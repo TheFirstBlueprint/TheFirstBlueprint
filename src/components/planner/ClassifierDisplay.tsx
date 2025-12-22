@@ -8,7 +8,18 @@ interface ClassifierDisplayProps {
 }
 
 export const ClassifierDisplay = ({ classifier, onEmpty }: ClassifierDisplayProps) => {
-  const slots = Array.from({ length: classifier.maxCapacity }, (_, i) => classifier.balls[i] || null);
+  const columns = 3;
+  const rows = Math.ceil(classifier.maxCapacity / columns);
+  const slots = Array.from({ length: classifier.maxCapacity }, () => null as Classifier['balls'][number] | null);
+
+  classifier.balls.forEach((ball, index) => {
+    const targetRow = rows - 1 - Math.floor(index / columns);
+    const targetCol = index % columns;
+    const visualIndex = targetRow * columns + targetCol;
+    if (visualIndex >= 0 && visualIndex < slots.length) {
+      slots[visualIndex] = ball;
+    }
+  });
 
   return (
     <div className="panel">

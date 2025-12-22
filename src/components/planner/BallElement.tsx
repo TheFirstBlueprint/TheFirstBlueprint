@@ -7,6 +7,7 @@ interface BallElementProps {
   onRemove: () => void;
   fieldBounds: { width: number; height: number };
   checkRobotCollision: (x: number, y: number) => string | null;
+  checkGoalDrop: (clientX: number, clientY: number) => Alliance | null;
   checkClassifierDrop: (clientX: number, clientY: number) => Alliance | null;
   onCollectByRobot: (robotId: string) => void;
   onScoreToClassifier: (ballId: string, alliance: Alliance) => void;
@@ -19,6 +20,7 @@ export const BallElement = ({
   onPositionChange,
   fieldBounds,
   checkRobotCollision,
+  checkGoalDrop,
   checkClassifierDrop,
   onCollectByRobot,
   onScoreToClassifier,
@@ -44,6 +46,12 @@ export const BallElement = ({
       document.removeEventListener('mouseup', handleMouseUp);
 
       // Check for robot collision on drop
+      const goalTarget = checkGoalDrop(upEvent.clientX, upEvent.clientY);
+      if (goalTarget) {
+        onScoreToClassifier(ball.id, goalTarget);
+        return;
+      }
+
       const classifierTarget = checkClassifierDrop(upEvent.clientX, upEvent.clientY);
       if (classifierTarget) {
         onScoreToClassifier(ball.id, classifierTarget);

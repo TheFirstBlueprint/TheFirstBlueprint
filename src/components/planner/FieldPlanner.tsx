@@ -10,9 +10,10 @@ import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
 
 const FIELD_SIZE = 600;
+const GOAL_SIZE = 120;
 const CLASSIFIER_STACK = {
   top: 126,
-  sideInset: 18,
+  sideInset: 0,
   slotSize: 14,
   gap: 4,
   padding: 6,
@@ -47,6 +48,7 @@ export const FieldPlanner = () => {
   const [penColor, setPenColor] = useState('#22d3ee');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,26 @@ export const FieldPlanner = () => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+
+  const getGoalDropTarget = useCallback((clientX: number, clientY: number) => {
+    const rect = fieldRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+
+    if (x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE) {
+      return 'blue';
+    }
+
+    const xFromRight = rect.width - x;
+    if (xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE) {
+      return 'red';
+    }
+
+    return null;
+  }, []);
 
   const isPointInRect = useCallback((rect: DOMRect | undefined, clientX: number, clientY: number) => {
     if (!rect) return false;
@@ -199,6 +221,7 @@ export const FieldPlanner = () => {
           className="relative bg-card rounded-lg overflow-hidden shadow-2xl border border-border"
           style={{ width: FIELD_SIZE, height: FIELD_SIZE }}
           onClick={handleFieldClick}
+          ref={fieldRef}
         >
           {/* Field Background */}
           <img
@@ -229,6 +252,7 @@ export const FieldPlanner = () => {
               onRemove={() => removeBall(ball.id)}
               fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
               checkRobotCollision={checkRobotCollision}
+              checkGoalDrop={getGoalDropTarget}
               checkClassifierDrop={getClassifierDropTarget}
               onCollectByRobot={(robotId) => robotCollectBall(robotId, ball.id)}
               onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
@@ -246,7 +270,7 @@ export const FieldPlanner = () => {
             }}
           >
             <div
-              className="flex flex-col rounded-md bg-background/70 border border-border/60 p-1"
+              className="flex flex-col-reverse rounded-md bg-background/70 border border-border/60 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.blue.maxCapacity }, (_, index) => {
@@ -280,7 +304,7 @@ export const FieldPlanner = () => {
             }}
           >
             <div
-              className="flex flex-col rounded-md bg-background/70 border border-border/60 p-1"
+              className="flex flex-col-reverse rounded-md bg-background/70 border border-border/60 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.red.maxCapacity }, (_, index) => {
