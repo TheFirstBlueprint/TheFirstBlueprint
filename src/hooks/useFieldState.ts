@@ -6,13 +6,44 @@ import {
   Position,
   DrawingPath,
   Alliance,
-  BallColor,
   createInitialState,
+  BallColor,
   DEFAULT_CONFIG,
 } from '@/types/planner';
 
 let idCounter = 0;
 const generateId = () => `id-${++idCounter}-${Date.now()}`;
+const BALL_DIAMETER = 20;
+const HUMAN_PLAYER_ZONE_SIZE = DEFAULT_CONFIG.tileSize;
+const HUMAN_PLAYER_ZONE_INSET = 12;
+const HUMAN_PLAYER_SPACING = 24;
+const SPIKE_CLEAR_RADIUS = 18;
+const SPIKE_ROW_SPACING = 24;
+const SPIKE_ROW_HALF = SPIKE_ROW_SPACING;
+const SPIKE_MARKS = {
+  blue: [
+    { x: 0.1621, y: 0.418 },
+    { x: 0.1621, y: 0.582 },
+    { x: 0.1621, y: 0.7461 },
+  ],
+  red: [
+    { x: 0.8359, y: 0.422 },
+    { x: 0.8359, y: 0.582 },
+    { x: 0.8359, y: 0.7451 },
+  ],
+};
+const SPIKE_PATTERNS = {
+  blue: [
+    ['green', 'purple', 'purple'],
+    ['purple', 'green', 'purple'],
+    ['purple', 'purple', 'green'],
+  ],
+  red: [
+    ['purple', 'purple', 'green'],
+    ['purple', 'green', 'purple'],
+    ['green', 'purple', 'purple'],
+  ],
+} as const;
 
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
@@ -205,20 +236,20 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const spacing = 25;
       const columns = 3;
-      const padding = 60;
+      const zoneStartX = alliance === 'red' ? DEFAULT_CONFIG.fieldWidth - HUMAN_PLAYER_ZONE_SIZE : 0;
+      const zoneStartY = DEFAULT_CONFIG.fieldHeight - HUMAN_PLAYER_ZONE_SIZE;
       const baseX = alliance === 'red'
-        ? DEFAULT_CONFIG.fieldWidth - padding - (columns - 1) * spacing
-        : padding;
-      const baseY = DEFAULT_CONFIG.fieldHeight - padding;
+        ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (columns - 1) * HUMAN_PLAYER_SPACING
+        : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
+      const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
 
       const depositedBalls = classifier.balls.map((ball, index) => ({
         ...ball,
         isScored: false,
         position: {
-          x: baseX + (index % columns) * spacing,
-          y: baseY - Math.floor(index / columns) * spacing,
+          x: baseX + (index % columns) * HUMAN_PLAYER_SPACING,
+          y: baseY - Math.floor(index / columns) * HUMAN_PLAYER_SPACING,
         },
       }));
 
@@ -229,6 +260,58 @@ export const useFieldState = () => {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: [] },
         },
+      };
+    });
+  }, []);
+
+  const setupFieldArtifacts = useCallback(() => {
+    setState((prev) => {
+      const spikePositions = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
+        SPIKE_MARKS[alliance].flatMap((mark) => {
+          const centerX = mark.x * DEFAULT_CONFIG.fieldWidth;
+          const centerY = mark.y * DEFAULT_CONFIG.fieldHeight;
+          return [-SPIKE_ROW_HALF, 0, SPIKE_ROW_HALF].map((offsetX) => ({
+            x: centerX + offsetX,
+            y: centerY,
+          }));
+        })
+      );
+
+      const filteredBalls = prev.balls.filter((ball) => {
+        return spikePositions.every((pos) => {
+          const dx = ball.position.x - pos.x;
+          const dy = ball.position.y - pos.y;
+          return Math.sqrt(dx * dx + dy * dy) > SPIKE_CLEAR_RADIUS;
+        });
+      });
+
+      const newArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
+        SPIKE_MARKS[alliance].flatMap((mark, rowIndex) => {
+          const pattern = SPIKE_PATTERNS[alliance][rowIndex];
+          const centerX = mark.x * DEFAULT_CONFIG.fieldWidth;
+          const centerY = mark.y * DEFAULT_CONFIG.fieldHeight;
+          return pattern.map((color, index) => ({
+            id: generateId(),
+            color,
+            position: {
+              x: Math.max(
+                BALL_DIAMETER / 2,
+                Math.min(
+                  DEFAULT_CONFIG.fieldWidth - BALL_DIAMETER / 2,
+                  centerX + (index - 1) * SPIKE_ROW_SPACING
+                )
+              ),
+              y: centerY,
+            },
+            isScored: false,
+            heldByRobotId: null,
+          }));
+        })
+      );
+
+      return {
+        ...prev,
+        balls: [...filteredBalls, ...newArtifacts],
       };
     });
   }, []);
@@ -303,6 +386,7 @@ export const useFieldState = () => {
     scoreBallToClassifier,
     // Classifier
     emptyClassifier,
+    setupFieldArtifacts,
     // Drawing
     addDrawing,
     removeDrawing,

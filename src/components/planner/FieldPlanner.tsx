@@ -34,6 +34,7 @@ export const FieldPlanner = () => {
     removeBall,
     scoreBallToClassifier,
     emptyClassifier,
+    setupFieldArtifacts,
     addDrawing,
     removeDrawing,
     clearDrawings,
@@ -67,6 +68,12 @@ export const FieldPlanner = () => {
         case 'p':
           setActiveTool('pen');
           break;
+        case 'd':
+          setActiveTool('dotted');
+          break;
+        case 'a':
+          setActiveTool('arrow');
+          break;
         case 'e':
           setActiveTool('eraser');
           break;
@@ -89,6 +96,11 @@ export const FieldPlanner = () => {
   const handleRandomizeMotif = () => {
     const next = motifs[Math.floor(Math.random() * motifs.length)];
     setMotif(next);
+  };
+
+  const handleSetupField = () => {
+    setupFieldArtifacts();
+    toast.success('Artifacts placed on spike marks.');
   };
 
   const redRobotCount = state.robots.filter((robot) => robot.alliance === 'red').length;
@@ -197,7 +209,7 @@ export const FieldPlanner = () => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Panel */}
-      <div className="w-56 p-4 border-r border-border flex-shrink-0">
+      <div className="w-64 p-4 border-r border-border flex-shrink-0">
         <ToolPanel
           activeTool={activeTool}
           onToolChange={setActiveTool}
@@ -211,6 +223,7 @@ export const FieldPlanner = () => {
           onClearBalls={clearBalls}
           onClearRobots={clearRobots}
           onResetField={resetField}
+          onSetupField={handleSetupField}
           onExport={handleExport}
           onImport={handleImport}
         />
@@ -359,7 +372,7 @@ export const FieldPlanner = () => {
       </div>
 
       {/* Right Panel */}
-      <div className="w-56 p-4 border-l border-border flex-shrink-0">
+      <div className="w-64 p-4 border-l border-border flex-shrink-0">
         <div className="mb-6">
           <h1 className="font-mono text-lg font-semibold text-primary mb-1">
             FTC DECODE

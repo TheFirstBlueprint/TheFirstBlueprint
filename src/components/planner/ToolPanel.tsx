@@ -3,11 +3,14 @@ import { cn } from '@/lib/utils';
 import {
   MousePointer2,
   Pencil,
+  Minus,
+  ArrowRight,
   Eraser,
   Circle,
   Square,
   Trash2,
   RotateCcw,
+  Wand2,
   Download,
   Upload,
 } from 'lucide-react';
@@ -25,6 +28,7 @@ interface ToolPanelProps {
   onClearBalls: () => void;
   onClearRobots: () => void;
   onResetField: () => void;
+  onSetupField: () => void;
   onExport: () => void;
   onImport: () => void;
 }
@@ -44,15 +48,18 @@ export const ToolPanel = ({
   onClearBalls,
   onClearRobots,
   onResetField,
+  onSetupField,
   onExport,
   onImport,
 }: ToolPanelProps) => {
+  const isDrawTool = activeTool === 'pen' || activeTool === 'dotted' || activeTool === 'arrow';
+
   return (
     <div className="flex flex-col gap-4">
       {/* Drawing Tools */}
       <div className="panel">
         <div className="panel-header">Tools</div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => onToolChange('select')}
             className={cn('tool-button', activeTool === 'select' && 'active')}
@@ -68,6 +75,20 @@ export const ToolPanel = ({
             <Pencil className="w-4 h-4" />
           </button>
           <button
+            onClick={() => onToolChange('dotted')}
+            className={cn('tool-button', activeTool === 'dotted' && 'active')}
+            title="Dotted line (D)"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onToolChange('arrow')}
+            className={cn('tool-button', activeTool === 'arrow' && 'active')}
+            title="Arrow line (A)"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => onToolChange('eraser')}
             className={cn('tool-button', activeTool === 'eraser' && 'active')}
             title="Eraser (E)"
@@ -76,7 +97,7 @@ export const ToolPanel = ({
           </button>
         </div>
 
-        {activeTool === 'pen' && (
+        {isDrawTool && (
           <div className="mt-3">
             <div className="text-xs text-muted-foreground mb-1">Pen Color</div>
             <div className="flex gap-1">
@@ -151,6 +172,15 @@ export const ToolPanel = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Field Setup */}
+      <div className="panel">
+        <div className="panel-header">Field Setup</div>
+        <button onClick={onSetupField} className="tool-button gap-1">
+          <Wand2 className="w-4 h-4" />
+          <span className="text-xs">Place Artifacts</span>
+        </button>
       </div>
 
       {/* Clear Controls */}

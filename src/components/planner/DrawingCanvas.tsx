@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { DrawingPath, Position, Tool } from '@/types/planner';
+import { DrawingPath, DrawingStyle, Position, Tool } from '@/types/planner';
 
 interface DrawingCanvasProps {
   width: number;
@@ -27,6 +27,53 @@ export const DrawingCanvas = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
+  const isDrawTool = activeTool === 'pen' || activeTool === 'dotted' || activeTool === 'arrow';
+
+  const getDrawingStyle = (tool: Tool): DrawingStyle => {
+    switch (tool) {
+      case 'dotted':
+        return 'dotted';
+      case 'arrow':
+        return 'arrow';
+      default:
+        return 'solid';
+    }
+  };
+
+  const drawPath = useCallback(
+    (ctx: CanvasRenderingContext2D, points: Position[], color: string, width: number, style: DrawingStyle) => {
+      if (points.length < 2) return;
+
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.setLineDash(style === 'dotted' ? [6, 6] : []);
+
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+
+      if (style === 'arrow') {
+        const end = points[points.length - 1];
+        const prev = points[points.length - 2];
+        const angle = Math.atan2(end.y - prev.y, end.x - prev.x);
+        const size = 10;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(end.x, end.y);
+        ctx.lineTo(end.x - size * Math.cos(angle - Math.PI / 6), end.y - size * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(end.x - size * Math.cos(angle + Math.PI / 6), end.y - size * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+    },
+    []
+  );
 
   // Redraw all paths
   const redrawCanvas = useCallback(() => {
@@ -39,36 +86,14 @@ export const DrawingCanvas = ({
     ctx.clearRect(0, 0, width, height);
 
     drawings.forEach((drawing) => {
-      if (drawing.points.length < 2) return;
-
-      ctx.beginPath();
-      ctx.strokeStyle = drawing.color;
-      ctx.lineWidth = drawing.width;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      ctx.moveTo(drawing.points[0].x, drawing.points[0].y);
-      for (let i = 1; i < drawing.points.length; i++) {
-        ctx.lineTo(drawing.points[i].x, drawing.points[i].y);
-      }
-      ctx.stroke();
+      drawPath(ctx, drawing.points, drawing.color, drawing.width, drawing.style || 'solid');
     });
 
     // Draw current path
     if (currentPath.length > 1) {
-      ctx.beginPath();
-      ctx.strokeStyle = penColor;
-      ctx.lineWidth = penWidth;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      ctx.moveTo(currentPath[0].x, currentPath[0].y);
-      for (let i = 1; i < currentPath.length; i++) {
-        ctx.lineTo(currentPath[i].x, currentPath[i].y);
-      }
-      ctx.stroke();
+      drawPath(ctx, currentPath, penColor, penWidth, getDrawingStyle(activeTool));
     }
-  }, [drawings, currentPath, penColor, penWidth, width, height]);
+  }, [drawings, currentPath, penColor, penWidth, width, height, drawPath, activeTool, getDrawingStyle]);
 
   useEffect(() => {
     redrawCanvas();
@@ -86,11 +111,11 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (activeTool === 'select') return;
+    if (!isDrawTool && activeTool !== 'eraser') return;
 
     const point = getCanvasPoint(e);
 
-    if (activeTool === 'pen') {
+    if (isDrawTool) {
       setIsDrawing(true);
       setCurrentPath([point]);
     } else if (activeTool === 'eraser') {
@@ -110,14 +135,14 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || activeTool !== 'pen') return;
+    if (!isDrawing || !isDrawTool) return;
 
     const point = getCanvasPoint(e);
     setCurrentPath((prev) => [...prev, point]);
   };
 
   const handleMouseUp = () => {
-    if (!isDrawing || activeTool !== 'pen') return;
+    if (!isDrawing || !isDrawTool) return;
 
     if (currentPath.length > 1) {
       const newPath: DrawingPath = {
@@ -125,6 +150,7 @@ export const DrawingCanvas = ({
         points: currentPath,
         color: penColor,
         width: penWidth,
+        style: getDrawingStyle(activeTool),
       };
       onAddDrawing(newPath);
     }
@@ -142,7 +168,7 @@ export const DrawingCanvas = ({
       style={{
         zIndex: 5,
         pointerEvents: activeTool === 'select' ? 'none' : 'auto',
-        cursor: activeTool === 'pen' ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
+        cursor: isDrawTool ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
