@@ -146,6 +146,38 @@ export const useFieldState = () => {
     });
   }, []);
 
+  const robotCollectBalls = useCallback((robotId: string, ballIds: string[]) => {
+    setState((prev) => {
+      const robot = prev.robots.find((r) => r.id === robotId);
+      if (!robot || robot.heldBalls.length >= DEFAULT_CONFIG.maxBallsPerRobot) {
+        return prev;
+      }
+
+      const ballMap = new Map(prev.balls.map((b) => [b.id, b]));
+      const availableSpace = DEFAULT_CONFIG.maxBallsPerRobot - robot.heldBalls.length;
+      const ballsToCollect = ballIds
+        .map((id) => ballMap.get(id))
+        .filter((ball): ball is Ball => Boolean(ball))
+        .slice(0, availableSpace);
+
+      if (ballsToCollect.length === 0) {
+        return prev;
+      }
+
+      const collectedIds = new Set(ballsToCollect.map((ball) => ball.id));
+
+      return {
+        ...prev,
+        robots: prev.robots.map((r) =>
+          r.id === robotId
+            ? { ...r, heldBalls: [...r.heldBalls, ...ballsToCollect.map((b) => ({ ...b, heldByRobotId: robotId }))] }
+            : r
+        ),
+        balls: prev.balls.filter((b) => !collectedIds.has(b.id)),
+      };
+    });
+  }, []);
+
   // Robot ejects single ball to classifier
   const robotEjectSingle = useCallback((robotId: string) => {
     setState((prev) => {
@@ -377,6 +409,7 @@ export const useFieldState = () => {
     updateRobotRotation,
     removeRobot,
     robotCollectBall,
+    robotCollectBalls,
     robotEjectSingle,
     robotEjectAll,
     // Ball

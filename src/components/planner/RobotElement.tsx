@@ -12,6 +12,11 @@ interface RobotElementProps {
   onEjectSingle: () => void;
   onEjectAll: () => void;
   fieldBounds: { width: number; height: number };
+  intakeActive: boolean;
+  outtakeActive: boolean;
+  onToggleIntake: () => void;
+  onToggleOuttake: () => void;
+  isLocked: boolean;
 }
 
 export const RobotElement = ({
@@ -24,9 +29,15 @@ export const RobotElement = ({
   onEjectSingle,
   onEjectAll,
   fieldBounds,
+  intakeActive,
+  outtakeActive,
+  onToggleIntake,
+  onToggleOuttake,
+  isLocked,
 }: RobotElementProps) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isLocked) return;
     onSelect();
 
     const startX = e.clientX;
@@ -53,6 +64,7 @@ export const RobotElement = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isLocked) return;
     onSelect();
   };
 
@@ -105,30 +117,44 @@ export const RobotElement = ({
           style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); onRotate(-15); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-15); }}
             className="tool-button !p-1"
             title="Rotate left"
           >
             <RotateCw className="w-3 h-3 scale-x-[-1]" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onRotate(15); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(15); }}
             className="tool-button !p-1"
             title="Rotate right"
           >
             <RotateCw className="w-3 h-3" />
           </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleIntake(); }}
+            className={cn('tool-button !p-1', intakeActive && 'active')}
+            title="Toggle intake (I)"
+          >
+            I
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleOuttake(); }}
+            className={cn('tool-button !p-1', outtakeActive && 'active')}
+            title="Toggle outtake (O)"
+          >
+            O
+          </button>
           {robot.heldBalls.length > 0 && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); onEjectSingle(); }}
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
                 className="tool-button !p-1 text-ball-green"
                 title="Eject one ball"
               >
                 1
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); onEjectAll(); }}
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}
                 className="tool-button !p-1 text-ball-purple"
                 title="Eject all balls"
               >
@@ -137,7 +163,7 @@ export const RobotElement = ({
             </>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(); }}
             className="tool-button !p-1 text-destructive"
             title="Remove robot"
           >

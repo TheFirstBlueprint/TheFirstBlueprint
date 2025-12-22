@@ -11,6 +11,7 @@ interface BallElementProps {
   checkClassifierDrop: (clientX: number, clientY: number) => Alliance | null;
   onCollectByRobot: (robotId: string) => void;
   onScoreToClassifier: (ballId: string, alliance: Alliance) => void;
+  isLocked: boolean;
 }
 
 const BALL_SIZE = 20;
@@ -24,9 +25,11 @@ export const BallElement = ({
   checkClassifierDrop,
   onCollectByRobot,
   onScoreToClassifier,
+  isLocked,
 }: BallElementProps) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isLocked) return;
 
     const startX = e.clientX;
     const startY = e.clientY;

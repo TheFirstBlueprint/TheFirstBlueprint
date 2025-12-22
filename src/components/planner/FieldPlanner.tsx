@@ -11,6 +11,14 @@ import { toast } from 'sonner';
 
 const FIELD_SIZE = 600;
 const GOAL_SIZE = 120;
+const AUTON_SECONDS = 30;
+const TRANSITION_SECONDS = 7;
+const TELEOP_SECONDS = 120;
+const MAGNET_RADIUS = 10;
+const MAGNET_TARGETS = [
+  { x: 0.27, y: 0.761 },
+  { x: 0.7275, y: 0.761 },
+];
 const CLASSIFIER_STACK = {
   top: 126,
   sideInset: 0,
@@ -29,6 +37,7 @@ export const FieldPlanner = () => {
     robotEjectSingle,
     robotEjectAll,
     robotCollectBall,
+    robotCollectBalls,
     addBall,
     updateBallPosition,
     removeBall,
@@ -49,17 +58,24 @@ export const FieldPlanner = () => {
   const [penColor, setPenColor] = useState('#22d3ee');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
   const [motif, setMotif] = useState('GPP');
+  const [robotModes, setRobotModes] = useState<Record<string, { intake: boolean; outtake: boolean }>>({});
+  const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>('full');
+  const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
+  const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
+  const isInputLocked = timerRunning && timerPhase === 'transition';
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
+      if (isInputLocked) return;
       
       switch (e.key.toLowerCase()) {
         case 's':
@@ -77,6 +93,28 @@ export const FieldPlanner = () => {
         case 'e':
           setActiveTool('eraser');
           break;
+        case 'i':
+          if (selectedRobotId) {
+            setRobotModes((prev) => ({
+              ...prev,
+              [selectedRobotId]: {
+                intake: !prev[selectedRobotId]?.intake,
+                outtake: prev[selectedRobotId]?.outtake ?? false,
+              },
+            }));
+          }
+          break;
+        case 'o':
+          if (selectedRobotId) {
+            setRobotModes((prev) => ({
+              ...prev,
+              [selectedRobotId]: {
+                intake: prev[selectedRobotId]?.intake ?? false,
+                outtake: !prev[selectedRobotId]?.outtake,
+              },
+            }));
+          }
+          break;
         case 'escape':
           setSelectedRobotId(null);
           break;
@@ -85,9 +123,52 @@ export const FieldPlanner = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isInputLocked, selectedRobotId]);
+
+  useEffect(() => {
+    setRobotModes((prev) => {
+      const next: Record<string, { intake: boolean; outtake: boolean }> = {};
+      state.robots.forEach((robot) => {
+        next[robot.id] = prev[robot.id] ?? { intake: false, outtake: false };
+      });
+      return next;
+    });
+  }, [state.robots]);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+
+    const interval = window.setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev > 1) return prev - 1;
+
+        if (timerMode === 'full') {
+          if (timerPhase === 'auton') {
+            setTimerPhase('transition');
+            return TRANSITION_SECONDS;
+          }
+          if (timerPhase === 'transition') {
+            setTimerPhase('teleop');
+            return TELEOP_SECONDS;
+          }
+          if (timerPhase === 'teleop') {
+            setTimerRunning(false);
+            setTimerPhase('idle');
+            return 0;
+          }
+        }
+
+        setTimerRunning(false);
+        setTimerPhase('idle');
+        return 0;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [timerRunning, timerMode, timerPhase]);
 
   const handleFieldClick = () => {
+    if (isInputLocked) return;
     setSelectedRobotId(null);
   };
 
@@ -103,10 +184,59 @@ export const FieldPlanner = () => {
     toast.success('Artifacts placed on spike marks.');
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleTimerModeChange = (mode: 'full' | 'teleop' | 'auton') => {
+    setTimerMode(mode);
+    setTimerRunning(false);
+    if (mode === 'full') {
+      setTimerPhase('auton');
+      setTimeLeft(AUTON_SECONDS);
+      return;
+    }
+    setTimerPhase(mode);
+    setTimeLeft(mode === 'auton' ? AUTON_SECONDS : TELEOP_SECONDS);
+  };
+
+  const handleTimerToggle = () => {
+    if (timerRunning) {
+      setTimerRunning(false);
+      return;
+    }
+
+    if (timeLeft === 0) {
+      if (timerMode === 'full') {
+        setTimerPhase('auton');
+        setTimeLeft(AUTON_SECONDS);
+      } else {
+        setTimerPhase(timerMode);
+        setTimeLeft(timerMode === 'auton' ? AUTON_SECONDS : TELEOP_SECONDS);
+      }
+    }
+    setTimerRunning(true);
+  };
+
   const redRobotCount = state.robots.filter((robot) => robot.alliance === 'red').length;
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+
+  const getGoalTargetForPosition = useCallback((x: number, y: number) => {
+    if (x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE) {
+      return 'blue';
+    }
+
+    const xFromRight = FIELD_SIZE - x;
+    if (xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE) {
+      return 'red';
+    }
+
+    return null;
+  }, []);
 
   const getGoalDropTarget = useCallback((clientX: number, clientY: number) => {
     const rect = fieldRef.current?.getBoundingClientRect();
@@ -116,17 +246,8 @@ export const FieldPlanner = () => {
     const y = clientY - rect.top;
     if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
 
-    if (x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE) {
-      return 'blue';
-    }
-
-    const xFromRight = rect.width - x;
-    if (xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE) {
-      return 'red';
-    }
-
-    return null;
-  }, []);
+    return getGoalTargetForPosition(x, y);
+  }, [getGoalTargetForPosition]);
 
   const isPointInRect = useCallback((rect: DOMRect | undefined, clientX: number, clientY: number) => {
     if (!rect) return false;
@@ -170,6 +291,126 @@ export const FieldPlanner = () => {
       return null;
     },
     [state.robots]
+  );
+
+  const getIntakeRobotForBall = useCallback(
+    (x: number, y: number) => {
+      for (const robot of state.robots) {
+        const modes = robotModes[robot.id];
+        if (!modes?.intake) continue;
+        const dx = x - robot.position.x;
+        const dy = y - robot.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < robot.size / 2 + 10 && robot.heldBalls.length < DEFAULT_CONFIG.maxBallsPerRobot) {
+          return robot.id;
+        }
+      }
+      return null;
+    },
+    [state.robots, robotModes]
+  );
+
+  const getGoalRotation = useCallback((robot: { alliance: 'red' | 'blue'; position: { x: number; y: number } }) => {
+    const targetX = robot.alliance === 'blue' ? 0 : FIELD_SIZE;
+    const targetY = 0;
+    const dx = targetX - robot.position.x;
+    const dy = targetY - robot.position.y;
+    return (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+  }, []);
+
+  const handleRobotShoot = useCallback(
+    (robotId: string, mode: 'single' | 'all') => {
+      if (isInputLocked) return;
+      const robot = state.robots.find((item) => item.id === robotId);
+      if (!robot || robot.heldBalls.length === 0) return;
+
+      const originalRotation = robot.rotation;
+      const targetRotation = getGoalRotation(robot);
+      updateRobotRotation(robotId, targetRotation);
+
+      if (mode === 'single') {
+        robotEjectSingle(robotId);
+      } else {
+        robotEjectAll(robotId);
+      }
+
+      window.setTimeout(() => {
+        updateRobotRotation(robotId, originalRotation);
+      }, 250);
+    },
+    [getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.robots, updateRobotRotation]
+  );
+
+  const handleBallMove = useCallback(
+    (ballId: string, x: number, y: number) => {
+      if (isInputLocked) return;
+      updateBallPosition(ballId, { x, y });
+
+      const intakeRobotId = getIntakeRobotForBall(x, y);
+      if (intakeRobotId) {
+        robotCollectBall(intakeRobotId, ballId);
+      }
+    },
+    [getIntakeRobotForBall, isInputLocked, robotCollectBall, updateBallPosition]
+  );
+
+  const handleRobotMove = useCallback(
+    (robotId: string, x: number, y: number) => {
+      if (isInputLocked) return;
+      let nextX = x;
+      let nextY = y;
+      for (const target of MAGNET_TARGETS) {
+        const targetX = target.x * FIELD_SIZE;
+        const targetY = target.y * FIELD_SIZE;
+        const dx = targetX - nextX;
+        const dy = targetY - nextY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= MAGNET_RADIUS) {
+          nextX = targetX;
+          nextY = targetY;
+          break;
+        }
+      }
+
+      updateRobotPosition(robotId, { x: nextX, y: nextY });
+
+      const robot = state.robots.find((item) => item.id === robotId);
+      const modes = robotModes[robotId];
+      if (!robot || !modes) return;
+
+      if (modes.intake) {
+        const inRange = state.balls
+          .map((ball) => {
+            const dx = ball.position.x - nextX;
+            const dy = ball.position.y - nextY;
+            return { ball, distance: Math.sqrt(dx * dx + dy * dy) };
+          })
+          .filter(({ distance }) => distance < robot.size / 2 + 10)
+          .sort((a, b) => a.distance - b.distance)
+          .map(({ ball }) => ball.id);
+
+        if (inRange.length > 0) {
+          robotCollectBalls(robotId, inRange);
+        }
+      }
+
+      if (modes.outtake && robot.heldBalls.length > 0) {
+        const goalTarget = getGoalTargetForPosition(nextX, nextY);
+        if (goalTarget && goalTarget === robot.alliance) {
+          handleRobotShoot(robotId, 'all');
+        }
+      }
+    },
+    [
+      getGoalTargetForPosition,
+      handleRobotShoot,
+      isInputLocked,
+      robotCollectBalls,
+      robotModes,
+      state.balls,
+      state.robots,
+      updateRobotPosition,
+    ]
   );
 
   const handleExport = () => {
@@ -262,6 +503,7 @@ export const FieldPlanner = () => {
             penWidth={3}
             onAddDrawing={addDrawing}
             onRemoveDrawing={removeDrawing}
+            isLocked={isInputLocked}
           />
 
           {/* Balls */}
@@ -269,7 +511,7 @@ export const FieldPlanner = () => {
             <BallElement
               key={ball.id}
               ball={ball}
-              onPositionChange={(x, y) => updateBallPosition(ball.id, { x, y })}
+              onPositionChange={(x, y) => handleBallMove(ball.id, x, y)}
               onRemove={() => removeBall(ball.id)}
               fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
               checkRobotCollision={checkRobotCollision}
@@ -277,6 +519,7 @@ export const FieldPlanner = () => {
               checkClassifierDrop={getClassifierDropTarget}
               onCollectByRobot={(robotId) => robotCollectBall(robotId, ball.id)}
               onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
+              isLocked={isInputLocked}
             />
           ))}
 
@@ -357,15 +600,36 @@ export const FieldPlanner = () => {
               robot={robot}
               isSelected={selectedRobotId === robot.id}
               onSelect={() => setSelectedRobotId(robot.id)}
-              onPositionChange={(x, y) => updateRobotPosition(robot.id, { x, y })}
+              onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
               onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
               onRemove={() => {
                 removeRobot(robot.id);
                 setSelectedRobotId(null);
               }}
-              onEjectSingle={() => robotEjectSingle(robot.id)}
-              onEjectAll={() => robotEjectAll(robot.id)}
+              onEjectSingle={() => handleRobotShoot(robot.id, 'single')}
+              onEjectAll={() => handleRobotShoot(robot.id, 'all')}
               fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
+              intakeActive={robotModes[robot.id]?.intake ?? false}
+              outtakeActive={robotModes[robot.id]?.outtake ?? false}
+              onToggleIntake={() =>
+                setRobotModes((prev) => ({
+                  ...prev,
+                  [robot.id]: {
+                    intake: !prev[robot.id]?.intake,
+                    outtake: prev[robot.id]?.outtake ?? false,
+                  },
+                }))
+              }
+              onToggleOuttake={() =>
+                setRobotModes((prev) => ({
+                  ...prev,
+                  [robot.id]: {
+                    intake: prev[robot.id]?.intake ?? false,
+                    outtake: !prev[robot.id]?.outtake,
+                  },
+                }))
+              }
+              isLocked={isInputLocked}
             />
           ))}
         </div>
@@ -383,6 +647,51 @@ export const FieldPlanner = () => {
         </div>
 
         <div className="space-y-4">
+          <div className="panel">
+            <div className="panel-header">Game Timer</div>
+            <div className="text-center text-2xl font-mono text-foreground">
+              {formatTime(timeLeft)}
+            </div>
+            <div className="text-center text-xs text-muted-foreground">
+              {timerMode === 'full'
+                ? timerPhase === 'transition'
+                  ? 'Transition (inputs locked)'
+                  : timerPhase === 'idle'
+                    ? 'Idle'
+                    : `Phase: ${timerPhase}`
+                : timerMode.toUpperCase()}
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              <button
+                onClick={() => handleTimerModeChange('full')}
+                className={`tool-button ${timerMode === 'full' ? 'active' : ''}`}
+                title="Full game"
+              >
+                <span className="text-xs font-mono">Full</span>
+              </button>
+              <button
+                onClick={() => handleTimerModeChange('auton')}
+                className={`tool-button ${timerMode === 'auton' ? 'active' : ''}`}
+                title="Auton"
+              >
+                <span className="text-xs font-mono">Auton</span>
+              </button>
+              <button
+                onClick={() => handleTimerModeChange('teleop')}
+                className={`tool-button ${timerMode === 'teleop' ? 'active' : ''}`}
+                title="Teleop"
+              >
+                <span className="text-xs font-mono">Teleop</span>
+              </button>
+            </div>
+            <button
+              onClick={handleTimerToggle}
+              className="tool-button mt-2 w-full"
+              title={timerRunning ? 'Pause timer' : 'Start timer'}
+            >
+              {timerRunning ? 'Pause' : 'Start'}
+            </button>
+          </div>
           <div className="panel">
             <div className="panel-header">Motif</div>
             <div className="grid grid-cols-3 gap-2">
@@ -427,6 +736,7 @@ export const FieldPlanner = () => {
             <li>• Drag robots & balls to position</li>
             <li>• Drop balls on robots to collect</li>
             <li>• Click robot for controls</li>
+            <li>• I/O to toggle intake/outtake</li>
             <li>• Use pen to draw paths</li>
             <li>• Export to save strategy</li>
           </ul>

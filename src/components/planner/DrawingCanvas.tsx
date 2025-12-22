@@ -10,6 +10,7 @@ interface DrawingCanvasProps {
   penWidth: number;
   onAddDrawing: (path: DrawingPath) => void;
   onRemoveDrawing: (id: string) => void;
+  isLocked: boolean;
 }
 
 let pathIdCounter = 0;
@@ -23,6 +24,7 @@ export const DrawingCanvas = ({
   penWidth,
   onAddDrawing,
   onRemoveDrawing,
+  isLocked,
 }: DrawingCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -111,6 +113,7 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isLocked) return;
     if (!isDrawTool && activeTool !== 'eraser') return;
 
     const point = getCanvasPoint(e);
@@ -135,6 +138,7 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (isLocked) return;
     if (!isDrawing || !isDrawTool) return;
 
     const point = getCanvasPoint(e);
@@ -142,6 +146,7 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseUp = () => {
+    if (isLocked) return;
     if (!isDrawing || !isDrawTool) return;
 
     if (currentPath.length > 1) {
@@ -167,7 +172,7 @@ export const DrawingCanvas = ({
       className="absolute inset-0"
       style={{
         zIndex: 5,
-        pointerEvents: activeTool === 'select' ? 'none' : 'auto',
+        pointerEvents: activeTool === 'select' || isLocked ? 'none' : 'auto',
         cursor: isDrawTool ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
       }}
       onMouseDown={handleMouseDown}
