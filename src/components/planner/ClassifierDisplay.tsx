@@ -4,10 +4,15 @@ import { Trash2 } from 'lucide-react';
 
 interface ClassifierDisplayProps {
   classifier: Classifier;
+  motif: string;
   onEmpty: () => void;
 }
 
-export const ClassifierDisplay = ({ classifier, onEmpty }: ClassifierDisplayProps) => {
+const motifToColor = (motif: string) => {
+  return motif.split('').map((token) => (token === 'G' ? 'green' : 'purple'));
+};
+
+export const ClassifierDisplay = ({ classifier, motif, onEmpty }: ClassifierDisplayProps) => {
   const columns = 3;
   const rows = Math.ceil(classifier.maxCapacity / columns);
   const slots = Array.from({ length: classifier.maxCapacity }, () => null as Classifier['balls'][number] | null);
@@ -19,6 +24,19 @@ export const ClassifierDisplay = ({ classifier, onEmpty }: ClassifierDisplayProp
     if (visualIndex >= 0 && visualIndex < slots.length) {
       slots[visualIndex] = ball;
     }
+  });
+
+  const motifColors = motifToColor(motif);
+  const rowMatchesBottom = Array.from({ length: rows }, (_, rowIndex) => {
+    const start = rowIndex * columns;
+    const rowBalls = classifier.balls.slice(start, start + columns);
+    if (rowBalls.length < columns) return false;
+    return rowBalls.every((ball, idx) => ball.color === motifColors[idx]);
+  });
+  const rowMatchesTop = rowMatchesBottom.slice().reverse();
+  const rowsView = Array.from({ length: rows }, (_, rowIndex) => {
+    const start = rowIndex * columns;
+    return slots.slice(start, start + columns);
   });
 
   return (
@@ -45,25 +63,38 @@ export const ClassifierDisplay = ({ classifier, onEmpty }: ClassifierDisplayProp
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1">
-        {slots.map((ball, index) => (
+      <div className="flex flex-col gap-1">
+        {rowsView.map((row, rowIndex) => (
           <div
-            key={index}
+            key={`row-${rowIndex}`}
             className={cn(
-              'w-6 h-6 rounded-full border border-border flex items-center justify-center',
-              'transition-all duration-200',
-              ball
-                ? ball.color === 'green'
-                  ? 'bg-ball-green'
-                  : 'bg-ball-purple'
-                : 'bg-muted/30'
+              'grid grid-cols-3 gap-1 rounded-md p-1',
+              rowMatchesTop[rowIndex] && 'bg-white/20'
             )}
           >
-            {ball && (
-              <span className="text-[8px] font-mono text-foreground/80">
-                {index + 1}
-              </span>
-            )}
+            {row.map((ball, index) => {
+              const slotIndex = rowIndex * columns + index;
+              return (
+                <div
+                  key={slotIndex}
+                  className={cn(
+                    'w-6 h-6 rounded-full border border-border flex items-center justify-center',
+                    'transition-all duration-200',
+                    ball
+                      ? ball.color === 'green'
+                        ? 'bg-ball-green'
+                        : 'bg-ball-purple'
+                      : 'bg-muted/30'
+                  )}
+                >
+                  {ball && (
+                    <span className="text-[8px] font-mono text-foreground/80">
+                      {slotIndex + 1}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>

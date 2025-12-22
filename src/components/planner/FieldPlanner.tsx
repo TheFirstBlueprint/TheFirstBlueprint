@@ -47,6 +47,7 @@ export const FieldPlanner = () => {
   const [activeTool, setActiveTool] = useState<Tool>('select');
   const [penColor, setPenColor] = useState('#22d3ee');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
+  const [motif, setMotif] = useState('GPP');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
@@ -81,6 +82,13 @@ export const FieldPlanner = () => {
 
   const handleFieldClick = () => {
     setSelectedRobotId(null);
+  };
+
+  const motifs = ['GPP', 'PGP', 'PPG'];
+
+  const handleRandomizeMotif = () => {
+    const next = motifs[Math.floor(Math.random() * motifs.length)];
+    setMotif(next);
   };
 
   const redRobotCount = state.robots.filter((robot) => robot.alliance === 'red').length;
@@ -362,15 +370,39 @@ export const FieldPlanner = () => {
         </div>
 
         <div className="space-y-4">
+          <div className="panel">
+            <div className="panel-header">Motif</div>
+            <div className="grid grid-cols-3 gap-2">
+              {motifs.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setMotif(option)}
+                  className={`tool-button ${motif === option ? 'active' : ''}`}
+                  title={`Set motif ${option}`}
+                >
+                  <span className="text-xs font-mono">{option}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleRandomizeMotif}
+              className="tool-button mt-2 w-full"
+              title="Randomize motif"
+            >
+              Randomize
+            </button>
+          </div>
           <div ref={redClassifierRef}>
             <ClassifierDisplay
               classifier={state.classifiers.red}
+              motif={motif}
               onEmpty={() => emptyClassifier('red')}
             />
           </div>
           <div ref={blueClassifierRef}>
             <ClassifierDisplay
               classifier={state.classifiers.blue}
+              motif={motif}
               onEmpty={() => emptyClassifier('blue')}
             />
           </div>
