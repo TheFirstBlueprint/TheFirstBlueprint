@@ -19,7 +19,8 @@ interface ToolPanelProps {
   onPenColorChange: (color: string) => void;
   onAddBall: (color: BallColor) => void;
   onAddRobot: (alliance: Alliance) => void;
-  canAddRobot: boolean;
+  canAddRedRobot: boolean;
+  canAddBlueRobot: boolean;
   onClearDrawings: () => void;
   onClearBalls: () => void;
   onClearRobots: () => void;
@@ -37,7 +38,8 @@ export const ToolPanel = ({
   onPenColorChange,
   onAddBall,
   onAddRobot,
-  canAddRobot,
+  canAddRedRobot,
+  canAddBlueRobot,
   onClearDrawings,
   onClearBalls,
   onClearRobots,
@@ -125,10 +127,10 @@ export const ToolPanel = ({
           <div className="flex gap-2">
             <button
               onClick={() => onAddRobot('red')}
-              disabled={!canAddRobot}
+              disabled={!canAddRedRobot}
               className={cn(
                 'tool-button flex-1 gap-1',
-                !canAddRobot && 'opacity-50 cursor-not-allowed'
+                !canAddRedRobot && 'opacity-50 cursor-not-allowed'
               )}
               title="Add red alliance robot"
             >
@@ -137,10 +139,10 @@ export const ToolPanel = ({
             </button>
             <button
               onClick={() => onAddRobot('blue')}
-              disabled={!canAddRobot}
+              disabled={!canAddBlueRobot}
               className={cn(
                 'tool-button flex-1 gap-1',
-                !canAddRobot && 'opacity-50 cursor-not-allowed'
+                !canAddBlueRobot && 'opacity-50 cursor-not-allowed'
               )}
               title="Add blue alliance robot"
             >

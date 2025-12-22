@@ -24,6 +24,7 @@ export const FieldPlanner = () => {
     addBall,
     updateBallPosition,
     removeBall,
+    scoreBallToClassifier,
     emptyClassifier,
     addDrawing,
     removeDrawing,
@@ -39,6 +40,8 @@ export const FieldPlanner = () => {
   const [penColor, setPenColor] = useState('#22d3ee');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const redClassifierRef = useRef<HTMLDivElement>(null);
+  const blueClassifierRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -68,6 +71,25 @@ export const FieldPlanner = () => {
   const handleFieldClick = () => {
     setSelectedRobotId(null);
   };
+
+  const redRobotCount = state.robots.filter((robot) => robot.alliance === 'red').length;
+  const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
+  const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+  const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+
+  const getClassifierDropTarget = useCallback((clientX: number, clientY: number) => {
+    const redRect = redClassifierRef.current?.getBoundingClientRect();
+    if (redRect && clientX >= redRect.left && clientX <= redRect.right && clientY >= redRect.top && clientY <= redRect.bottom) {
+      return 'red';
+    }
+
+    const blueRect = blueClassifierRef.current?.getBoundingClientRect();
+    if (blueRect && clientX >= blueRect.left && clientX <= blueRect.right && clientY >= blueRect.top && clientY <= blueRect.bottom) {
+      return 'blue';
+    }
+
+    return null;
+  }, []);
 
   const checkRobotCollision = useCallback(
     (x: number, y: number): string | null => {
@@ -131,7 +153,8 @@ export const FieldPlanner = () => {
           onPenColorChange={setPenColor}
           onAddBall={addBall}
           onAddRobot={addRobot}
-          canAddRobot={state.robots.length < DEFAULT_CONFIG.maxRobots}
+          canAddRedRobot={canAddRedRobot}
+          canAddBlueRobot={canAddBlueRobot}
           onClearDrawings={clearDrawings}
           onClearBalls={clearBalls}
           onClearRobots={clearRobots}
@@ -184,7 +207,9 @@ export const FieldPlanner = () => {
               onRemove={() => removeBall(ball.id)}
               fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
               checkRobotCollision={checkRobotCollision}
+              checkClassifierDrop={getClassifierDropTarget}
               onCollectByRobot={(robotId) => robotCollectBall(robotId, ball.id)}
+              onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
             />
           ))}
 
@@ -221,14 +246,18 @@ export const FieldPlanner = () => {
         </div>
 
         <div className="space-y-4">
-          <ClassifierDisplay
-            classifier={state.classifiers.red}
-            onEmpty={() => emptyClassifier('red')}
-          />
-          <ClassifierDisplay
-            classifier={state.classifiers.blue}
-            onEmpty={() => emptyClassifier('blue')}
-          />
+          <div ref={redClassifierRef}>
+            <ClassifierDisplay
+              classifier={state.classifiers.red}
+              onEmpty={() => emptyClassifier('red')}
+            />
+          </div>
+          <div ref={blueClassifierRef}>
+            <ClassifierDisplay
+              classifier={state.classifiers.blue}
+              onEmpty={() => emptyClassifier('blue')}
+            />
+          </div>
         </div>
 
         <div className="mt-6 panel">

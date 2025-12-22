@@ -19,7 +19,13 @@ export const useFieldState = () => {
 
   // Robot operations
   const addRobot = useCallback((alliance: Alliance, position?: Position) => {
-    if (state.robots.length >= DEFAULT_CONFIG.maxRobots) return;
+    const allianceCount = state.robots.filter((robot) => robot.alliance === alliance).length;
+    if (
+      state.robots.length >= DEFAULT_CONFIG.maxRobots ||
+      allianceCount >= DEFAULT_CONFIG.maxRobotsPerAlliance
+    ) {
+      return;
+    }
 
     const robot: Robot = {
       id: generateId(),
@@ -31,7 +37,7 @@ export const useFieldState = () => {
     };
 
     setState((prev) => ({ ...prev, robots: [...prev.robots, robot] }));
-  }, [state.robots.length]);
+  }, [state.robots]);
 
   const updateRobotPosition = useCallback((id: string, position: Position) => {
     setState((prev) => ({
@@ -199,15 +205,20 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const cornerX = alliance === 'red' ? 50 : 550;
-      const cornerY = 550;
+      const spacing = 25;
+      const columns = 3;
+      const padding = 60;
+      const baseX = alliance === 'red'
+        ? DEFAULT_CONFIG.fieldWidth - padding - (columns - 1) * spacing
+        : padding;
+      const baseY = DEFAULT_CONFIG.fieldHeight - padding;
 
       const depositedBalls = classifier.balls.map((ball, index) => ({
         ...ball,
         isScored: false,
         position: {
-          x: cornerX + (index % 3) * 25,
-          y: cornerY - Math.floor(index / 3) * 25,
+          x: baseX + (index % columns) * spacing,
+          y: baseY - Math.floor(index / columns) * spacing,
         },
       }));
 

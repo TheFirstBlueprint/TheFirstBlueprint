@@ -52,6 +52,7 @@ export interface PlannerConfig {
   fieldHeight: number;
   tileSize: number;
   maxRobots: number;
+  maxRobotsPerAlliance: number;
   maxBallsPerRobot: number;
   classifierCapacity: number;
 }
@@ -61,6 +62,7 @@ export const DEFAULT_CONFIG: PlannerConfig = {
   fieldHeight: 600,
   tileSize: 100, // Field is 6x6 tiles
   maxRobots: 4,
+  maxRobotsPerAlliance: 2,
   maxBallsPerRobot: 3,
   classifierCapacity: 9,
 };

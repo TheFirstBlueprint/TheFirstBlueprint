@@ -51,6 +51,11 @@ export const RobotElement = ({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect();
+  };
+
   return (
     <div
       className={cn(
@@ -66,6 +71,7 @@ export const RobotElement = ({
         zIndex: isSelected ? 50 : 20,
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
     >
       {/* Robot body */}
       <div

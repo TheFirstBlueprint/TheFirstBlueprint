@@ -1,4 +1,4 @@
-import { Ball } from '@/types/planner';
+import { Alliance, Ball } from '@/types/planner';
 import { cn } from '@/lib/utils';
 
 interface BallElementProps {
@@ -7,7 +7,9 @@ interface BallElementProps {
   onRemove: () => void;
   fieldBounds: { width: number; height: number };
   checkRobotCollision: (x: number, y: number) => string | null;
+  checkClassifierDrop: (clientX: number, clientY: number) => Alliance | null;
   onCollectByRobot: (robotId: string) => void;
+  onScoreToClassifier: (ballId: string, alliance: Alliance) => void;
 }
 
 const BALL_SIZE = 20;
@@ -17,7 +19,9 @@ export const BallElement = ({
   onPositionChange,
   fieldBounds,
   checkRobotCollision,
+  checkClassifierDrop,
   onCollectByRobot,
+  onScoreToClassifier,
 }: BallElementProps) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,6 +44,12 @@ export const BallElement = ({
       document.removeEventListener('mouseup', handleMouseUp);
 
       // Check for robot collision on drop
+      const classifierTarget = checkClassifierDrop(upEvent.clientX, upEvent.clientY);
+      if (classifierTarget) {
+        onScoreToClassifier(ball.id, classifierTarget);
+        return;
+      }
+
       const dx = upEvent.clientX - startX;
       const dy = upEvent.clientY - startY;
       const finalX = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.width - BALL_SIZE / 2, startPosX + dx));
