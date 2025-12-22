@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FTC Decode Field Planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root{ --field:600px; --goal:120px; }
+*{ box-sizing:border-box; }
+body{
+  margin:0; font-family:system-ui,Arial,sans-serif;
+  background:#0f172a; color:#e5e7eb; height:100vh;
+  display:flex; flex-direction:column;
+}
+header{ padding:10px 16px; background:#020617; border-bottom:1px solid #1e293b; }
+main{ flex:1; display:grid; grid-template-columns:220px 1fr 220px; gap:10px; padding:10px; }
+.panel{ background:#020617; border:1px solid #1e293b; border-radius:12px; padding:10px; }
+button{ width:100%; padding:8px; margin-bottom:6px; background:#1e293b; color:#e5e7eb; border:none; border-radius:8px; cursor:pointer; }
+button:hover{ background:#334155; }
+#field-container{ display:flex; align-items:center; justify-content:center; }
+#field{ position:relative; width:var(--field); height:var(--field); border:4px solid #94a3b8; background:#020617; overflow:hidden; }
+#field::before{
+  content:""; position:absolute; inset:0;
+  background:url('https://preview.redd.it/xsjhmvxpoonf1.png') center/contain no-repeat;
+  transform:rotate(90deg); z-index:0;
+}
+.goal{ position:absolute; width:0; height:0; z-index:5; pointer-events:none; }
+.goal.blue{ top:0; left:0; border-top:var(--goal) solid #2563eb; border-right:var(--goal) solid transparent; }
+.goal.red{ top:0; right:0; border-top:var(--goal) solid #dc2626; border-left:var(--goal) solid transparent; }
+.classifier{ position:absolute; top:calc(var(--goal) + 8px); width:22px; display:flex; flex-direction:column; gap:4px; z-index:6; }
+#blueClassifier{ left:10px; }
+#redClassifier{ right:10px; }
+.slot{ width:18px; height:18px; border-radius:50%; }
+.green{ background:#22c55e; }
+.purple{ background:#a855f7; }
+.ball{ position:absolute; width:18px; height:18px; border-radius:50%; cursor:grab; z-index:6; }
+.bot{ position:absolute; width:30px; height:30px; border-radius:6px; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:grab; z-index:7; }
+.bot.blue{ background:#2563eb; color:#020617; }
+.bot.red{ background:#dc2626; color:#020617; }
+.park{ position:absolute; width:30px; height:30px; border:2px dashed #e5e7eb; bottom:10px; z-index:3; }
+#parkBlue{ left:10px; }
+#parkRed{ right:10px; }
+.ink{ position:absolute; width:4px; height:4px; background:white; border-radius:2px; z-index:2; }
+</style>
+</head>
+<body>
+<header><h2>FTC Decode Strategy Planner (2025–26)</h2></header>
+<main>
+  <div class="panel">
+    <h3>Tools</h3>
+    <button onclick="addBall('green')">Add Green Ball</button>
+    <button onclick="addBall('purple')">Add Purple Ball</button>
+    <button onclick="mode='pen'">Pen</button>
+    <button onclick="mode='erase'">Eraser</button>
+    <button onclick="emptyClassifier()">Empty Classifier</button>
+    <button onclick="clearClassifier()">Clear Classifier</button>
+    <button onclick="clearAll()">Clear Everything</button>
+  </div>
+
+  <div id="field-container">
+    <div id="field">
+      <div class="goal blue"></div>
+      <div class="goal red"></div>
+      <div id="blueClassifier" class="classifier"></div>
+      <div id="redClassifier" class="classifier"></div>
+      <div id="parkBlue" class="park"></div>
+      <div id="parkRed" class="park"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p style="font-size:12px">Top-down · FIFO classification · FTC Decode</p>
+  </div>
+</main>
+
+<script>
+const field = document.getElementById('field');
+const blueC = document.getElementById('blueClassifier');
+const redC  = document.getElementById('redClassifier');
+let mode = 'none';
+let counts = { blue:0, red:0 };
+
+function insideGoal(x,y){
+  const g = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--goal'));
+  return (x < g && y < g) || (x > field.clientWidth - g && y < g);
+}
+
+function drag(el){
+  let ox = 0, oy = 0;
+  el.onmousedown = e => {
+    ox = e.offsetX; oy = e.offsetY;
+    document.onmousemove = ev => {
+      let nx = Math.max(0, Math.min(ev.pageX - field.offsetLeft - ox, field.clientWidth - el.offsetWidth));
+      let ny = Math.max(0, Math.min(ev.pageY - field.offsetTop - oy, field.clientHeight - el.offsetHeight));
+      if(el.classList.contains('bot') && insideGoal(nx, ny)) return;
+      el.style.left = nx + 'px';
+      el.style.top  = ny + 'px';
+      if(el.classList.contains('ball')) checkGoal(el);
+    };
+    document.onmouseup = () => document.onmousemove = null;
+  };
+}
+
+function addBall(color){
+  const b = document.createElement('div');
+  b.className = 'ball ' + color;
+  b.dataset.color = color;
+  b.style.left = '290px';
+  b.style.top  = '290px';
+  field.appendChild(b);
+  drag(b);
+}
+
+function checkGoal(ball){
+  if(ball.dataset.locked) return;
+  const g = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--goal'));
+  const x = ball.offsetLeft;
+  const y = ball.offsetTop;
+  if(x < g && y < g) classify(ball, 'blue');
+  if(x > field.clientWidth - g - ball.offsetWidth && y < g) classify(ball, 'red');
+}
+
+function classify(ball, side){
+  if(counts[side] >= 9) return;
+  ball.dataset.locked = '1';
+  ball.remove();
+  const s = document.createElement('div');
+  s.className = 'slot ' + ball.dataset.color;
+  (side === 'blue' ? blueC : redC).appendChild(s);
+  counts[side]++;
+}
+
+function emptyClassifier(){
+  const all = [...blueC.children, ...redC.children];
+  blueC.innerHTML = '';
+  redC.innerHTML = '';
+  counts = { blue:0, red:0 };
+  let i = 0;
+  all.forEach(slot => {
+    const color = slot.classList.contains('green') ? 'green' : 'purple';
+    const b = document.createElement('div');
+    b.className = 'ball ' + color;
+    b.dataset.color = color;
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    b.style.left = (20 + col * 22) + 'px';
+    b.style.top  = (field.clientHeight - 80 + row * 22) + 'px';
+    field.appendChild(b);
+    drag(b);
+    i++;
+  });
+}
+
+function clearClassifier(){
+  blueC.innerHTML = '';
+  redC.innerHTML  = '';
+  counts = { blue:0, red:0 };
+}
+
+function clearAll(){
+  field.querySelectorAll('.ball, .ink').forEach(e => e.remove());
+  clearClassifier();
+}
+
+/* INITIAL BOTS: 2 BLUE, 2 RED */
+const bots = [
+  { label:'Ap1', team:'blue', x:60,  y:420 },
+  { label:'Ap2', team:'blue', x:100, y:420 },
+  { label:'Ap1', team:'red',  x:440, y:420 },
+  { label:'Ap2', team:'red',  x:480, y:420 }
+];
+
+bots.forEach(b => {
+  const el = document.createElement('div');
+  el.className = 'bot ' + b.team;
+  el.textContent = b.label;
+  el.style.left = b.x + 'px';
+  el.style.top  = b.y + 'px';
+  field.appendChild(el);
+  drag(el);
+});
+
+field.addEventListener('mousemove', e => {
+  if(mode === 'pen' && e.buttons === 1){
+    const d = document.createElement('div');
+    d.className = 'ink';
+    d.style.left = e.offsetX + 'px';
+    d.style.top  = e.offsetY + 'px';
+    field.appendChild(d);
+  }
+});
+
+field.addEventListener('click', e => {
+  if(mode === 'erase' && e.target.classList.contains('ink')) e.target.remove();
+});
+</script>
+</body>
+</html>

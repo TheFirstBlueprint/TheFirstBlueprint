@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG } from '@/types/planner';
-import fieldImage from '@/assets/ftc-decode-field.png';
+import fieldImage from '@/assets/ftc-decode-field-2.png';
 import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
 import { DrawingCanvas } from './DrawingCanvas';
@@ -10,6 +10,13 @@ import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
 
 const FIELD_SIZE = 600;
+const CLASSIFIER_STACK = {
+  top: 126,
+  sideInset: 18,
+  slotSize: 14,
+  gap: 4,
+  padding: 6,
+};
 
 export const FieldPlanner = () => {
   const {
@@ -42,6 +49,8 @@ export const FieldPlanner = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
+  const redClassifierFieldRef = useRef<HTMLDivElement>(null);
+  const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -77,19 +86,32 @@ export const FieldPlanner = () => {
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
 
+  const isPointInRect = useCallback((rect: DOMRect | undefined, clientX: number, clientY: number) => {
+    if (!rect) return false;
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }, []);
+
   const getClassifierDropTarget = useCallback((clientX: number, clientY: number) => {
     const redRect = redClassifierRef.current?.getBoundingClientRect();
-    if (redRect && clientX >= redRect.left && clientX <= redRect.right && clientY >= redRect.top && clientY <= redRect.bottom) {
+    const redFieldRect = redClassifierFieldRef.current?.getBoundingClientRect();
+    if (
+      isPointInRect(redFieldRect, clientX, clientY) ||
+      isPointInRect(redRect, clientX, clientY)
+    ) {
       return 'red';
     }
 
     const blueRect = blueClassifierRef.current?.getBoundingClientRect();
-    if (blueRect && clientX >= blueRect.left && clientX <= blueRect.right && clientY >= blueRect.top && clientY <= blueRect.bottom) {
+    const blueFieldRect = blueClassifierFieldRef.current?.getBoundingClientRect();
+    if (
+      isPointInRect(blueFieldRect, clientX, clientY) ||
+      isPointInRect(blueRect, clientX, clientY)
+    ) {
       return 'blue';
     }
 
     return null;
-  }, []);
+  }, [isPointInRect]);
 
   const checkRobotCollision = useCallback(
     (x: number, y: number): string | null => {
@@ -212,6 +234,76 @@ export const FieldPlanner = () => {
               onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
             />
           ))}
+
+          {/* Classifier stacks (field overlay) */}
+          <div
+            ref={blueClassifierFieldRef}
+            className="absolute z-10 pointer-events-none"
+            style={{
+              top: CLASSIFIER_STACK.top,
+              left: CLASSIFIER_STACK.sideInset,
+              padding: CLASSIFIER_STACK.padding,
+            }}
+          >
+            <div
+              className="flex flex-col rounded-md bg-background/70 border border-border/60 p-1"
+              style={{ gap: CLASSIFIER_STACK.gap }}
+            >
+              {Array.from({ length: state.classifiers.blue.maxCapacity }, (_, index) => {
+                const ball = state.classifiers.blue.balls[index];
+                return (
+                  <div
+                    key={`blue-slot-${index}`}
+                    className={`rounded-full border border-border/60 ${
+                      ball
+                        ? ball.color === 'green'
+                          ? 'bg-ball-green'
+                          : 'bg-ball-purple'
+                        : 'bg-muted/30'
+                    }`}
+                    style={{
+                      width: CLASSIFIER_STACK.slotSize,
+                      height: CLASSIFIER_STACK.slotSize,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div
+            ref={redClassifierFieldRef}
+            className="absolute z-10 pointer-events-none"
+            style={{
+              top: CLASSIFIER_STACK.top,
+              right: CLASSIFIER_STACK.sideInset,
+              padding: CLASSIFIER_STACK.padding,
+            }}
+          >
+            <div
+              className="flex flex-col rounded-md bg-background/70 border border-border/60 p-1"
+              style={{ gap: CLASSIFIER_STACK.gap }}
+            >
+              {Array.from({ length: state.classifiers.red.maxCapacity }, (_, index) => {
+                const ball = state.classifiers.red.balls[index];
+                return (
+                  <div
+                    key={`red-slot-${index}`}
+                    className={`rounded-full border border-border/60 ${
+                      ball
+                        ? ball.color === 'green'
+                          ? 'bg-ball-green'
+                          : 'bg-ball-purple'
+                        : 'bg-muted/30'
+                    }`}
+                    style={{
+                      width: CLASSIFIER_STACK.slotSize,
+                      height: CLASSIFIER_STACK.slotSize,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
           {/* Robots */}
           {state.robots.map((robot) => (
