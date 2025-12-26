@@ -448,9 +448,9 @@ export const FieldPlanner = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Left Panel */}
-      <div className="w-64 p-4 border-r border-border flex-shrink-0">
+      <div className="w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
         <ToolPanel
           activeTool={activeTool}
           onToolChange={setActiveTool}
@@ -478,7 +478,7 @@ export const FieldPlanner = () => {
       </div>
 
       {/* Field Area */}
-      <div className="flex-1 flex items-center justify-center p-8 field-container">
+      <div className="flex-1 flex items-start justify-center p-8 pt-4 field-container">
         <div
           className="relative bg-card rounded-lg overflow-hidden shadow-2xl border border-border"
           style={{ width: FIELD_SIZE, height: FIELD_SIZE }}
@@ -636,7 +636,7 @@ export const FieldPlanner = () => {
       </div>
 
       {/* Right Panel */}
-      <div className="w-64 p-4 border-l border-border flex-shrink-0">
+      <div className="w-64 p-4 border-l border-border flex-shrink-0 h-full overflow-y-auto">
         <div className="mb-6">
           <h1 className="font-mono text-lg font-semibold text-primary mb-1">
             FTC DECODE
