@@ -13,6 +13,7 @@ import {
   Wand2,
   Download,
   Upload,
+  Users,
 } from 'lucide-react';
 
 interface ToolPanelProps {
@@ -29,6 +30,7 @@ interface ToolPanelProps {
   onClearRobots: () => void;
   onResetField: () => void;
   onSetupField: () => void;
+  onSetupRobots: () => void;
   onExport: () => void;
   onImport: () => void;
 }
@@ -49,6 +51,7 @@ export const ToolPanel = ({
   onClearRobots,
   onResetField,
   onSetupField,
+  onSetupRobots,
   onExport,
   onImport,
 }: ToolPanelProps) => {
@@ -180,6 +183,10 @@ export const ToolPanel = ({
         <button onClick={onSetupField} className="tool-button gap-1">
           <Wand2 className="w-4 h-4" />
           <span className="text-xs">Place Artifacts</span>
+        </button>
+        <button onClick={onSetupRobots} className="tool-button gap-1 mt-2">
+          <Users className="w-4 h-4" />
+          <span className="text-xs">Place Sample Robots</span>
         </button>
       </div>
 

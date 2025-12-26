@@ -8,7 +8,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Goal, Save } from 'lucide-react';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
@@ -30,6 +30,25 @@ const CLASSIFIER_STACK = {
 };
 const MAX_ROBOT_INCHES = 18;
 const MIN_ROBOT_INCHES = 1;
+const CLASSIFIER_ZONE = {
+  blue: { x: 0, y: 126, width: 14, height: 162 },
+  red: { x: FIELD_SIZE - 14, y: 126, width: 14, height: 162 },
+};
+const GOAL_ZONE = {
+  blue: { x: 0, y: 0, width: 120, height: 126 },
+  red: { x: FIELD_SIZE-120, y: 0, width: 120, height: 126 },
+};
+const LEVER_RADIUS = 6;
+const LEVER_POSITION = {
+  blue: {
+    x: CLASSIFIER_ZONE.blue.x + CLASSIFIER_ZONE.blue.width + 20,
+    y: CLASSIFIER_ZONE.blue.y + CLASSIFIER_ZONE.blue.height - 20,
+  },
+  red: {
+    x: CLASSIFIER_ZONE.red.x - CLASSIFIER_ZONE.red.width - 20,
+    y: CLASSIFIER_ZONE.red.y + CLASSIFIER_ZONE.red.height - 20,
+  },
+};
 
 export const FieldPlanner = () => {
   const {
@@ -78,6 +97,10 @@ export const FieldPlanner = () => {
   const [draftRobotId, setDraftRobotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
+  const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
+    red: null,
+    blue: null,
+  });
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
@@ -209,6 +232,68 @@ export const FieldPlanner = () => {
     return () => window.clearInterval(interval);
   }, [timerRunning, timerMode, timerPhase]);
 
+  const getRobotDimensions = useCallback(
+    (robot: typeof state.robots[number]) => {
+      const widthIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.widthIn ?? 18));
+      const heightIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.heightIn ?? 18));
+      return {
+        width: widthIn * pixelsPerInch,
+        height: heightIn * pixelsPerInch,
+      };
+    },
+    [pixelsPerInch]
+  );
+
+  const getRobotRect = useCallback((x: number, y: number, width: number, height: number) => {
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    return {
+      left: x - halfWidth,
+      right: x + halfWidth,
+      top: y - halfHeight,
+      bottom: y + halfHeight,
+    };
+  }, []);
+
+  const isRobotTouchingLever = useCallback(
+    (robot: typeof state.robots[number], lever: { x: number; y: number }) => {
+      const { width, height } = getRobotDimensions(robot);
+      const rect = getRobotRect(robot.position.x, robot.position.y, width, height);
+      const closestX = Math.max(rect.left, Math.min(lever.x, rect.right));
+      const closestY = Math.max(rect.top, Math.min(lever.y, rect.bottom));
+      const dx = lever.x - closestX;
+      const dy = lever.y - closestY;
+      return dx * dx + dy * dy <= LEVER_RADIUS * LEVER_RADIUS;
+    },
+    [getRobotDimensions, getRobotRect]
+  );
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      (['blue', 'red'] as const).forEach((alliance) => {
+        const lever = LEVER_POSITION[alliance];
+        const touchingRobot = state.robots.find((robot) => isRobotTouchingLever(robot, lever));
+        const now = Date.now();
+
+        if (touchingRobot) {
+          if (!leverContactRef.current[alliance]) {
+            leverContactRef.current[alliance] = now;
+            return;
+          }
+          if (now - leverContactRef.current[alliance] >= 2000) {
+            emptyClassifier(alliance);
+            leverContactRef.current[alliance] = null;
+          }
+          return;
+        }
+
+        leverContactRef.current[alliance] = null;
+      });
+    }, 200);
+
+    return () => window.clearInterval(interval);
+  }, [emptyClassifier, isRobotTouchingLever, state.robots]);
+
   const handleFieldClick = () => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
@@ -248,16 +333,96 @@ export const FieldPlanner = () => {
     [state.robots]
   );
 
-  const getRobotDimensions = useCallback(
-    (robot: typeof state.robots[number]) => {
-      const widthIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.widthIn ?? 18));
-      const heightIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.heightIn ?? 18));
+  const rectsOverlap = useCallback(
+    (a: ReturnType<typeof getRobotRect>, b: ReturnType<typeof getRobotRect>) => {
+      return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    },
+    [getRobotRect]
+  );
+
+  const isPointInBlueGoal = useCallback((x: number, y: number) => {
+    return x >= 0 && y >= 0 && x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE;
+  }, []);
+
+  const isPointInRedGoal = useCallback((x: number, y: number) => {
+    const xFromRight = FIELD_SIZE - x;
+    return xFromRight >= 0 && y >= 0 && xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE;
+  }, []);
+
+  const isRectInGoal = useCallback(
+    (rect: ReturnType<typeof getRobotRect>) => {
+      const corners = [
+        { x: rect.left, y: rect.top },
+        { x: rect.right, y: rect.top },
+        { x: rect.left, y: rect.bottom },
+        { x: rect.right, y: rect.bottom },
+      ];
+      return corners.some((corner) => isPointInBlueGoal(corner.x, corner.y) || isPointInRedGoal(corner.x, corner.y));
+    },
+    [isPointInBlueGoal, isPointInRedGoal, getRobotRect]
+  );
+
+  const isRectInClassifier = useCallback(
+    (rect: ReturnType<typeof getRobotRect>) => {
+      const blueZone = getRobotRect(
+        CLASSIFIER_ZONE.blue.x + CLASSIFIER_ZONE.blue.width / 2,
+        CLASSIFIER_ZONE.blue.y + CLASSIFIER_ZONE.blue.height / 2,
+        CLASSIFIER_ZONE.blue.width,
+        CLASSIFIER_ZONE.blue.height
+      );
+      const redZone = getRobotRect(
+        CLASSIFIER_ZONE.red.x + CLASSIFIER_ZONE.red.width / 2,
+        CLASSIFIER_ZONE.red.y + CLASSIFIER_ZONE.red.height / 2,
+        CLASSIFIER_ZONE.red.width,
+        CLASSIFIER_ZONE.red.height
+      );
+      const blueGoal = getRobotRect(
+        GOAL_ZONE.blue.x + GOAL_ZONE.blue.width / 2,
+        GOAL_ZONE.blue.y + GOAL_ZONE.blue.height / 2,
+        GOAL_ZONE.blue.width,
+        GOAL_ZONE.blue.height
+      );
+      const redGoal = getRobotRect(
+        GOAL_ZONE.red.x + GOAL_ZONE.red.width / 2,
+        GOAL_ZONE.red.y + GOAL_ZONE.red.height / 2,
+        GOAL_ZONE.red.width,
+        GOAL_ZONE.red.height
+      );
+      return rectsOverlap(rect, blueZone) || rectsOverlap(rect, redZone) || 
+      rectsOverlap(rect, blueGoal) || rectsOverlap(rect, redGoal);
+    },
+    [getRobotRect, rectsOverlap]
+  );
+
+  const clampToField = useCallback(
+    (pos: { x: number; y: number }, width: number, height: number) => {
+      const halfWidth = width / 2;
+      const halfHeight = height / 2;
       return {
-        width: widthIn * pixelsPerInch,
-        height: heightIn * pixelsPerInch,
+        x: Math.max(halfWidth, Math.min(FIELD_SIZE - halfWidth, pos.x)),
+        y: Math.max(halfHeight, Math.min(FIELD_SIZE - halfHeight, pos.y)),
       };
     },
-    [pixelsPerInch]
+    []
+  );
+
+  const preventBlockedEntry = useCallback(
+    (
+      currentPos: { x: number; y: number },
+      nextPos: { x: number; y: number },
+      width: number,
+      height: number
+    ) => {
+      const currentRect = getRobotRect(currentPos.x, currentPos.y, width, height);
+      const nextRect = getRobotRect(nextPos.x, nextPos.y, width, height);
+      const enteringGoal = !isRectInGoal(currentRect) && isRectInGoal(nextRect);
+      const enteringClassifier = !isRectInClassifier(currentRect) && isRectInClassifier(nextRect);
+      if (enteringGoal || enteringClassifier) {
+        return currentPos;
+      }
+      return nextPos;
+    },
+    [getRobotRect, isRectInClassifier, isRectInGoal]
   );
 
   const handleRandomizeMotif = () => {
@@ -266,8 +431,33 @@ export const FieldPlanner = () => {
   };
 
   const handleSetupField = () => {
+    clearBalls();
     setupFieldArtifacts();
     toast.success('Artifacts placed on spike marks.');
+  };
+
+  const handleSetupRobots = () => {
+    const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
+    const redRobots = state.robots.filter((robot) => robot.alliance === 'red');
+
+    const ensureRobot = (alliance: 'blue' | 'red', index: number, position: { x: number; y: number }) => {
+      const robots = alliance === 'blue' ? blueRobots : redRobots;
+      const existing = robots[index];
+      if (!existing) {
+        addRobot(alliance, position);
+        return;
+      }
+      updateRobotPosition(existing.id, position);
+    };
+
+    const goalInset = 40;
+    const tileOffset = DEFAULT_CONFIG.tileSize;
+    const farInset = 60;
+    ensureRobot('blue', 0, { x: goalInset + tileOffset, y: goalInset + tileOffset });
+    ensureRobot('blue', 1, { x: farInset, y: FIELD_SIZE - farInset });
+    ensureRobot('red', 0, { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset });
+    ensureRobot('red', 1, { x: FIELD_SIZE - farInset, y: FIELD_SIZE - farInset });
+    toast.success('Sample robots positioned.');
   };
 
   const formatTime = (seconds: number) => {
@@ -445,6 +635,8 @@ export const FieldPlanner = () => {
   const handleRobotMove = useCallback(
     (robotId: string, x: number, y: number) => {
       if (isInputLocked) return;
+      const movingRobot = state.robots.find((item) => item.id === robotId);
+      if (!movingRobot) return;
       let nextX = x;
       let nextY = y;
       for (const target of MAGNET_TARGETS) {
@@ -460,17 +652,38 @@ export const FieldPlanner = () => {
         }
       }
 
-      updateRobotPosition(robotId, { x: nextX, y: nextY });
+      const movingDimensions = getRobotDimensions(movingRobot);
+      let candidate = clampToField({ x: nextX, y: nextY }, movingDimensions.width, movingDimensions.height);
+      candidate = preventBlockedEntry(
+        movingRobot.position,
+        candidate,
+        movingDimensions.width,
+        movingDimensions.height
+      );
 
-      const robot = state.robots.find((item) => item.id === robotId);
+      const movingRect = getRobotRect(candidate.x, candidate.y, movingDimensions.width, movingDimensions.height);
+      const collides = state.robots.some((other) => {
+        if (other.id === robotId) return false;
+        const otherDimensions = getRobotDimensions(other);
+        const otherRect = getRobotRect(other.position.x, other.position.y, otherDimensions.width, otherDimensions.height);
+        return rectsOverlap(movingRect, otherRect);
+      });
+
+      if (collides) {
+        candidate = movingRobot.position;
+      }
+
+      updateRobotPosition(robotId, { x: candidate.x, y: candidate.y });
+
+      const robot = movingRobot;
       const modes = robotModes[robotId];
       if (!robot || !modes) return;
 
       if (modes.intake) {
         const inRange = state.balls
           .map((ball) => {
-            const dx = ball.position.x - nextX;
-            const dy = ball.position.y - nextY;
+            const dx = ball.position.x - candidate.x;
+            const dy = ball.position.y - candidate.y;
             return { ball, distance: Math.sqrt(dx * dx + dy * dy) };
           })
           .filter(({ distance }) => {
@@ -486,7 +699,7 @@ export const FieldPlanner = () => {
       }
 
       if (modes.outtake && robot.heldBalls.length > 0) {
-        const goalTarget = getGoalTargetForPosition(nextX, nextY);
+        const goalTarget = getGoalTargetForPosition(candidate.x, candidate.y);
         if (goalTarget && goalTarget === robot.alliance) {
           handleRobotShoot(robotId, 'all');
         }
@@ -497,6 +710,10 @@ export const FieldPlanner = () => {
       handleRobotShoot,
       isInputLocked,
       getRobotDimensions,
+      clampToField,
+      getRobotRect,
+      rectsOverlap,
+      preventBlockedEntry,
       robotCollectBalls,
       robotModes,
       state.balls,
@@ -619,6 +836,7 @@ export const FieldPlanner = () => {
           onClearRobots={clearRobots}
           onResetField={resetField}
           onSetupField={handleSetupField}
+          onSetupRobots={handleSetupRobots}
           onExport={handleExport}
           onImport={handleImport}
         />
