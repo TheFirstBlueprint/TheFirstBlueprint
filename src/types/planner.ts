@@ -12,9 +12,12 @@ export interface Robot {
   id: string;
   position: Position;
   rotation: number; // degrees
-  size: number; // pixels (field scale)
+  widthIn?: number;
+  heightIn?: number;
   alliance: Alliance;
   heldBalls: Ball[];
+  name?: string;
+  imageDataUrl?: string | null;
 }
 
 export interface Ball {

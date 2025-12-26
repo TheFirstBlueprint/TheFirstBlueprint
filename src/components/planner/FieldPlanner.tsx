@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG } from '@/types/planner';
 import fieldImage from '@/assets/ftc-decode-field-2.png';
@@ -8,8 +8,10 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
+import { Save } from 'lucide-react';
 
 const FIELD_SIZE = 600;
+const FIELD_INCHES = 144;
 const GOAL_SIZE = 120;
 const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
@@ -26,6 +28,8 @@ const CLASSIFIER_STACK = {
   gap: 4,
   padding: 6,
 };
+const MAX_ROBOT_INCHES = 18;
+const MIN_ROBOT_INCHES = 1;
 
 export const FieldPlanner = () => {
   const {
@@ -33,6 +37,7 @@ export const FieldPlanner = () => {
     addRobot,
     updateRobotPosition,
     updateRobotRotation,
+    updateRobotDetails,
     removeRobot,
     robotEjectSingle,
     robotEjectAll,
@@ -63,13 +68,23 @@ export const FieldPlanner = () => {
   const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
   const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [robotPanelOpen, setRobotPanelOpen] = useState(false);
+  const [robotDraft, setRobotDraft] = useState<{
+    widthIn: number;
+    heightIn: number;
+    name: string;
+    imageDataUrl: string | null;
+  } | null>(null);
+  const [draftRobotId, setDraftRobotId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const robotImageInputRef = useRef<HTMLInputElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+  const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -136,6 +151,33 @@ export const FieldPlanner = () => {
   }, [state.robots]);
 
   useEffect(() => {
+    if (!selectedRobotId) {
+      setRobotPanelOpen(false);
+      setRobotDraft(null);
+      setDraftRobotId(null);
+      return;
+    }
+
+    if (selectedRobotId === draftRobotId) return;
+    const robot = state.robots.find((item) => item.id === selectedRobotId);
+    if (!robot) {
+      setRobotPanelOpen(false);
+      setRobotDraft(null);
+      setDraftRobotId(null);
+      return;
+    }
+
+    setRobotDraft({
+      widthIn: robot.widthIn ?? 18,
+      heightIn: robot.heightIn ?? 18,
+      name: robot.name ?? '',
+      imageDataUrl: robot.imageDataUrl ?? null,
+    });
+    setRobotPanelOpen(true);
+    setDraftRobotId(selectedRobotId);
+  }, [draftRobotId, selectedRobotId, state.robots]);
+
+  useEffect(() => {
     if (!timerRunning) return;
 
     const interval = window.setInterval(() => {
@@ -169,10 +211,54 @@ export const FieldPlanner = () => {
 
   const handleFieldClick = () => {
     if (isInputLocked) return;
+    if (robotPanelOpen) return;
     setSelectedRobotId(null);
   };
 
   const motifs = ['GPP', 'PGP', 'PPG'];
+  const defaultNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
+    const redRobots = state.robots.filter((robot) => robot.alliance === 'red');
+    blueRobots.forEach((robot, index) => {
+      if (!robot.name) {
+        map.set(robot.id, `${index + 1}`);
+      }
+    });
+    redRobots.forEach((robot, index) => {
+      if (!robot.name) {
+        map.set(robot.id, `${index + 3}`);
+      }
+    });
+    return map;
+  }, [state.robots]);
+
+  const getRobotDisplayName = useCallback(
+    (robot: typeof state.robots[number]) => robot.name?.trim() || defaultNameMap.get(robot.id) || '',
+    [defaultNameMap]
+  );
+
+  const getDefaultNameForRobot = useCallback(
+    (robot: typeof state.robots[number]) => {
+      const allianceRobots = state.robots.filter((item) => item.alliance === robot.alliance);
+      const index = allianceRobots.findIndex((item) => item.id === robot.id);
+      if (index === -1) return '';
+      return robot.alliance === 'blue' ? `${index + 1}` : `${index + 3}`;
+    },
+    [state.robots]
+  );
+
+  const getRobotDimensions = useCallback(
+    (robot: typeof state.robots[number]) => {
+      const widthIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.widthIn ?? 18));
+      const heightIn = Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robot.heightIn ?? 18));
+      return {
+        width: widthIn * pixelsPerInch,
+        height: heightIn * pixelsPerInch,
+      };
+    },
+    [pixelsPerInch]
+  );
 
   const handleRandomizeMotif = () => {
     const next = motifs[Math.floor(Math.random() * motifs.length)];
@@ -282,7 +368,8 @@ export const FieldPlanner = () => {
         const dx = x - robot.position.x;
         const dy = y - robot.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < robot.size / 2 + 10) {
+        const { width, height } = getRobotDimensions(robot);
+        if (distance < Math.max(width, height) / 2 + 10) {
           if (robot.heldBalls.length < DEFAULT_CONFIG.maxBallsPerRobot) {
             return robot.id;
           }
@@ -290,7 +377,7 @@ export const FieldPlanner = () => {
       }
       return null;
     },
-    [state.robots]
+    [getRobotDimensions, state.robots]
   );
 
   const getIntakeRobotForBall = useCallback(
@@ -301,13 +388,14 @@ export const FieldPlanner = () => {
         const dx = x - robot.position.x;
         const dy = y - robot.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < robot.size / 2 + 10 && robot.heldBalls.length < DEFAULT_CONFIG.maxBallsPerRobot) {
+        const { width, height } = getRobotDimensions(robot);
+        if (distance < Math.max(width, height) / 2 + 10 && robot.heldBalls.length < DEFAULT_CONFIG.maxBallsPerRobot) {
           return robot.id;
         }
       }
       return null;
     },
-    [state.robots, robotModes]
+    [getRobotDimensions, robotModes, state.robots]
   );
 
   const getGoalRotation = useCallback((robot: { alliance: 'red' | 'blue'; position: { x: number; y: number } }) => {
@@ -385,7 +473,10 @@ export const FieldPlanner = () => {
             const dy = ball.position.y - nextY;
             return { ball, distance: Math.sqrt(dx * dx + dy * dy) };
           })
-          .filter(({ distance }) => distance < robot.size / 2 + 10)
+          .filter(({ distance }) => {
+            const { width, height } = getRobotDimensions(robot);
+            return distance < Math.max(width, height) / 2 + 10;
+          })
           .sort((a, b) => a.distance - b.distance)
           .map(({ ball }) => ball.id);
 
@@ -405,6 +496,7 @@ export const FieldPlanner = () => {
       getGoalTargetForPosition,
       handleRobotShoot,
       isInputLocked,
+      getRobotDimensions,
       robotCollectBalls,
       robotModes,
       state.balls,
@@ -446,6 +538,68 @@ export const FieldPlanner = () => {
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  const handleRobotImageSelect = () => {
+    robotImageInputRef.current?.click();
+  };
+
+  const handleRobotImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setRobotDraft((prev) => (prev ? { ...prev, imageDataUrl: content } : prev));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRobotSave = () => {
+    if (!selectedRobotId || !robotDraft) return;
+    const name = robotDraft.name.trim();
+    const isNameValid = name === '' || /^\d{1,5}$/.test(name);
+    if (!isNameValid) {
+      toast.error('Robot name must be 1-5 digits.');
+      return;
+    }
+
+    const selected = state.robots.find((robot) => robot.id === selectedRobotId);
+    const proposedName = name || (selected ? getDefaultNameForRobot(selected) : '');
+    const takenNames = state.robots
+      .filter((robot) => robot.id !== selectedRobotId)
+      .map((robot) => getRobotDisplayName(robot));
+    if (takenNames.includes(proposedName)) {
+      toast.error('Robot names must be unique.');
+      return;
+    }
+
+    updateRobotDetails(selectedRobotId, {
+      widthIn: Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robotDraft.widthIn)),
+      heightIn: Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, robotDraft.heightIn)),
+      name,
+      imageDataUrl: robotDraft.imageDataUrl,
+    });
+    setRobotPanelOpen(false);
+    setRobotDraft(null);
+    setDraftRobotId(null);
+    setSelectedRobotId(null);
+  };
+
+  const selectedRobot = selectedRobotId
+    ? state.robots.find((robot) => robot.id === selectedRobotId)
+    : null;
+  const draftName = robotDraft?.name.trim() ?? '';
+  const nameIsValid = draftName === '' || /^\d{1,5}$/.test(draftName);
+  const proposedName = draftName || (selectedRobot ? getDefaultNameForRobot(selectedRobot) : '');
+  const nameIsUnique = selectedRobot
+    ? !state.robots
+        .filter((robot) => robot.id !== selectedRobot.id)
+        .map((robot) => getRobotDisplayName(robot))
+        .includes(proposedName)
+    : true;
+  const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
@@ -594,44 +748,56 @@ export const FieldPlanner = () => {
           </div>
 
           {/* Robots */}
-          {state.robots.map((robot) => (
-            <RobotElement
-              key={robot.id}
-              robot={robot}
-              isSelected={selectedRobotId === robot.id}
-              onSelect={() => setSelectedRobotId(robot.id)}
-              onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
-              onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
-              onRemove={() => {
-                removeRobot(robot.id);
-                setSelectedRobotId(null);
-              }}
-              onEjectSingle={() => handleRobotShoot(robot.id, 'single')}
-              onEjectAll={() => handleRobotShoot(robot.id, 'all')}
-              fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
-              intakeActive={robotModes[robot.id]?.intake ?? false}
-              outtakeActive={robotModes[robot.id]?.outtake ?? false}
-              onToggleIntake={() =>
-                setRobotModes((prev) => ({
-                  ...prev,
-                  [robot.id]: {
-                    intake: !prev[robot.id]?.intake,
-                    outtake: prev[robot.id]?.outtake ?? false,
-                  },
-                }))
-              }
-              onToggleOuttake={() =>
-                setRobotModes((prev) => ({
-                  ...prev,
-                  [robot.id]: {
-                    intake: prev[robot.id]?.intake ?? false,
-                    outtake: !prev[robot.id]?.outtake,
-                  },
-                }))
-              }
-              isLocked={isInputLocked}
-            />
-          ))}
+          {state.robots.map((robot) => {
+            const dimensions = getRobotDimensions(robot);
+            const displayName = getRobotDisplayName(robot);
+            return (
+              <RobotElement
+                key={robot.id}
+                robot={robot}
+                dimensions={dimensions}
+                displayName={displayName}
+                isSelected={selectedRobotId === robot.id}
+                onSelect={() => {
+                  setSelectedRobotId(robot.id);
+                  setRobotPanelOpen(true);
+                }}
+                onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
+                onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
+                onRemove={() => {
+                  removeRobot(robot.id);
+                  setSelectedRobotId(null);
+                  setRobotPanelOpen(false);
+                  setRobotDraft(null);
+                  setDraftRobotId(null);
+                }}
+                onEjectSingle={() => handleRobotShoot(robot.id, 'single')}
+                onEjectAll={() => handleRobotShoot(robot.id, 'all')}
+                fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
+                intakeActive={robotModes[robot.id]?.intake ?? false}
+                outtakeActive={robotModes[robot.id]?.outtake ?? false}
+                onToggleIntake={() =>
+                  setRobotModes((prev) => ({
+                    ...prev,
+                    [robot.id]: {
+                      intake: !prev[robot.id]?.intake,
+                      outtake: prev[robot.id]?.outtake ?? false,
+                    },
+                  }))
+                }
+                onToggleOuttake={() =>
+                  setRobotModes((prev) => ({
+                    ...prev,
+                    [robot.id]: {
+                      intake: prev[robot.id]?.intake ?? false,
+                      outtake: !prev[robot.id]?.outtake,
+                    },
+                  }))
+                }
+                isLocked={isInputLocked}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -646,101 +812,217 @@ export const FieldPlanner = () => {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="panel">
-            <div className="panel-header">Game Timer</div>
-            <div className="text-center text-2xl font-mono text-foreground">
-              {formatTime(timeLeft)}
-            </div>
-            <div className="text-center text-xs text-muted-foreground">
-              {timerMode === 'full'
-                ? timerPhase === 'transition'
-                  ? 'Transition (inputs locked)'
-                  : timerPhase === 'idle'
-                    ? 'Idle'
-                    : `Phase: ${timerPhase}`
-                : timerMode.toUpperCase()}
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              <button
-                onClick={() => handleTimerModeChange('full')}
-                className={`tool-button ${timerMode === 'full' ? 'active' : ''}`}
-                title="Full game"
-              >
-                <span className="text-xs font-mono">Full</span>
-              </button>
-              <button
-                onClick={() => handleTimerModeChange('auton')}
-                className={`tool-button ${timerMode === 'auton' ? 'active' : ''}`}
-                title="Auton"
-              >
-                <span className="text-xs font-mono">Auton</span>
-              </button>
-              <button
-                onClick={() => handleTimerModeChange('teleop')}
-                className={`tool-button ${timerMode === 'teleop' ? 'active' : ''}`}
-                title="Teleop"
-              >
-                <span className="text-xs font-mono">Teleop</span>
-              </button>
-            </div>
-            <button
-              onClick={handleTimerToggle}
-              className="tool-button mt-2 w-full"
-              title={timerRunning ? 'Pause timer' : 'Start timer'}
-            >
-              {timerRunning ? 'Pause' : 'Start'}
-            </button>
-          </div>
-          <div className="panel">
-            <div className="panel-header">Motif</div>
-            <div className="grid grid-cols-3 gap-2">
-              {motifs.map((option) => (
+        {robotPanelOpen && selectedRobot && robotDraft ? (
+          <div
+            className="space-y-4"
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              if (canSaveRobot) {
+                handleRobotSave();
+              }
+            }}
+          >
+            <div className="panel">
+              <div className="panel-header flex items-center justify-between">
+                <span>Robot Settings</span>
                 <button
-                  key={option}
-                  onClick={() => setMotif(option)}
-                  className={`tool-button ${motif === option ? 'active' : ''}`}
-                  title={`Set motif ${option}`}
+                  onClick={handleRobotSave}
+                  className="tool-button !p-1"
+                  title="Save robot settings"
+                  disabled={!canSaveRobot}
                 >
-                  <span className="text-xs font-mono">{option}</span>
+                  <Save className="w-4 h-4" />
                 </button>
-              ))}
+              </div>
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <div>
+                  <label className="block mb-1 text-xs text-foreground">Width (inches)</label>
+                  <input
+                    type="number"
+                    min={MIN_ROBOT_INCHES}
+                    max={MAX_ROBOT_INCHES}
+                    step={0.5}
+                    value={robotDraft.widthIn}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      if (Number.isNaN(next)) return;
+                      setRobotDraft((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              widthIn: Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, next)),
+                            }
+                          : prev
+                      );
+                    }}
+                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-xs text-foreground">Height (inches)</label>
+                  <input
+                    type="number"
+                    min={MIN_ROBOT_INCHES}
+                    max={MAX_ROBOT_INCHES}
+                    step={0.5}
+                    value={robotDraft.heightIn}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      if (Number.isNaN(next)) return;
+                      setRobotDraft((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              heightIn: Math.min(MAX_ROBOT_INCHES, Math.max(MIN_ROBOT_INCHES, next)),
+                            }
+                          : prev
+                      );
+                    }}
+                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-xs text-foreground">Robot Name (1-5 digits)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\\d*"
+                    value={robotDraft.name}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      if (next === '' || /^\d{0,5}$/.test(next)) {
+                        setRobotDraft((prev) => (prev ? { ...prev, name: next } : prev));
+                      }
+                    }}
+                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                  />
+                  {!nameIsValid && (
+                    <p className="mt-1 text-xs text-destructive">Name must be 1-5 digits.</p>
+                  )}
+                  {nameIsValid && !nameIsUnique && (
+                    <p className="mt-1 text-xs text-destructive">Name must be unique.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block mb-1 text-xs text-foreground">Robot Image</label>
+                  <button
+                    onClick={handleRobotImageSelect}
+                    className="tool-button w-full"
+                    title="Import robot image"
+                  >
+                    {robotDraft.imageDataUrl ? 'Change Image' : 'Import Image'}
+                  </button>
+                  <input
+                    ref={robotImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleRobotImageChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleRandomizeMotif}
-              className="tool-button mt-2 w-full"
-              title="Randomize motif"
-            >
-              Randomize
-            </button>
           </div>
-          <div ref={redClassifierRef}>
-            <ClassifierDisplay
-              classifier={state.classifiers.red}
-              motif={motif}
-              onEmpty={() => emptyClassifier('red')}
-            />
-          </div>
-          <div ref={blueClassifierRef}>
-            <ClassifierDisplay
-              classifier={state.classifiers.blue}
-              motif={motif}
-              onEmpty={() => emptyClassifier('blue')}
-            />
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="space-y-4">
+              <div className="panel">
+                <div className="panel-header">Game Timer</div>
+                <div className="text-center text-2xl font-mono text-foreground">
+                  {formatTime(timeLeft)}
+                </div>
+                <div className="text-center text-xs text-muted-foreground">
+                  {timerMode === 'full'
+                    ? timerPhase === 'transition'
+                      ? 'Transition (inputs locked)'
+                      : timerPhase === 'idle'
+                        ? 'Idle'
+                        : `Phase: ${timerPhase}`
+                    : timerMode.toUpperCase()}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  <button
+                    onClick={() => handleTimerModeChange('full')}
+                    className={`tool-button ${timerMode === 'full' ? 'active' : ''}`}
+                    title="Full game"
+                  >
+                    <span className="text-xs font-mono">Full</span>
+                  </button>
+                  <button
+                    onClick={() => handleTimerModeChange('auton')}
+                    className={`tool-button ${timerMode === 'auton' ? 'active' : ''}`}
+                    title="Auton"
+                  >
+                    <span className="text-xs font-mono">Auton</span>
+                  </button>
+                  <button
+                    onClick={() => handleTimerModeChange('teleop')}
+                    className={`tool-button ${timerMode === 'teleop' ? 'active' : ''}`}
+                    title="Teleop"
+                  >
+                    <span className="text-xs font-mono">Teleop</span>
+                  </button>
+                </div>
+                <button
+                  onClick={handleTimerToggle}
+                  className="tool-button mt-2 w-full"
+                  title={timerRunning ? 'Pause timer' : 'Start timer'}
+                >
+                  {timerRunning ? 'Pause' : 'Start'}
+                </button>
+              </div>
+              <div className="panel">
+                <div className="panel-header">Motif</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {motifs.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setMotif(option)}
+                      className={`tool-button ${motif === option ? 'active' : ''}`}
+                      title={`Set motif ${option}`}
+                    >
+                      <span className="text-xs font-mono">{option}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleRandomizeMotif}
+                  className="tool-button mt-2 w-full"
+                  title="Randomize motif"
+                >
+                  Randomize
+                </button>
+              </div>
+              <div ref={redClassifierRef}>
+                <ClassifierDisplay
+                  classifier={state.classifiers.red}
+                  motif={motif}
+                  onEmpty={() => emptyClassifier('red')}
+                />
+              </div>
+              <div ref={blueClassifierRef}>
+                <ClassifierDisplay
+                  classifier={state.classifiers.blue}
+                  motif={motif}
+                  onEmpty={() => emptyClassifier('blue')}
+                />
+              </div>
+            </div>
 
-        <div className="mt-6 panel">
-          <div className="panel-header">Instructions</div>
-          <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• Drag robots & balls to position</li>
-            <li>• Drop balls on robots to collect</li>
-            <li>• Click robot for controls</li>
-            <li>• I/O to toggle intake/outtake</li>
-            <li>• Use pen to draw paths</li>
-            <li>• Export to save strategy</li>
-          </ul>
-        </div>
+            <div className="mt-6 panel">
+              <div className="panel-header">Instructions</div>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>Drag robots & balls to position</li>
+                <li>Drop balls on robots to collect</li>
+                <li>Click robot for controls</li>
+                <li>I/O to toggle intake/outtake</li>
+                <li>Use pen to draw paths</li>
+                <li>Export to save strategy</li>
+              </ul>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

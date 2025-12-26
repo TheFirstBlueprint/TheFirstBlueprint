@@ -62,9 +62,12 @@ export const useFieldState = () => {
       id: generateId(),
       position: position || { x: 300, y: 450 },
       rotation: 0,
-      size: 75, // ~3/4 of a tile
+      widthIn: 18,
+      heightIn: 18,
       alliance,
       heldBalls: [],
+      name: '',
+      imageDataUrl: null,
     };
 
     setState((prev) => ({ ...prev, robots: [...prev.robots, robot] }));
@@ -92,6 +95,13 @@ export const useFieldState = () => {
     setState((prev) => ({
       ...prev,
       robots: prev.robots.filter((r) => r.id !== id),
+    }));
+  }, []);
+
+  const updateRobotDetails = useCallback((id: string, updates: Partial<Robot>) => {
+    setState((prev) => ({
+      ...prev,
+      robots: prev.robots.map((r) => (r.id === id ? { ...r, ...updates } : r)),
     }));
   }, []);
 
@@ -407,6 +417,7 @@ export const useFieldState = () => {
     addRobot,
     updateRobotPosition,
     updateRobotRotation,
+    updateRobotDetails,
     removeRobot,
     robotCollectBall,
     robotCollectBalls,

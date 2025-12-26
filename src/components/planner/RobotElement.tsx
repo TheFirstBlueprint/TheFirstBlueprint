@@ -4,6 +4,8 @@ import { RotateCw, ChevronUp, Trash2 } from 'lucide-react';
 
 interface RobotElementProps {
   robot: Robot;
+  dimensions: { width: number; height: number };
+  displayName: string;
   isSelected: boolean;
   onSelect: () => void;
   onPositionChange: (x: number, y: number) => void;
@@ -21,6 +23,8 @@ interface RobotElementProps {
 
 export const RobotElement = ({
   robot,
+  dimensions,
+  displayName,
   isSelected,
   onSelect,
   onPositionChange,
@@ -35,6 +39,7 @@ export const RobotElement = ({
   onToggleOuttake,
   isLocked,
 }: RobotElementProps) => {
+  const hasImage = Boolean(robot.imageDataUrl);
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isLocked) return;
@@ -48,8 +53,10 @@ export const RobotElement = ({
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      const newX = Math.max(robot.size / 2, Math.min(fieldBounds.width - robot.size / 2, startPosX + dx));
-      const newY = Math.max(robot.size / 2, Math.min(fieldBounds.height - robot.size / 2, startPosY + dy));
+      const halfWidth = dimensions.width / 2;
+      const halfHeight = dimensions.height / 2;
+      const newX = Math.max(halfWidth, Math.min(fieldBounds.width - halfWidth, startPosX + dx));
+      const newY = Math.max(halfHeight, Math.min(fieldBounds.height - halfHeight, startPosY + dy));
       onPositionChange(newX, newY);
     };
 
@@ -75,10 +82,10 @@ export const RobotElement = ({
         'transition-shadow duration-200'
       )}
       style={{
-        left: robot.position.x - robot.size / 2,
-        top: robot.position.y - robot.size / 2,
-        width: robot.size,
-        height: robot.size,
+        left: robot.position.x - dimensions.width / 2,
+        top: robot.position.y - dimensions.height / 2,
+        width: dimensions.width,
+        height: dimensions.height,
         transform: `rotate(${robot.rotation}deg)`,
         zIndex: isSelected ? 50 : 20,
       }}
@@ -88,16 +95,33 @@ export const RobotElement = ({
       {/* Robot body */}
       <div
         className={cn(
-          'w-full h-full rounded-md border-2 flex items-center justify-center',
+          'w-full h-full rounded-md border-2 flex items-center justify-center overflow-hidden',
           'transition-all duration-200',
-          robot.alliance === 'red'
-            ? 'bg-alliance-red/80 border-alliance-red'
-            : 'bg-alliance-blue/80 border-alliance-blue',
+          hasImage
+            ? 'bg-transparent border-transparent'
+            : robot.alliance === 'red'
+              ? 'bg-alliance-red/80 border-alliance-red'
+              : 'bg-alliance-blue/80 border-alliance-blue',
           isSelected && (robot.alliance === 'red' ? 'glow-alliance-red' : 'glow-alliance-blue')
         )}
       >
-        {/* Orientation indicator */}
-        <ChevronUp className="w-6 h-6 text-foreground/90" />
+        {hasImage ? (
+          <>
+            <div className="absolute inset-0">
+              <img
+                src={robot.imageDataUrl ?? undefined}
+                alt={displayName || 'Robot'}
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <ChevronUp className="w-6 h-6 text-foreground/90 -mt-1" />
+            <span className="text-xs font-mono text-foreground/90">{displayName}</span>
+          </div>
+        )}
 
         {/* Ball count indicator */}
         {robot.heldBalls.length > 0 && (
@@ -109,6 +133,14 @@ export const RobotElement = ({
           </div>
         )}
       </div>
+      {hasImage && displayName && (
+        <div
+          className="absolute left-1/2 top-full mt-1 text-xs font-mono text-foreground/90"
+          style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
+        >
+          {displayName}
+        </div>
+      )}
 
       {/* Controls (shown when selected) */}
       {isSelected && (
