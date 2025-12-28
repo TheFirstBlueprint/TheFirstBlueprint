@@ -1,6 +1,6 @@
 import { Robot } from '@/types/planner';
 import { cn } from '@/lib/utils';
-import { RotateCw, ChevronUp, Trash2 } from 'lucide-react';
+import { RotateCw, ChevronUp, Trash2, Pencil } from 'lucide-react';
 
 interface RobotElementProps {
   robot: Robot;
@@ -10,6 +10,7 @@ interface RobotElementProps {
   onSelect: () => void;
   onPositionChange: (x: number, y: number) => void;
   onRotate: (delta: number) => void;
+  onEdit: () => void;
   onRemove: () => void;
   onEjectSingle: () => void;
   onEjectAll: () => void;
@@ -18,6 +19,7 @@ interface RobotElementProps {
   outtakeActive: boolean;
   onToggleIntake: () => void;
   onToggleOuttake: () => void;
+  onRemoveHeldBall: (ballId: string) => void;
   isLocked: boolean;
 }
 
@@ -29,6 +31,7 @@ export const RobotElement = ({
   onSelect,
   onPositionChange,
   onRotate,
+  onEdit,
   onRemove,
   onEjectSingle,
   onEjectAll,
@@ -37,6 +40,7 @@ export const RobotElement = ({
   outtakeActive,
   onToggleIntake,
   onToggleOuttake,
+  onRemoveHeldBall,
   isLocked,
 }: RobotElementProps) => {
   const hasImage = Boolean(robot.imageDataUrl);
@@ -133,6 +137,31 @@ export const RobotElement = ({
           </div>
         )}
       </div>
+      {robot.heldBalls.length > 0 && (
+        <div
+          className="absolute top-1/2 -right-4 flex flex-col gap-1"
+          style={{ transform: `translateY(-50%) rotate(-${robot.rotation}deg)` }}
+        >
+          {robot.heldBalls.map((ball, index) => (
+            <button
+              key={ball.id}
+              type="button"
+              className={cn(
+                'w-3 h-3 rounded-full border border-border',
+                ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple',
+                index === 0 && 'ring-2 ring-yellow-400'
+              )}
+              title="Remove ball"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isLocked) {
+                  onRemoveHeldBall(ball.id);
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
       {hasImage && displayName && (
         <div
           className="absolute left-1/2 top-full mt-1 text-xs font-mono text-foreground/90"
@@ -149,18 +178,25 @@ export const RobotElement = ({
           style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-15); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-45); }}
             className="tool-button !p-1"
             title="Rotate left"
           >
             <RotateCw className="w-3 h-3 scale-x-[-1]" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(15); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(45); }}
             className="tool-button !p-1"
             title="Rotate right"
           >
             <RotateCw className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(); }}
+            className="tool-button !p-1"
+            title="Edit robot"
+          >
+            <Pencil className="w-3 h-3" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleIntake(); }}
@@ -172,18 +208,18 @@ export const RobotElement = ({
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleOuttake(); }}
             className={cn('tool-button !p-1', outtakeActive && 'active')}
-            title="Toggle outtake (O)"
+            title="Toggle rapid fire (K)"
           >
-            O
+            K
           </button>
           {robot.heldBalls.length > 0 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
                 className="tool-button !p-1 text-ball-green"
-                title="Eject one ball"
+                title="Shoot one ball (O)"
               >
-                1
+                O
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}

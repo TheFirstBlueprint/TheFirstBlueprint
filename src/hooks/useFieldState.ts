@@ -188,6 +188,16 @@ export const useFieldState = () => {
     });
   }, []);
 
+  const removeRobotBall = useCallback((robotId: string, ballId: string) => {
+    setState((prev) => ({
+      ...prev,
+      robots: prev.robots.map((robot) => {
+        if (robot.id !== robotId) return robot;
+        return { ...robot, heldBalls: robot.heldBalls.filter((ball) => ball.id !== ballId) };
+      }),
+    }));
+  }, []);
+
   // Robot ejects single ball to classifier
   const robotEjectSingle = useCallback((robotId: string) => {
     setState((prev) => {
@@ -421,6 +431,7 @@ export const useFieldState = () => {
     removeRobot,
     robotCollectBall,
     robotCollectBalls,
+    removeRobotBall,
     robotEjectSingle,
     robotEjectAll,
     // Ball

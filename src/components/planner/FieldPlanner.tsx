@@ -8,7 +8,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Save } from 'lucide-react';
+import { Goal, Save, X } from 'lucide-react';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
@@ -62,6 +62,7 @@ export const FieldPlanner = () => {
     robotEjectAll,
     robotCollectBall,
     robotCollectBalls,
+    removeRobotBall,
     addBall,
     updateBallPosition,
     removeBall,
@@ -88,6 +89,7 @@ export const FieldPlanner = () => {
   const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [robotPanelOpen, setRobotPanelOpen] = useState(false);
+  const [classifierEmptying, setClassifierEmptying] = useState({ red: false, blue: false });
   const [robotDraft, setRobotDraft] = useState<{
     widthIn: number;
     heightIn: number;
@@ -108,6 +110,47 @@ export const FieldPlanner = () => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+
+  const rotateSelectedRobot = useCallback(
+    (delta: number) => {
+      if (!selectedRobotId) return;
+      const robot = state.robots.find((item) => item.id === selectedRobotId);
+      if (!robot) return;
+      updateRobotRotation(selectedRobotId, robot.rotation + delta);
+    },
+    [selectedRobotId, state.robots, updateRobotRotation]
+  );
+
+  const getGoalRotation = useCallback((robot: { alliance: 'red' | 'blue'; position: { x: number; y: number } }) => {
+    const targetX = robot.alliance === 'blue' ? 0 : FIELD_SIZE;
+    const targetY = 0;
+    const dx = targetX - robot.position.x;
+    const dy = targetY - robot.position.y;
+    return (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+  }, []);
+
+  const handleRobotShoot = useCallback(
+    (robotId: string, mode: 'single' | 'all') => {
+      if (isInputLocked) return;
+      const robot = state.robots.find((item) => item.id === robotId);
+      if (!robot || robot.heldBalls.length === 0) return;
+
+      const originalRotation = robot.rotation;
+      const targetRotation = getGoalRotation(robot);
+      updateRobotRotation(robotId, targetRotation);
+
+      if (mode === 'single') {
+        robotEjectSingle(robotId);
+      } else {
+        robotEjectAll(robotId);
+      }
+
+      window.setTimeout(() => {
+        updateRobotRotation(robotId, originalRotation);
+      }, 250);
+    },
+    [getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.robots, updateRobotRotation]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -131,6 +174,14 @@ export const FieldPlanner = () => {
         case 'e':
           setActiveTool('eraser');
           break;
+        case 'arrowleft':
+          e.preventDefault();
+          rotateSelectedRobot(-15);
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          rotateSelectedRobot(15);
+          break;
         case 'i':
           if (selectedRobotId) {
             setRobotModes((prev) => ({
@@ -143,6 +194,11 @@ export const FieldPlanner = () => {
           }
           break;
         case 'o':
+          if (selectedRobotId) {
+            handleRobotShoot(selectedRobotId, 'single');
+          }
+          break;
+        case 'k':
           if (selectedRobotId) {
             setRobotModes((prev) => ({
               ...prev,
@@ -161,7 +217,7 @@ export const FieldPlanner = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isInputLocked, selectedRobotId]);
+  }, [handleRobotShoot, isInputLocked, rotateSelectedRobot, selectedRobotId]);
 
   useEffect(() => {
     setRobotModes((prev) => {
@@ -181,6 +237,7 @@ export const FieldPlanner = () => {
       return;
     }
 
+    if (!robotPanelOpen) return;
     if (selectedRobotId === draftRobotId) return;
     const robot = state.robots.find((item) => item.id === selectedRobotId);
     if (!robot) {
@@ -196,9 +253,8 @@ export const FieldPlanner = () => {
       name: robot.name ?? '',
       imageDataUrl: robot.imageDataUrl ?? null,
     });
-    setRobotPanelOpen(true);
     setDraftRobotId(selectedRobotId);
-  }, [draftRobotId, selectedRobotId, state.robots]);
+  }, [draftRobotId, robotPanelOpen, selectedRobotId, state.robots]);
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -273,6 +329,11 @@ export const FieldPlanner = () => {
       (['blue', 'red'] as const).forEach((alliance) => {
         const lever = LEVER_POSITION[alliance];
         const touchingRobot = state.robots.find((robot) => isRobotTouchingLever(robot, lever));
+        const isTouching = Boolean(touchingRobot);
+        setClassifierEmptying((prev) => {
+          if (prev[alliance] === isTouching) return prev;
+          return { ...prev, [alliance]: isTouching };
+        });
         const now = Date.now();
 
         if (touchingRobot) {
@@ -280,7 +341,7 @@ export const FieldPlanner = () => {
             leverContactRef.current[alliance] = now;
             return;
           }
-          if (now - leverContactRef.current[alliance] >= 2000) {
+          if (now - leverContactRef.current[alliance] >= 1000) {
             emptyClassifier(alliance);
             leverContactRef.current[alliance] = null;
           }
@@ -588,37 +649,6 @@ export const FieldPlanner = () => {
     [getRobotDimensions, robotModes, state.robots]
   );
 
-  const getGoalRotation = useCallback((robot: { alliance: 'red' | 'blue'; position: { x: number; y: number } }) => {
-    const targetX = robot.alliance === 'blue' ? 0 : FIELD_SIZE;
-    const targetY = 0;
-    const dx = targetX - robot.position.x;
-    const dy = targetY - robot.position.y;
-    return (Math.atan2(dy, dx) * 180) / Math.PI + 90;
-  }, []);
-
-  const handleRobotShoot = useCallback(
-    (robotId: string, mode: 'single' | 'all') => {
-      if (isInputLocked) return;
-      const robot = state.robots.find((item) => item.id === robotId);
-      if (!robot || robot.heldBalls.length === 0) return;
-
-      const originalRotation = robot.rotation;
-      const targetRotation = getGoalRotation(robot);
-      updateRobotRotation(robotId, targetRotation);
-
-      if (mode === 'single') {
-        robotEjectSingle(robotId);
-      } else {
-        robotEjectAll(robotId);
-      }
-
-      window.setTimeout(() => {
-        updateRobotRotation(robotId, originalRotation);
-      }, 250);
-    },
-    [getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.robots, updateRobotRotation]
-  );
-
   const handleBallMove = useCallback(
     (ballId: string, x: number, y: number) => {
       if (isInputLocked) return;
@@ -773,6 +803,29 @@ export const FieldPlanner = () => {
     e.target.value = '';
   };
 
+  const handleRobotPanelOpen = useCallback(
+    (robotId: string) => {
+      const robot = state.robots.find((item) => item.id === robotId);
+      if (!robot) return;
+      setSelectedRobotId(robotId);
+      setRobotDraft({
+        widthIn: robot.widthIn ?? 18,
+        heightIn: robot.heightIn ?? 18,
+        name: robot.name ?? '',
+        imageDataUrl: robot.imageDataUrl ?? null,
+      });
+      setRobotPanelOpen(true);
+      setDraftRobotId(robotId);
+    },
+    [state.robots]
+  );
+
+  const handleRobotPanelClose = () => {
+    setRobotPanelOpen(false);
+    setRobotDraft(null);
+    setDraftRobotId(null);
+  };
+
   const handleRobotSave = () => {
     if (!selectedRobotId || !robotDraft) return;
     const name = robotDraft.name.trim();
@@ -864,6 +917,16 @@ export const FieldPlanner = () => {
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             draggable={false}
           />
+          {classifierEmptying.blue && (
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-300 text-yellow-900 text-xs font-mono flex items-center justify-center border border-yellow-500 shadow">
+              o
+            </div>
+          )}
+          {classifierEmptying.red && (
+            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-300 text-yellow-900 text-xs font-mono flex items-center justify-center border border-yellow-500 shadow">
+              o
+            </div>
+          )}
 
           {/* Drawing Canvas (beneath elements) */}
           <DrawingCanvas
@@ -978,22 +1041,21 @@ export const FieldPlanner = () => {
                 isSelected={selectedRobotId === robot.id}
                 onSelect={() => {
                   setSelectedRobotId(robot.id);
-                  setRobotPanelOpen(true);
                 }}
                 onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
                 onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
+                onEdit={() => handleRobotPanelOpen(robot.id)}
                 onRemove={() => {
                   removeRobot(robot.id);
                   setSelectedRobotId(null);
-                  setRobotPanelOpen(false);
-                  setRobotDraft(null);
-                  setDraftRobotId(null);
+                  handleRobotPanelClose();
                 }}
                 onEjectSingle={() => handleRobotShoot(robot.id, 'single')}
                 onEjectAll={() => handleRobotShoot(robot.id, 'all')}
                 fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
                 intakeActive={robotModes[robot.id]?.intake ?? false}
                 outtakeActive={robotModes[robot.id]?.outtake ?? false}
+                onRemoveHeldBall={(ballId) => removeRobotBall(robot.id, ballId)}
                 onToggleIntake={() =>
                   setRobotModes((prev) => ({
                     ...prev,
@@ -1044,14 +1106,23 @@ export const FieldPlanner = () => {
             <div className="panel">
               <div className="panel-header flex items-center justify-between">
                 <span>Robot Settings</span>
-                <button
-                  onClick={handleRobotSave}
-                  className="tool-button !p-1"
-                  title="Save robot settings"
-                  disabled={!canSaveRobot}
-                >
-                  <Save className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleRobotPanelClose}
+                    className="tool-button !p-1"
+                    title="Close robot settings"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleRobotSave}
+                    className="tool-button !p-1"
+                    title="Save robot settings"
+                    disabled={!canSaveRobot}
+                  >
+                    <Save className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="space-y-3 text-xs text-muted-foreground">
                 <div>
@@ -1234,7 +1305,9 @@ export const FieldPlanner = () => {
                 <li>Drag robots & balls to position</li>
                 <li>Drop balls on robots to collect</li>
                 <li>Click robot for controls</li>
-                <li>I/O to toggle intake/outtake</li>
+                <li>Arrow keys rotate selected robot</li>
+                <li>I to toggle intake, K for rapid fire</li>
+                <li>O to shoot one ball</li>
                 <li>Use pen to draw paths</li>
                 <li>Export to save strategy</li>
               </ul>
