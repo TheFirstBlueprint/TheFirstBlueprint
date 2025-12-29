@@ -712,18 +712,6 @@ export const FieldPlanner = () => {
         movingDimensions.height
       );
 
-      const movingRect = getRobotRect(candidate.x, candidate.y, movingDimensions.width, movingDimensions.height);
-      const collides = state.robots.some((other) => {
-        if (other.id === robotId) return false;
-        const otherDimensions = getRobotDimensions(other);
-        const otherRect = getRobotRect(other.position.x, other.position.y, otherDimensions.width, otherDimensions.height);
-        return rectsOverlap(movingRect, otherRect);
-      });
-
-      if (collides) {
-        candidate = movingRobot.position;
-      }
-
       updateRobotPosition(robotId, { x: candidate.x, y: candidate.y });
 
       const robot = movingRobot;
