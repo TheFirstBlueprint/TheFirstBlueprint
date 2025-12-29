@@ -220,13 +220,7 @@ export const FieldPlanner = () => {
           break;
         case 'k':
           if (selectedRobotId) {
-            setRobotModes((prev) => ({
-              ...prev,
-              [selectedRobotId]: {
-                intake: prev[selectedRobotId]?.intake ?? false,
-                outtake: !prev[selectedRobotId]?.outtake,
-              },
-            }));
+            handleRobotShoot(selectedRobotId, 'all');
           }
           break;
         case 'l':
@@ -1095,7 +1089,6 @@ export const FieldPlanner = () => {
                 onEjectAll={() => handleRobotShoot(robot.id, 'all')}
                 fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
                 intakeActive={robotModes[robot.id]?.intake ?? false}
-                outtakeActive={robotModes[robot.id]?.outtake ?? false}
                 onRemoveHeldBall={(ballId) => removeRobotBall(robot.id, ballId)}
                 onCycleBalls={() => cycleRobotBalls(robot.id)}
                 onToggleIntake={() =>
@@ -1104,15 +1097,6 @@ export const FieldPlanner = () => {
                     [robot.id]: {
                       intake: !prev[robot.id]?.intake,
                       outtake: prev[robot.id]?.outtake ?? false,
-                    },
-                  }))
-                }
-                onToggleOuttake={() =>
-                  setRobotModes((prev) => ({
-                    ...prev,
-                    [robot.id]: {
-                      intake: prev[robot.id]?.intake ?? false,
-                      outtake: !prev[robot.id]?.outtake,
                     },
                   }))
                 }
@@ -1352,7 +1336,7 @@ export const FieldPlanner = () => {
                 <li>Drop balls on robots to collect</li>
                 <li>Click robot for controls</li>
                 <li>Arrow keys rotate selected robot</li>
-                <li>I to toggle intake, K for rapid fire</li>
+                <li>I to toggle intake, K to shoot all balls</li>
                 <li>O to shoot one ball</li>
                 <li>L to cycle held balls</li>
                 <li>Use pen to draw paths</li>

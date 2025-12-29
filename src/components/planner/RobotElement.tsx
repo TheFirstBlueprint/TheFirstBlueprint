@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Robot } from '@/types/planner';
 import { cn } from '@/lib/utils';
 import { RotateCw, ChevronUp, Trash2, Pencil } from 'lucide-react';
@@ -16,9 +17,7 @@ interface RobotElementProps {
   onEjectAll: () => void;
   fieldBounds: { width: number; height: number };
   intakeActive: boolean;
-  outtakeActive: boolean;
   onToggleIntake: () => void;
-  onToggleOuttake: () => void;
   onCycleBalls: () => void;
   onRemoveHeldBall: (ballId: string) => void;
   isLocked: boolean;
@@ -38,37 +37,41 @@ export const RobotElement = ({
   onEjectAll,
   fieldBounds,
   intakeActive,
-  outtakeActive,
   onToggleIntake,
-  onToggleOuttake,
   onCycleBalls,
   onRemoveHeldBall,
   isLocked,
 }: RobotElementProps) => {
+  const positionRef = useRef(robot.position);
+  const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
   const hasImage = Boolean(robot.imageDataUrl);
+  useEffect(() => {
+    positionRef.current = robot.position;
+  }, [robot.position.x, robot.position.y]);
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isLocked) return;
     onSelect();
 
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startPosX = robot.position.x;
-    const startPosY = robot.position.y;
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+      if (!lastMouseRef.current) return;
+      const dx = moveEvent.clientX - lastMouseRef.current.x;
+      const dy = moveEvent.clientY - lastMouseRef.current.y;
+      const basePosition = positionRef.current;
       const halfWidth = dimensions.width / 2;
       const halfHeight = dimensions.height / 2;
-      const newX = Math.max(halfWidth, Math.min(fieldBounds.width - halfWidth, startPosX + dx));
-      const newY = Math.max(halfHeight, Math.min(fieldBounds.height - halfHeight, startPosY + dy));
+      const newX = Math.max(halfWidth, Math.min(fieldBounds.width - halfWidth, basePosition.x + dx));
+      const newY = Math.max(halfHeight, Math.min(fieldBounds.height - halfHeight, basePosition.y + dy));
       onPositionChange(newX, newY);
+      lastMouseRef.current = { x: moveEvent.clientX, y: moveEvent.clientY };
     };
 
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      lastMouseRef.current = null;
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -207,9 +210,9 @@ export const RobotElement = ({
             I
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleOuttake(); }}
-            className={cn('tool-button !p-1', outtakeActive && 'active')}
-            title="Toggle rapid fire (K)"
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}
+            className="tool-button !p-1"
+            title="Shoot all balls (K)"
           >
             K
           </button>
@@ -223,22 +226,13 @@ export const RobotElement = ({
             </button>
           )}
           {robot.heldBalls.length > 0 && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
-                className="tool-button !p-1 text-ball-green"
-                title="Shoot one ball (O)"
-              >
-                O
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}
-                className="tool-button !p-1 text-ball-purple"
-                title="Eject all balls"
-              >
-                ★
-              </button>
-            </>
+            <button
+              onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
+              className="tool-button !p-1 text-ball-green"
+              title="Shoot one ball (O)"
+            >
+              O
+            </button>
           )}
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(); }}
@@ -252,3 +246,4 @@ export const RobotElement = ({
     </div>
   );
 };
+
