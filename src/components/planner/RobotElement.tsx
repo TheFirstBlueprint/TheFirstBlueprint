@@ -19,6 +19,7 @@ interface RobotElementProps {
   outtakeActive: boolean;
   onToggleIntake: () => void;
   onToggleOuttake: () => void;
+  onCycleBalls: () => void;
   onRemoveHeldBall: (ballId: string) => void;
   isLocked: boolean;
 }
@@ -40,6 +41,7 @@ export const RobotElement = ({
   outtakeActive,
   onToggleIntake,
   onToggleOuttake,
+  onCycleBalls,
   onRemoveHeldBall,
   isLocked,
 }: RobotElementProps) => {
@@ -148,8 +150,7 @@ export const RobotElement = ({
               type="button"
               className={cn(
                 'w-3 h-3 rounded-full border border-border',
-                ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple',
-                index === 0 && 'ring-2 ring-yellow-400'
+                ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
               )}
               title="Remove ball"
               onClick={(e) => {
@@ -212,6 +213,15 @@ export const RobotElement = ({
           >
             K
           </button>
+          {robot.heldBalls.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); if (!isLocked) onCycleBalls(); }}
+              className="tool-button !p-1"
+              title="Cycle balls (L)"
+            >
+              L
+            </button>
+          )}
           {robot.heldBalls.length > 0 && (
             <>
               <button

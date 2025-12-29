@@ -63,11 +63,13 @@ export const FieldPlanner = () => {
     robotCollectBall,
     robotCollectBalls,
     removeRobotBall,
+    cycleRobotBalls,
     addBall,
     updateBallPosition,
     removeBall,
     scoreBallToClassifier,
     emptyClassifier,
+    popClassifierBall,
     setupFieldArtifacts,
     addDrawing,
     removeDrawing,
@@ -103,6 +105,11 @@ export const FieldPlanner = () => {
     red: null,
     blue: null,
   });
+  const manualClassifierEmptyingRef = useRef({ red: false, blue: false });
+  const manualEmptyingTimeoutRef = useRef<{ red: number | null; blue: number | null }>({
+    red: null,
+    blue: null,
+  });
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
@@ -120,6 +127,19 @@ export const FieldPlanner = () => {
     },
     [selectedRobotId, state.robots, updateRobotRotation]
   );
+
+  const handleClassifierAction = useCallback((alliance: 'red' | 'blue', action: () => void) => {
+    manualClassifierEmptyingRef.current[alliance] = true;
+    setClassifierEmptying((prev) => ({ ...prev, [alliance]: true }));
+    if (manualEmptyingTimeoutRef.current[alliance]) {
+      window.clearTimeout(manualEmptyingTimeoutRef.current[alliance]);
+    }
+    manualEmptyingTimeoutRef.current[alliance] = window.setTimeout(() => {
+      manualClassifierEmptyingRef.current[alliance] = false;
+      setClassifierEmptying((prev) => ({ ...prev, [alliance]: false }));
+    }, 1000);
+    action();
+  }, []);
 
   const getGoalRotation = useCallback((robot: { alliance: 'red' | 'blue'; position: { x: number; y: number } }) => {
     const targetX = robot.alliance === 'blue' ? 0 : FIELD_SIZE;
@@ -209,6 +229,11 @@ export const FieldPlanner = () => {
             }));
           }
           break;
+        case 'l':
+          if (selectedRobotId) {
+            cycleRobotBalls(selectedRobotId);
+          }
+          break;
         case 'escape':
           setSelectedRobotId(null);
           break;
@@ -217,7 +242,7 @@ export const FieldPlanner = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRobotShoot, isInputLocked, rotateSelectedRobot, selectedRobotId]);
+  }, [cycleRobotBalls, handleRobotShoot, isInputLocked, rotateSelectedRobot, selectedRobotId]);
 
   useEffect(() => {
     setRobotModes((prev) => {
@@ -330,9 +355,11 @@ export const FieldPlanner = () => {
         const lever = LEVER_POSITION[alliance];
         const touchingRobot = state.robots.find((robot) => isRobotTouchingLever(robot, lever));
         const isTouching = Boolean(touchingRobot);
+        const isManual = manualClassifierEmptyingRef.current[alliance];
         setClassifierEmptying((prev) => {
-          if (prev[alliance] === isTouching) return prev;
-          return { ...prev, [alliance]: isTouching };
+          const next = isTouching || isManual;
+          if (prev[alliance] === next) return prev;
+          return { ...prev, [alliance]: next };
         });
         const now = Date.now();
 
@@ -826,6 +853,20 @@ export const FieldPlanner = () => {
     setDraftRobotId(null);
   };
 
+  const handleClassifierEmpty = useCallback(
+    (alliance: 'red' | 'blue') => {
+      handleClassifierAction(alliance, () => emptyClassifier(alliance));
+    },
+    [emptyClassifier, handleClassifierAction]
+  );
+
+  const handleClassifierPop = useCallback(
+    (alliance: 'red' | 'blue') => {
+      handleClassifierAction(alliance, () => popClassifierBall(alliance));
+    },
+    [handleClassifierAction, popClassifierBall]
+  );
+
   const handleRobotSave = () => {
     if (!selectedRobotId || !robotDraft) return;
     const name = robotDraft.name.trim();
@@ -1056,6 +1097,7 @@ export const FieldPlanner = () => {
                 intakeActive={robotModes[robot.id]?.intake ?? false}
                 outtakeActive={robotModes[robot.id]?.outtake ?? false}
                 onRemoveHeldBall={(ballId) => removeRobotBall(robot.id, ballId)}
+                onCycleBalls={() => cycleRobotBalls(robot.id)}
                 onToggleIntake={() =>
                   setRobotModes((prev) => ({
                     ...prev,
@@ -1287,14 +1329,18 @@ export const FieldPlanner = () => {
                 <ClassifierDisplay
                   classifier={state.classifiers.red}
                   motif={motif}
-                  onEmpty={() => emptyClassifier('red')}
+                  onEmpty={() => handleClassifierEmpty('red')}
+                  onPopSingle={() => handleClassifierPop('red')}
+                  isEmptying={classifierEmptying.red}
                 />
               </div>
               <div ref={blueClassifierRef}>
                 <ClassifierDisplay
                   classifier={state.classifiers.blue}
                   motif={motif}
-                  onEmpty={() => emptyClassifier('blue')}
+                  onEmpty={() => handleClassifierEmpty('blue')}
+                  onPopSingle={() => handleClassifierPop('blue')}
+                  isEmptying={classifierEmptying.blue}
                 />
               </div>
             </div>
@@ -1308,6 +1354,7 @@ export const FieldPlanner = () => {
                 <li>Arrow keys rotate selected robot</li>
                 <li>I to toggle intake, K for rapid fire</li>
                 <li>O to shoot one ball</li>
+                <li>L to cycle held balls</li>
                 <li>Use pen to draw paths</li>
                 <li>Export to save strategy</li>
               </ul>

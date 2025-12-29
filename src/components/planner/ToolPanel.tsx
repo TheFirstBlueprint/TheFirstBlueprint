@@ -8,6 +8,7 @@ import {
   Eraser,
   Circle,
   Square,
+  RectangleHorizontal,
   Trash2,
   RotateCcw,
   Wand2,
@@ -55,7 +56,13 @@ export const ToolPanel = ({
   onExport,
   onImport,
 }: ToolPanelProps) => {
-  const isDrawTool = activeTool === 'pen' || activeTool === 'dotted' || activeTool === 'arrow';
+  const isDrawTool =
+    activeTool === 'pen' ||
+    activeTool === 'dotted' ||
+    activeTool === 'arrow' ||
+    activeTool === 'box' ||
+    activeTool === 'rectangle' ||
+    activeTool === 'circle';
 
   return (
     <div className="flex flex-col gap-4">
@@ -90,6 +97,27 @@ export const ToolPanel = ({
             title="Arrow line (A)"
           >
             <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onToolChange('box')}
+            className={cn('tool-button', activeTool === 'box' && 'active')}
+            title="Box"
+          >
+            <Square className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onToolChange('rectangle')}
+            className={cn('tool-button', activeTool === 'rectangle' && 'active')}
+            title="Rectangle"
+          >
+            <RectangleHorizontal className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onToolChange('circle')}
+            className={cn('tool-button', activeTool === 'circle' && 'active')}
+            title="Circle"
+          >
+            <Circle className="w-4 h-4" />
           </button>
           <button
             onClick={() => onToolChange('eraser')}

@@ -282,6 +282,18 @@ export const useFieldState = () => {
     });
   }, []);
 
+  const cycleRobotBalls = useCallback((robotId: string) => {
+    setState((prev) => ({
+      ...prev,
+      robots: prev.robots.map((robot) => {
+        if (robot.id !== robotId || robot.heldBalls.length < 2) return robot;
+        const last = robot.heldBalls[robot.heldBalls.length - 1];
+        const rest = robot.heldBalls.slice(0, -1);
+        return { ...robot, heldBalls: [last, ...rest] };
+      }),
+    }));
+  }, []);
+
   // Empty classifier to field corner
   const emptyClassifier = useCallback((alliance: Alliance) => {
     setState((prev) => {
@@ -311,6 +323,42 @@ export const useFieldState = () => {
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: [] },
+        },
+      };
+    });
+  }, []);
+
+  // Pop one ball from classifier to field corner
+  const popClassifierBall = useCallback((alliance: Alliance) => {
+    setState((prev) => {
+      const classifier = prev.classifiers[alliance];
+      if (classifier.balls.length === 0) return prev;
+
+      const columns = 3;
+      const zoneStartX = alliance === 'red' ? DEFAULT_CONFIG.fieldWidth - HUMAN_PLAYER_ZONE_SIZE : 0;
+      const zoneStartY = DEFAULT_CONFIG.fieldHeight - HUMAN_PLAYER_ZONE_SIZE;
+      const baseX = alliance === 'red'
+        ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (columns - 1) * HUMAN_PLAYER_SPACING
+        : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
+      const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
+      const index = classifier.balls.length - 1;
+      const ball = classifier.balls[index];
+      const poppedBall: Ball = {
+        ...ball,
+        isScored: false,
+        heldByRobotId: null,
+        position: {
+          x: baseX + (index % columns) * HUMAN_PLAYER_SPACING,
+          y: baseY - Math.floor(index / columns) * HUMAN_PLAYER_SPACING,
+        },
+      };
+
+      return {
+        ...prev,
+        balls: [...prev.balls, poppedBall],
+        classifiers: {
+          ...prev.classifiers,
+          [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
         },
       };
     });
@@ -434,6 +482,7 @@ export const useFieldState = () => {
     removeRobotBall,
     robotEjectSingle,
     robotEjectAll,
+    cycleRobotBalls,
     // Ball
     addBall,
     updateBallPosition,
@@ -441,6 +490,7 @@ export const useFieldState = () => {
     scoreBallToClassifier,
     // Classifier
     emptyClassifier,
+    popClassifierBall,
     setupFieldArtifacts,
     // Drawing
     addDrawing,

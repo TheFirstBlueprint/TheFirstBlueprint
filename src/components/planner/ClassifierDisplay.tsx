@@ -6,13 +6,21 @@ interface ClassifierDisplayProps {
   classifier: Classifier;
   motif: string;
   onEmpty: () => void;
+  onPopSingle: () => void;
+  isEmptying: boolean;
 }
 
 const motifToColor = (motif: string) => {
   return motif.split('').map((token) => (token === 'G' ? 'green' : 'purple'));
 };
 
-export const ClassifierDisplay = ({ classifier, motif, onEmpty }: ClassifierDisplayProps) => {
+export const ClassifierDisplay = ({
+  classifier,
+  motif,
+  onEmpty,
+  onPopSingle,
+  isEmptying,
+}: ClassifierDisplayProps) => {
   const columns = 3;
   const rows = Math.ceil(classifier.maxCapacity / columns);
   const slots = Array.from({ length: classifier.maxCapacity }, () => null as Classifier['balls'][number] | null);
@@ -40,7 +48,7 @@ export const ClassifierDisplay = ({ classifier, motif, onEmpty }: ClassifierDisp
   });
 
   return (
-    <div className="panel">
+    <div className={cn('panel', isEmptying && 'bg-yellow-100/60 border border-yellow-200')}>
       <div className="flex items-center justify-between mb-2">
         <span
           className={cn(
@@ -50,17 +58,30 @@ export const ClassifierDisplay = ({ classifier, motif, onEmpty }: ClassifierDisp
         >
           {classifier.alliance.toUpperCase()} Classifier
         </span>
-        <button
-          onClick={onEmpty}
-          disabled={classifier.balls.length === 0}
-          className={cn(
-            'tool-button !p-1',
-            classifier.balls.length === 0 && 'opacity-50 cursor-not-allowed'
-          )}
-          title="Empty classifier"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onPopSingle}
+            disabled={classifier.balls.length === 0}
+            className={cn(
+              'tool-button !p-1',
+              classifier.balls.length === 0 && 'opacity-50 cursor-not-allowed'
+            )}
+            title="Pop one ball"
+          >
+            1
+          </button>
+          <button
+            onClick={onEmpty}
+            disabled={classifier.balls.length === 0}
+            className={cn(
+              'tool-button !p-1',
+              classifier.balls.length === 0 && 'opacity-50 cursor-not-allowed'
+            )}
+            title="Empty classifier"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1">
