@@ -488,23 +488,33 @@ export const FieldPlanner = () => {
     []
   );
 
-  const preventBlockedEntry = useCallback(
+  const resolveSolidOverlap = useCallback(
     (
-      currentPos: { x: number; y: number },
-      nextPos: { x: number; y: number },
+      pos: { x: number; y: number },
       width: number,
-      height: number
+      height: number,
+      solids: Array<ReturnType<typeof getRobotRect>>
     ) => {
-      const currentRect = getRobotRect(currentPos.x, currentPos.y, width, height);
-      const nextRect = getRobotRect(nextPos.x, nextPos.y, width, height);
-      const enteringGoal = !isRectInGoal(currentRect) && isRectInGoal(nextRect);
-      const enteringClassifier = !isRectInClassifier(currentRect) && isRectInClassifier(nextRect);
-      if (enteringGoal || enteringClassifier) {
-        return currentPos;
-      }
+      let nextPos = pos;
+      solids.forEach((solid) => {
+        const rect = getRobotRect(nextPos.x, nextPos.y, width, height);
+        if (!rectsOverlap(rect, solid)) return;
+
+        const overlapX = Math.min(rect.right, solid.right) - Math.max(rect.left, solid.left);
+        const overlapY = Math.min(rect.bottom, solid.bottom) - Math.max(rect.top, solid.top);
+        if (overlapX <= 0 || overlapY <= 0) return;
+
+        if (overlapX < overlapY) {
+          const pushX = rect.right > solid.right ? overlapX : -overlapX;
+          nextPos = { ...nextPos, x: nextPos.x + pushX };
+        } else {
+          const pushY = rect.bottom > solid.bottom ? overlapY : -overlapY;
+          nextPos = { ...nextPos, y: nextPos.y + pushY };
+        }
+      });
       return nextPos;
     },
-    [getRobotRect, isRectInClassifier, isRectInGoal]
+    [getRobotRect, rectsOverlap]
   );
 
   const handleRandomizeMotif = () => {
@@ -705,13 +715,35 @@ export const FieldPlanner = () => {
 
       const movingDimensions = getRobotDimensions(movingRobot);
       let candidate = clampToField({ x: nextX, y: nextY }, movingDimensions.width, movingDimensions.height);
-      candidate = preventBlockedEntry(
-        movingRobot.position,
-        candidate,
-        movingDimensions.width,
-        movingDimensions.height
-      );
+      const solidRects = [
+        getRobotRect(
+          CLASSIFIER_ZONE.blue.x + CLASSIFIER_ZONE.blue.width / 2,
+          CLASSIFIER_ZONE.blue.y + CLASSIFIER_ZONE.blue.height / 2,
+          CLASSIFIER_ZONE.blue.width,
+          CLASSIFIER_ZONE.blue.height
+        ),
+        getRobotRect(
+          CLASSIFIER_ZONE.red.x + CLASSIFIER_ZONE.red.width / 2,
+          CLASSIFIER_ZONE.red.y + CLASSIFIER_ZONE.red.height / 2,
+          CLASSIFIER_ZONE.red.width,
+          CLASSIFIER_ZONE.red.height
+        ),
+        getRobotRect(
+          GOAL_ZONE.blue.x + GOAL_ZONE.blue.width / 2,
+          GOAL_ZONE.blue.y + GOAL_ZONE.blue.height / 2,
+          GOAL_ZONE.blue.width,
+          GOAL_ZONE.blue.height
+        ),
+        getRobotRect(
+          GOAL_ZONE.red.x + GOAL_ZONE.red.width / 2,
+          GOAL_ZONE.red.y + GOAL_ZONE.red.height / 2,
+          GOAL_ZONE.red.width,
+          GOAL_ZONE.red.height
+        ),
+      ];
+      candidate = resolveSolidOverlap(candidate, movingDimensions.width, movingDimensions.height, solidRects);
 
+      candidate = clampToField(candidate, movingDimensions.width, movingDimensions.height);
       updateRobotPosition(robotId, { x: candidate.x, y: candidate.y });
 
       const robot = movingRobot;
@@ -752,7 +784,7 @@ export const FieldPlanner = () => {
       clampToField,
       getRobotRect,
       rectsOverlap,
-      preventBlockedEntry,
+      resolveSolidOverlap,
       robotCollectBalls,
       robotModes,
       state.balls,
