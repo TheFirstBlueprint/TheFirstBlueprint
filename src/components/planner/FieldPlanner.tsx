@@ -12,7 +12,8 @@ import { Goal, Save, X } from 'lucide-react';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
-const GOAL_SIZE = 120;
+const GOAL_WIDTH = 120;
+const GOAL_HEIGHT = 156;
 const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 120;
@@ -35,8 +36,8 @@ const CLASSIFIER_ZONE = {
   red: { x: FIELD_SIZE - 14, y: 126, width: 14, height: 162 },
 };
 const GOAL_ZONE = {
-  blue: { x: 0, y: 0, width: 120, height: 126 },
-  red: { x: FIELD_SIZE-120, y: 0, width: 120, height: 126 },
+  blue: { x: 0, y: 0, width: GOAL_WIDTH, height: GOAL_HEIGHT },
+  red: { x: FIELD_SIZE - GOAL_WIDTH, y: 0, width: GOAL_WIDTH, height: GOAL_HEIGHT },
 };
 const LEVER_RADIUS = 6;
 const LEVER_POSITION = {
@@ -423,12 +424,26 @@ export const FieldPlanner = () => {
   );
 
   const isPointInBlueGoal = useCallback((x: number, y: number) => {
-    return x >= 0 && y >= 0 && x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE;
+    const { width, height } = GOAL_ZONE.blue;
+    return (
+      x >= 0 &&
+      y >= 0 &&
+      x <= width &&
+      y <= height &&
+      x / width + y / height <= 1
+    );
   }, []);
 
   const isPointInRedGoal = useCallback((x: number, y: number) => {
     const xFromRight = FIELD_SIZE - x;
-    return xFromRight >= 0 && y >= 0 && xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE;
+    const { width, height } = GOAL_ZONE.red;
+    return (
+      xFromRight >= 0 &&
+      y >= 0 &&
+      xFromRight <= width &&
+      y <= height &&
+      xFromRight / width + y / height <= 1
+    );
   }, []);
 
   const isRectInGoal = useCallback(
@@ -517,6 +532,45 @@ export const FieldPlanner = () => {
     [getRobotRect, rectsOverlap]
   );
 
+  const resolveGoalTriangleOverlap = useCallback(
+    (pos: { x: number; y: number }, width: number, height: number) => {
+      let nextPos = pos;
+      const goalWidth = GOAL_ZONE.blue.width;
+      const goalHeight = GOAL_ZONE.blue.height;
+      const invGoalWidth = 1 / goalWidth;
+      const invGoalHeight = 1 / goalHeight;
+      const normalScale = 1 / (invGoalWidth * invGoalWidth + invGoalHeight * invGoalHeight);
+
+      const blueRect = getRobotRect(nextPos.x, nextPos.y, width, height);
+      if (blueRect.left < goalWidth && blueRect.top < goalHeight) {
+        const blueValue = blueRect.left * invGoalWidth + blueRect.top * invGoalHeight;
+        if (blueValue < 1) {
+          const offset = (1 - blueValue) * normalScale;
+          nextPos = {
+            x: nextPos.x + offset * invGoalWidth,
+            y: nextPos.y + offset * invGoalHeight,
+          };
+        }
+      }
+
+      const redRect = getRobotRect(nextPos.x, nextPos.y, width, height);
+      if (redRect.right > FIELD_SIZE - goalWidth && redRect.top < goalHeight) {
+        const redValue =
+          (FIELD_SIZE - redRect.right) * invGoalWidth + redRect.top * invGoalHeight;
+        if (redValue < 1) {
+          const offset = (1 - redValue) * normalScale;
+          nextPos = {
+            x: nextPos.x - offset * invGoalWidth,
+            y: nextPos.y + offset * invGoalHeight,
+          };
+        }
+      }
+
+      return nextPos;
+    },
+    [getRobotRect]
+  );
+
   const handleRandomizeMotif = () => {
     const next = motifs[Math.floor(Math.random() * motifs.length)];
     setMotif(next);
@@ -594,12 +648,19 @@ export const FieldPlanner = () => {
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
 
   const getGoalTargetForPosition = useCallback((x: number, y: number) => {
-    if (x <= GOAL_SIZE && y <= GOAL_SIZE && x + y <= GOAL_SIZE) {
+    const { width, height } = GOAL_ZONE.blue;
+    if (x >= 0 && y >= 0 && x <= width && y <= height && x / width + y / height <= 1) {
       return 'blue';
     }
 
     const xFromRight = FIELD_SIZE - x;
-    if (xFromRight <= GOAL_SIZE && y <= GOAL_SIZE && xFromRight + y <= GOAL_SIZE) {
+    if (
+      xFromRight >= 0 &&
+      y >= 0 &&
+      xFromRight <= width &&
+      y <= height &&
+      xFromRight / width + y / height <= 1
+    ) {
       return 'red';
     }
 
@@ -728,20 +789,9 @@ export const FieldPlanner = () => {
           CLASSIFIER_ZONE.red.width,
           CLASSIFIER_ZONE.red.height
         ),
-        getRobotRect(
-          GOAL_ZONE.blue.x + GOAL_ZONE.blue.width / 2,
-          GOAL_ZONE.blue.y + GOAL_ZONE.blue.height / 2,
-          GOAL_ZONE.blue.width,
-          GOAL_ZONE.blue.height
-        ),
-        getRobotRect(
-          GOAL_ZONE.red.x + GOAL_ZONE.red.width / 2,
-          GOAL_ZONE.red.y + GOAL_ZONE.red.height / 2,
-          GOAL_ZONE.red.width,
-          GOAL_ZONE.red.height
-        ),
       ];
       candidate = resolveSolidOverlap(candidate, movingDimensions.width, movingDimensions.height, solidRects);
+      candidate = resolveGoalTriangleOverlap(candidate, movingDimensions.width, movingDimensions.height);
 
       candidate = clampToField(candidate, movingDimensions.width, movingDimensions.height);
       updateRobotPosition(robotId, { x: candidate.x, y: candidate.y });
@@ -782,9 +832,8 @@ export const FieldPlanner = () => {
       isInputLocked,
       getRobotDimensions,
       clampToField,
-      getRobotRect,
-      rectsOverlap,
       resolveSolidOverlap,
+      resolveGoalTriangleOverlap,
       robotCollectBalls,
       robotModes,
       state.balls,
