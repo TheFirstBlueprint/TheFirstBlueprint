@@ -68,7 +68,7 @@ const DEFAULT_KEYBINDS = {
 type ThemeMode = 'basic' | 'dark' | 'light';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 
-export const FieldPlanner = () => {
+export const FieldPlanner = ({ className }: { className?: string }) => {
   const {
     state,
     addRobot,
@@ -1049,10 +1049,10 @@ export const FieldPlanner = () => {
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
-    <div className="h-screen bg-background flex overflow-hidden">
+    <div className={`h-screen bg-background flex overflow-hidden ${className ?? ''}`}>
       <button
         onClick={handleOpenSettings}
-        className="tool-button fixed top-4 right-4 z-40 w-10 h-10"
+        className="tool-button fixed top-20 right-4 z-40 w-10 h-10"
         title="Settings"
         aria-label="Open settings"
       >
