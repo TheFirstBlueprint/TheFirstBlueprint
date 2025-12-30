@@ -8,7 +8,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Save, X } from 'lucide-react';
+import { Goal, Save, Settings, X } from 'lucide-react';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
@@ -50,6 +50,23 @@ const LEVER_POSITION = {
     y: CLASSIFIER_ZONE.red.y + CLASSIFIER_ZONE.red.height - 20,
   },
 };
+const THEME_STORAGE_KEY = 'planner-theme-mode';
+const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
+const DEFAULT_KEYBINDS = {
+  select: 's',
+  pen: 'p',
+  dotted: 'd',
+  arrow: 'a',
+  eraser: 'e',
+  intake: 'i',
+  outtakeSingle: 'o',
+  outtakeAll: 'k',
+  cycle: 'l',
+  rotateLeft: 'arrowleft',
+  rotateRight: 'arrowright',
+};
+type ThemeMode = 'basic' | 'dark' | 'light';
+type Keybinds = typeof DEFAULT_KEYBINDS;
 
 export const FieldPlanner = () => {
   const {
@@ -91,6 +108,11 @@ export const FieldPlanner = () => {
   const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
   const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('basic');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
+  const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
+  const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [robotPanelOpen, setRobotPanelOpen] = useState(false);
   const [classifierEmptying, setClassifierEmptying] = useState({ red: false, blue: false });
   const [robotDraft, setRobotDraft] = useState<{
@@ -118,6 +140,35 @@ export const FieldPlanner = () => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+
+  const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+    if (storedTheme) {
+      setThemeMode(storedTheme);
+      setDraftThemeMode(storedTheme);
+    }
+
+    const storedKeybinds = window.localStorage.getItem(KEYBINDS_STORAGE_KEY);
+    if (storedKeybinds) {
+      try {
+        const parsed = JSON.parse(storedKeybinds) as Partial<Keybinds>;
+        const merged = { ...DEFAULT_KEYBINDS, ...parsed };
+        setKeybinds(merged);
+        setDraftKeybinds(merged);
+      } catch {
+        setKeybinds(DEFAULT_KEYBINDS);
+        setDraftKeybinds(DEFAULT_KEYBINDS);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-basic', 'theme-dark', 'theme-light');
+    root.classList.add(`theme-${themeMode}`);
+  }, [themeMode]);
 
   const rotateSelectedRobot = useCallback(
     (delta: number) => {
@@ -177,33 +228,36 @@ export const FieldPlanner = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
+      if (e.target instanceof HTMLTextAreaElement) return;
       if (isInputLocked) return;
-      
-      switch (e.key.toLowerCase()) {
-        case 's':
+      if (settingsOpen) return;
+
+      const key = e.key.toLowerCase();
+      switch (key) {
+        case keybinds.select:
           setActiveTool('select');
           break;
-        case 'p':
+        case keybinds.pen:
           setActiveTool('pen');
           break;
-        case 'd':
+        case keybinds.dotted:
           setActiveTool('dotted');
           break;
-        case 'a':
+        case keybinds.arrow:
           setActiveTool('arrow');
           break;
-        case 'e':
+        case keybinds.eraser:
           setActiveTool('eraser');
           break;
-        case 'arrowleft':
+        case keybinds.rotateLeft:
           e.preventDefault();
           rotateSelectedRobot(-15);
           break;
-        case 'arrowright':
+        case keybinds.rotateRight:
           e.preventDefault();
           rotateSelectedRobot(15);
           break;
-        case 'i':
+        case keybinds.intake:
           if (selectedRobotId) {
             setRobotModes((prev) => ({
               ...prev,
@@ -214,17 +268,17 @@ export const FieldPlanner = () => {
             }));
           }
           break;
-        case 'o':
+        case keybinds.outtakeSingle:
           if (selectedRobotId) {
             handleRobotShoot(selectedRobotId, 'single');
           }
           break;
-        case 'k':
+        case keybinds.outtakeAll:
           if (selectedRobotId) {
             handleRobotShoot(selectedRobotId, 'all');
           }
           break;
-        case 'l':
+        case keybinds.cycle:
           if (selectedRobotId) {
             cycleRobotBalls(selectedRobotId);
           }
@@ -237,7 +291,7 @@ export const FieldPlanner = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cycleRobotBalls, handleRobotShoot, isInputLocked, rotateSelectedRobot, selectedRobotId]);
+  }, [cycleRobotBalls, handleRobotShoot, isInputLocked, keybinds, rotateSelectedRobot, selectedRobotId, settingsOpen]);
 
   useEffect(() => {
     setRobotModes((prev) => {
@@ -380,6 +434,7 @@ export const FieldPlanner = () => {
   const handleFieldClick = () => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
+    if (settingsOpen) return;
     setSelectedRobotId(null);
   };
 
@@ -961,6 +1016,24 @@ export const FieldPlanner = () => {
     setSelectedRobotId(null);
   };
 
+  const handleOpenSettings = () => {
+    setDraftThemeMode(themeMode);
+    setDraftKeybinds(keybinds);
+    setSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
+  };
+
+  const handleSaveSettings = () => {
+    setThemeMode(draftThemeMode);
+    setKeybinds(draftKeybinds);
+    window.localStorage.setItem(THEME_STORAGE_KEY, draftThemeMode);
+    window.localStorage.setItem(KEYBINDS_STORAGE_KEY, JSON.stringify(draftKeybinds));
+    setSettingsOpen(false);
+  };
+
   const selectedRobot = selectedRobotId
     ? state.robots.find((robot) => robot.id === selectedRobotId)
     : null;
@@ -977,6 +1050,14 @@ export const FieldPlanner = () => {
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
+      <button
+        onClick={handleOpenSettings}
+        className="tool-button fixed top-4 right-4 z-40 w-10 h-10"
+        title="Settings"
+        aria-label="Open settings"
+      >
+        <Settings className="w-4 h-4" />
+      </button>
       {/* Left Panel */}
       <div className="w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
         <ToolPanel
@@ -1415,6 +1496,98 @@ export const FieldPlanner = () => {
           </>
         )}
       </div>
+
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <div className="panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-mono text-sm uppercase tracking-wider text-muted-foreground">
+                Settings
+              </h2>
+              <button
+                onClick={handleCloseSettings}
+                className="tool-button !p-1"
+                title="Close settings"
+                aria-label="Close settings"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <div className="panel-header">Color Mode</div>
+                <select
+                  value={draftThemeMode}
+                  onChange={(e) => setDraftThemeMode(e.target.value as ThemeMode)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="basic">Basic</option>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="panel-header">Keybinds</div>
+                <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                  {(
+                    [
+                      ['Select Tool', 'select'],
+                      ['Pen Tool', 'pen'],
+                      ['Dotted Tool', 'dotted'],
+                      ['Arrow Tool', 'arrow'],
+                      ['Eraser Tool', 'eraser'],
+                      ['Intake Toggle', 'intake'],
+                      ['Outtake Single', 'outtakeSingle'],
+                      ['Outtake Rapid', 'outtakeAll'],
+                      ['Cycle Held Balls', 'cycle'],
+                      ['Rotate Left', 'rotateLeft'],
+                      ['Rotate Right', 'rotateRight'],
+                    ] as Array<[string, keyof Keybinds]>
+                  ).map(([label, key]) => (
+                    <label key={key} className="flex flex-col gap-1">
+                      <span>{label}</span>
+                      <input
+                        type="text"
+                        value={draftKeybinds[key]}
+                        onChange={(e) =>
+                          setDraftKeybinds((prev) => ({
+                            ...prev,
+                            [key]: normalizeKey(e.target.value),
+                          }))
+                        }
+                        className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                        placeholder="Key"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Use single keys or names like ArrowLeft/ArrowRight.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={handleCloseSettings}
+                className="tool-button"
+                title="Back"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                className="tool-button active"
+                title="Save settings"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
