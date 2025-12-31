@@ -33,6 +33,7 @@ const CLASSIFIER_STACK = {
   gap: 4,
   padding: 6,
 };
+const CLASSIFIER_EXTENSION_OFFSET = 8;
 const MAX_ROBOT_INCHES = 18;
 const MIN_ROBOT_INCHES = 1;
 const CLASSIFIER_ZONE = {
@@ -158,6 +159,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+  const classifierBallIds = useMemo(() => {
+    const ids = new Set<string>();
+    state.classifiers.blue.balls.forEach((ball) => ids.add(ball.id));
+    state.classifiers.red.balls.forEach((ball) => ids.add(ball.id));
+    state.classifiers.blue.extensionBalls.forEach((ball) => ids.add(ball.id));
+    state.classifiers.red.extensionBalls.forEach((ball) => ids.add(ball.id));
+    return ids;
+  }, [state.classifiers]);
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
     if (themeMode === 'dark') return fieldImageDark;
@@ -1384,6 +1393,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
               isLocked={isInputLocked}
               scale={fieldScale}
+              isGhost={classifierBallIds.has(ball.id)}
             />
           ))}
 
@@ -1423,6 +1433,44 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             </div>
           </div>
           <div
+            className="absolute z-10 pointer-events-none"
+            style={{
+              top:
+                CLASSIFIER_STACK.top +
+                CLASSIFIER_STACK.padding * 2 +
+                CLASSIFIER_STACK.slotSize * state.classifiers.blue.maxCapacity +
+                CLASSIFIER_STACK.gap * (state.classifiers.blue.maxCapacity - 1) +
+                CLASSIFIER_EXTENSION_OFFSET,
+              left: CLASSIFIER_STACK.sideInset,
+              padding: CLASSIFIER_STACK.padding,
+            }}
+          >
+            <div
+              className="flex flex-col-reverse rounded-md bg-alliance-blue/20 border border-alliance-blue/50 p-1"
+              style={{ gap: CLASSIFIER_STACK.gap }}
+            >
+              {Array.from({ length: state.classifiers.blue.extensionCapacity }, (_, index) => {
+                const ball = state.classifiers.blue.extensionBalls[index];
+                return (
+                  <div
+                    key={`blue-extension-${index}`}
+                    className={`rounded-full border border-border/60 ${
+                      ball
+                        ? ball.color === 'green'
+                          ? 'bg-ball-green'
+                          : 'bg-ball-purple'
+                        : 'bg-muted/30'
+                    }`}
+                    style={{
+                      width: CLASSIFIER_STACK.slotSize,
+                      height: CLASSIFIER_STACK.slotSize,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div
             ref={redClassifierFieldRef}
             className="absolute z-10 pointer-events-none"
             style={{
@@ -1440,6 +1488,44 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`red-slot-${index}`}
+                    className={`rounded-full border border-border/60 ${
+                      ball
+                        ? ball.color === 'green'
+                          ? 'bg-ball-green'
+                          : 'bg-ball-purple'
+                        : 'bg-muted/30'
+                    }`}
+                    style={{
+                      width: CLASSIFIER_STACK.slotSize,
+                      height: CLASSIFIER_STACK.slotSize,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className="absolute z-10 pointer-events-none"
+            style={{
+              top:
+                CLASSIFIER_STACK.top +
+                CLASSIFIER_STACK.padding * 2 +
+                CLASSIFIER_STACK.slotSize * state.classifiers.red.maxCapacity +
+                CLASSIFIER_STACK.gap * (state.classifiers.red.maxCapacity - 1) +
+                CLASSIFIER_EXTENSION_OFFSET,
+              right: CLASSIFIER_STACK.sideInset,
+              padding: CLASSIFIER_STACK.padding,
+            }}
+          >
+            <div
+              className="flex flex-col-reverse rounded-md bg-alliance-red/20 border border-alliance-red/50 p-1"
+              style={{ gap: CLASSIFIER_STACK.gap }}
+            >
+              {Array.from({ length: state.classifiers.red.extensionCapacity }, (_, index) => {
+                const ball = state.classifiers.red.extensionBalls[index];
+                return (
+                  <div
+                    key={`red-extension-${index}`}
                     className={`rounded-full border border-border/60 ${
                       ball
                         ? ball.color === 'green'

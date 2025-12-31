@@ -108,10 +108,11 @@ const placeBallsInBox = (balls: Ball[], existing: Ball[], alliance: Alliance) =>
 
 const getOtherAlliance = (alliance: Alliance) => (alliance === 'red' ? 'blue' : 'red');
 
-const getOverflowSpawnPosition = () => ({
-  x: DEFAULT_CONFIG.fieldWidth / 2,
-  y: DEFAULT_CONFIG.fieldHeight / 2,
-});
+const getClassifierCapacityLeft = (classifier: FieldState['classifiers'][Alliance]) => {
+  const baseLeft = classifier.maxCapacity - classifier.balls.length;
+  const extensionLeft = classifier.extensionCapacity - classifier.extensionBalls.length;
+  return Math.max(0, baseLeft + extensionLeft);
+};
 
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
@@ -278,12 +279,9 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[targetAlliance];
 
       if (classifier.balls.length >= classifier.maxCapacity) {
-        const overflowBall: Ball = {
-          ...ejectedBall,
-          position: getOverflowSpawnPosition(),
-          isScored: false,
-          heldByRobotId: null,
-        };
+        if (classifier.extensionBalls.length >= classifier.extensionCapacity) {
+          return prev;
+        }
         return {
           ...prev,
           robots: prev.robots.map((r) =>
@@ -291,10 +289,15 @@ export const useFieldState = () => {
               ? { ...r, heldBalls: r.heldBalls.slice(1) }
               : r
           ),
-          balls: [...prev.balls, overflowBall],
-          overflowCounts: {
-            ...prev.overflowCounts,
-            [targetAlliance]: prev.overflowCounts[targetAlliance] + 1,
+          classifiers: {
+            ...prev.classifiers,
+            [targetAlliance]: {
+              ...classifier,
+              extensionBalls: [
+                ...classifier.extensionBalls,
+                { ...ejectedBall, isScored: true, heldByRobotId: null },
+              ],
+            },
           },
         };
       }
@@ -325,23 +328,19 @@ export const useFieldState = () => {
 
       const targetAlliance = robot.alliance;
       const classifier = prev.classifiers[targetAlliance];
-      const availableSpace = classifier.maxCapacity - classifier.balls.length;
-      const ballsToEject = robot.heldBalls.slice(0, Math.max(0, availableSpace));
+      const capacityLeft = getClassifierCapacityLeft(classifier);
+      if (capacityLeft <= 0) return prev;
 
-      const droppedOverflow = robot.heldBalls.length - ballsToEject.length;
-      const overflowBalls = robot.heldBalls
-        .slice(ballsToEject.length)
-        .map((ball) => ({
-          ...ball,
-          position: getOverflowSpawnPosition(),
-          isScored: false,
-          heldByRobotId: null,
-        }));
+      const ballsToEject = robot.heldBalls.slice(0, capacityLeft);
+      const remainingHeld = robot.heldBalls.slice(ballsToEject.length);
+      const baseLeft = classifier.maxCapacity - classifier.balls.length;
+      const toBase = ballsToEject.slice(0, Math.max(0, baseLeft));
+      const toExtension = ballsToEject.slice(toBase.length);
       return {
         ...prev,
         robots: prev.robots.map((r) =>
           r.id === robotId
-            ? { ...r, heldBalls: [] }
+            ? { ...r, heldBalls: remainingHeld }
             : r
         ),
         classifiers: {
@@ -350,14 +349,13 @@ export const useFieldState = () => {
             ...classifier,
             balls: [
               ...classifier.balls,
-              ...ballsToEject.map((b) => ({ ...b, isScored: true, heldByRobotId: null })),
+              ...toBase.map((b) => ({ ...b, isScored: true, heldByRobotId: null })),
+            ],
+            extensionBalls: [
+              ...classifier.extensionBalls,
+              ...toExtension.map((b) => ({ ...b, isScored: true, heldByRobotId: null })),
             ],
           },
-        },
-        balls: [...prev.balls, ...overflowBalls],
-        overflowCounts: {
-          ...prev.overflowCounts,
-          [targetAlliance]: prev.overflowCounts[targetAlliance] + Math.max(0, droppedOverflow),
         },
       };
     });
@@ -371,18 +369,21 @@ export const useFieldState = () => {
 
       if (!ball) return prev;
       if (classifier.balls.length >= classifier.maxCapacity) {
-        const overflowBall: Ball = {
-          ...ball,
-          position: getOverflowSpawnPosition(),
-          isScored: false,
-          heldByRobotId: null,
-        };
+        if (classifier.extensionBalls.length >= classifier.extensionCapacity) {
+          return prev;
+        }
         return {
           ...prev,
-          balls: [...prev.balls.filter((b) => b.id !== ballId), overflowBall],
-          overflowCounts: {
-            ...prev.overflowCounts,
-            [alliance]: prev.overflowCounts[alliance] + 1,
+          balls: prev.balls.filter((b) => b.id !== ballId),
+          classifiers: {
+            ...prev.classifiers,
+            [alliance]: {
+              ...classifier,
+              extensionBalls: [
+                ...classifier.extensionBalls,
+                { ...ball, isScored: true, heldByRobotId: null },
+              ],
+            },
           },
         };
       }
@@ -436,16 +437,10 @@ export const useFieldState = () => {
       const spillPlaced = spillResult.placed;
       const finalRemaining = spillResult.remaining;
       const depositedBalls = [...primaryPlaced, ...spillPlaced];
-      const overflowBalls = finalRemaining.map((ball) => ({
-        ...ball,
-        position: getOverflowSpawnPosition(),
-        isScored: false,
-        heldByRobotId: null,
-      }));
 
       return {
         ...prev,
-        balls: [...prev.balls, ...depositedBalls, ...overflowBalls],
+        balls: [...prev.balls, ...depositedBalls],
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: [] },
@@ -477,16 +472,10 @@ export const useFieldState = () => {
         ? placeBallsInBox(remaining, [...prev.balls, ...primaryPlaced], otherAlliance)
         : { placed: [] as Ball[], remaining };
       const placed = [...primaryPlaced, ...spillResult.placed];
-      const overflowBalls = spillResult.remaining.map((remainingBall) => ({
-        ...remainingBall,
-        position: getOverflowSpawnPosition(),
-        isScored: false,
-        heldByRobotId: null,
-      }));
 
       return {
         ...prev,
-        balls: [...prev.balls, ...placed, ...overflowBalls],
+        balls: [...prev.balls, ...placed],
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
@@ -592,8 +581,8 @@ export const useFieldState = () => {
       ...prev,
       balls: [],
       classifiers: {
-        red: { ...prev.classifiers.red, balls: [] },
-        blue: { ...prev.classifiers.blue, balls: [] },
+        red: { ...prev.classifiers.red, balls: [], extensionBalls: [] },
+        blue: { ...prev.classifiers.blue, balls: [], extensionBalls: [] },
       },
       overflowCounts: {
         red: 0,
@@ -620,8 +609,23 @@ export const useFieldState = () => {
   const importState = useCallback((json: string) => {
     try {
       const parsed = JSON.parse(json) as FieldState;
-      setState({
+      const withClassifiers = {
         ...parsed,
+        classifiers: {
+          red: {
+            ...parsed.classifiers.red,
+            extensionBalls: parsed.classifiers.red.extensionBalls ?? [],
+            extensionCapacity: parsed.classifiers.red.extensionCapacity ?? 6,
+          },
+          blue: {
+            ...parsed.classifiers.blue,
+            extensionBalls: parsed.classifiers.blue.extensionBalls ?? [],
+            extensionCapacity: parsed.classifiers.blue.extensionCapacity ?? 6,
+          },
+        },
+      };
+      setState({
+        ...withClassifiers,
         overflowCounts: parsed.overflowCounts ?? { red: 0, blue: 0 },
       });
       return true;

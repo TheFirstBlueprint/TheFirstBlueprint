@@ -33,6 +33,8 @@ export interface Classifier {
   alliance: Alliance;
   balls: Ball[];
   maxCapacity: number;
+  extensionBalls: Ball[];
+  extensionCapacity: number;
 }
 
 export interface DrawingPath {
@@ -82,8 +84,8 @@ export const createInitialState = (): FieldState => ({
   robots: [],
   balls: [],
   classifiers: {
-    red: { alliance: 'red', balls: [], maxCapacity: 9 },
-    blue: { alliance: 'blue', balls: [], maxCapacity: 9 },
+    red: { alliance: 'red', balls: [], maxCapacity: 9, extensionBalls: [], extensionCapacity: 6 },
+    blue: { alliance: 'blue', balls: [], maxCapacity: 9, extensionBalls: [], extensionCapacity: 6 },
   },
   overflowCounts: {
     red: 0,

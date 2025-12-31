@@ -13,6 +13,7 @@ interface BallElementProps {
   onScoreToClassifier: (ballId: string, alliance: Alliance) => void;
   isLocked: boolean;
   scale: number;
+  isGhost?: boolean;
 }
 
 const BALL_SIZE = 20;
@@ -28,6 +29,7 @@ export const BallElement = ({
   onScoreToClassifier,
   isLocked,
   scale,
+  isGhost,
 }: BallElementProps) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,7 +89,8 @@ export const BallElement = ({
         'hover:scale-110',
         ball.color === 'green'
           ? 'bg-ball-green border-ball-green/50'
-          : 'bg-ball-purple border-ball-purple/50'
+          : 'bg-ball-purple border-ball-purple/50',
+        isGhost && 'ring-2 ring-red-500'
       )}
       style={{
         left: ball.position.x - BALL_SIZE / 2,
