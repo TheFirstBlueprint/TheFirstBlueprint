@@ -14,6 +14,7 @@ import {
   Wand2,
   Download,
   Upload,
+  PieChart,
 } from 'lucide-react';
 
 interface ToolPanelProps {
@@ -69,7 +70,8 @@ export const ToolPanel = ({
     activeTool === 'arrow' ||
     activeTool === 'box' ||
     activeTool === 'rectangle' ||
-    activeTool === 'circle';
+    activeTool === 'circle' ||
+    activeTool === 'arc';
 
   return (
     <div className="flex flex-col gap-4">
@@ -125,6 +127,13 @@ export const ToolPanel = ({
             title="Circle"
           >
             <Circle className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onToolChange('arc')}
+            className={cn('tool-button', activeTool === 'arc' && 'active')}
+            title="Arc"
+          >
+            <PieChart className="w-4 h-4" />
           </button>
           <button
             onClick={() => onToolChange('eraser')}

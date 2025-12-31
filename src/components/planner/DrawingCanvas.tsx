@@ -31,7 +31,7 @@ export const DrawingCanvas = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<Position[]>([]);
-  const isShapeTool = activeTool === 'box' || activeTool === 'rectangle' || activeTool === 'circle';
+  const isShapeTool = activeTool === 'box' || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
   const isDrawTool =
     activeTool === 'pen' || activeTool === 'dotted' || activeTool === 'arrow' || isShapeTool;
 
@@ -58,6 +58,9 @@ export const DrawingCanvas = ({
       const size = Math.max(rawWidth, rawHeight);
       const drawWidth = shape === 'rectangle' ? rawWidth : size;
       const drawHeight = shape === 'rectangle' ? rawHeight : size;
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const chordLength = Math.hypot(dx, dy);
 
       ctx.beginPath();
       ctx.strokeStyle = color;
@@ -66,7 +69,38 @@ export const DrawingCanvas = ({
       ctx.lineJoin = 'round';
       ctx.setLineDash([]);
 
-      if (shape === 'circle') {
+      if (shape === 'arc') {
+        if (chordLength < 1) return;
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
+        const perpX = -dy;
+        const perpY = dx;
+        const centerAX = midX + perpX / 2;
+        const centerAY = midY + perpY / 2;
+        const centerBX = midX - perpX / 2;
+        const centerBY = midY - perpY / 2;
+        const radius = chordLength / Math.SQRT2;
+
+        const startAngleA = Math.atan2(start.y - centerAY, start.x - centerAX);
+        const endAngleA = Math.atan2(end.y - centerAY, end.x - centerAX);
+        const startAngleB = Math.atan2(start.y - centerBY, start.x - centerBX);
+        const endAngleB = Math.atan2(end.y - centerBY, end.x - centerBX);
+
+        const diffA = Math.abs((((endAngleA - startAngleA) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+        const diffB = Math.abs((((endAngleB - startAngleB) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+        const shortestA = diffA > Math.PI ? Math.PI * 2 - diffA : diffA;
+        const shortestB = diffB > Math.PI ? Math.PI * 2 - diffB : diffB;
+
+        const useA = Math.abs(shortestA - Math.PI / 2) <= Math.abs(shortestB - Math.PI / 2);
+        const centerX = useA ? centerAX : centerBX;
+        const centerY = useA ? centerAY : centerBY;
+        const startAngle = useA ? startAngleA : startAngleB;
+        const endAngle = useA ? endAngleA : endAngleB;
+        const rawDiff = ((endAngle - startAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        const anticlockwise = rawDiff < 0;
+
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle, anticlockwise);
+      } else if (shape === 'circle') {
         const radius = drawWidth / 2;
         ctx.arc(minX + radius, minY + radius, radius, 0, Math.PI * 2);
       } else {
@@ -184,13 +218,22 @@ export const DrawingCanvas = ({
         if (drawing.shape && drawing.shape !== 'path') {
           const start = drawing.points[0];
           const end = drawing.points[1];
-          const minX = Math.min(start.x, end.x) - clickRadius;
-          const minY = Math.min(start.y, end.y) - clickRadius;
           const rawWidth = Math.abs(end.x - start.x);
           const rawHeight = Math.abs(end.y - start.y);
           const size = Math.max(rawWidth, rawHeight);
           const drawWidth = drawing.shape === 'rectangle' ? rawWidth : size;
           const drawHeight = drawing.shape === 'rectangle' ? rawHeight : size;
+          const dx = end.x - start.x;
+          const dy = end.y - start.y;
+          const chordLength = Math.hypot(dx, dy);
+          const minX =
+            drawing.shape === 'arc'
+              ? (start.x + end.x) / 2 - chordLength / Math.SQRT2 - clickRadius
+              : Math.min(start.x, end.x) - clickRadius;
+          const minY =
+            drawing.shape === 'arc'
+              ? (start.y + end.y) / 2 - chordLength / Math.SQRT2 - clickRadius
+              : Math.min(start.y, end.y) - clickRadius;
           if (
             point.x >= minX &&
             point.x <= minX + drawWidth + clickRadius * 2 &&

@@ -1,8 +1,8 @@
 export type BallColor = 'green' | 'purple';
 export type Alliance = 'red' | 'blue';
-export type Tool = 'select' | 'pen' | 'dotted' | 'arrow' | 'eraser' | 'box' | 'rectangle' | 'circle';
+export type Tool = 'select' | 'pen' | 'dotted' | 'arrow' | 'eraser' | 'box' | 'rectangle' | 'circle' | 'arc';
 export type DrawingStyle = 'solid' | 'dotted' | 'arrow';
-export type DrawingShape = 'path' | 'box' | 'rectangle' | 'circle';
+export type DrawingShape = 'path' | 'box' | 'rectangle' | 'circle' | 'arc';
 
 export interface Position {
   x: number;
