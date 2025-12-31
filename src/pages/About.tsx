@@ -45,6 +45,37 @@ const About = () => {
               ))}
             </div>
           </section>
+
+          <section className="panel mt-8">
+            <div className="panel-header">Forms</div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Share feedback or report a bug using the forms below.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <a
+                className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
+                href="#"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <h3 className="text-base font-semibold text-foreground">Feedback Form</h3>
+                <p className="text-xs text-muted-foreground">
+                  Tell us what you like or want improved.
+                </p>
+              </a>
+              <a
+                className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
+                href="#"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <h3 className="text-base font-semibold text-foreground">Bug Report Form</h3>
+                <p className="text-xs text-muted-foreground">
+                  Report issues or unexpected behavior.
+                </p>
+              </a>
+            </div>
+          </section>
         </main>
       </div>
     </>

@@ -2,7 +2,9 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG, Robot } from '@/types/planner';
-import fieldImage from '@/assets/ftc-decode-field-2.png';
+import fieldImageBasic from '@/assets/decode_field_B.png';
+import fieldImageDark from '@/assets/decode_field_D.png';
+import fieldImageLight from '@/assets/decode_field_L.png';
 import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
 import { DrawingCanvas } from './DrawingCanvas';
@@ -156,6 +158,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+  const fieldImage = useMemo(() => {
+    if (themeMode === 'light') return fieldImageLight;
+    if (themeMode === 'dark') return fieldImageDark;
+    return fieldImageBasic;
+  }, [themeMode]);
 
   const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
 
