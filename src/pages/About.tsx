@@ -54,7 +54,7 @@ const About = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <a
                 className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
-                href="#"
+                href="https://docs.google.com/forms/d/e/1FAIpQLScuZw-Olh9r-3xb1CchwMov8MTVGyKRlQKF0YCC_CXBm581Zg/viewform?usp=dialog"
                 rel="noreferrer"
                 target="_blank"
               >
@@ -65,7 +65,7 @@ const About = () => {
               </a>
               <a
                 className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
-                href="#"
+                href="https://docs.google.com/forms/d/e/1FAIpQLSfjtssKj7C5Dr80AMW0kl5BnlD3t9F-cb2SVH_KBGnHuM84uw/viewform?usp=dialog"
                 rel="noreferrer"
                 target="_blank"
               >
