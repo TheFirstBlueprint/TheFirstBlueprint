@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
-import { Tool, DEFAULT_CONFIG } from '@/types/planner';
+import { Tool, DEFAULT_CONFIG, Robot } from '@/types/planner';
 import fieldImage from '@/assets/ftc-decode-field-2.png';
 import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
@@ -9,7 +9,8 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Save, X } from 'lucide-react';
+import { Goal, Info, Save, X } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
@@ -57,8 +58,6 @@ const FIELD_SCREEN_RATIO = 0.94;
 const DEFAULT_KEYBINDS = {
   select: 's',
   pen: 'p',
-  dotted: 'd',
-  arrow: 'a',
   eraser: 'e',
   intake: 'i',
   outtakeSingle: 'o',
@@ -70,6 +69,10 @@ const DEFAULT_KEYBINDS = {
 const MAX_SEQUENCE = 10;
 type ThemeMode = 'basic' | 'dark' | 'light';
 type Keybinds = typeof DEFAULT_KEYBINDS;
+type SequenceStep = {
+  positions: Record<string, { x: number; y: number }>;
+  rotations: Record<string, number>;
+};
 
 export const FieldPlanner = ({ className }: { className?: string }) => {
   const {
@@ -115,10 +118,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fieldScale, setFieldScale] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sequenceSteps, setSequenceSteps] = useState<
-    Record<number, { positions: Record<string, { x: number; y: number }>; rotations: Record<string, number> }>
-  >({});
+  const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
   const [sequencePlaying, setSequencePlaying] = useState(false);
+  const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(null);
   const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
@@ -144,6 +146,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   });
   const fieldAreaRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
+  const robotsRef = useRef<Robot[]>([]);
+  const isApplyingSequenceRef = useRef(false);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
@@ -179,6 +183,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     root.classList.remove('theme-basic', 'theme-dark', 'theme-light');
     root.classList.add(`theme-${themeMode}`);
   }, [themeMode]);
+
+  useEffect(() => {
+    robotsRef.current = state.robots;
+  }, [state.robots]);
 
   const updateFieldScale = useCallback(() => {
     const area = fieldAreaRef.current;
@@ -269,74 +277,35 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.robots, updateRobotRotation]
   );
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-      if (e.target instanceof HTMLTextAreaElement) return;
-      if (isInputLocked) return;
-      if (settingsOpen) return;
-
-      const key = e.key.toLowerCase();
-      switch (key) {
-        case keybinds.select:
-          setActiveTool('select');
-          break;
-        case keybinds.pen:
-          setActiveTool('pen');
-          break;
-        case keybinds.dotted:
-          setActiveTool('dotted');
-          break;
-        case keybinds.arrow:
-          setActiveTool('arrow');
-          break;
-        case keybinds.eraser:
-          setActiveTool('eraser');
-          break;
-        case keybinds.rotateLeft:
-          e.preventDefault();
-          rotateSelectedRobot(-15);
-          break;
-        case keybinds.rotateRight:
-          e.preventDefault();
-          rotateSelectedRobot(15);
-          break;
-        case keybinds.intake:
-          if (selectedRobotId) {
-            setRobotModes((prev) => ({
-              ...prev,
-              [selectedRobotId]: {
-                intake: !prev[selectedRobotId]?.intake,
-                outtake: prev[selectedRobotId]?.outtake ?? false,
-              },
-            }));
-          }
-          break;
-        case keybinds.outtakeSingle:
-          if (selectedRobotId) {
-            handleRobotShoot(selectedRobotId, 'single');
-          }
-          break;
-        case keybinds.outtakeAll:
-          if (selectedRobotId) {
-            handleRobotShoot(selectedRobotId, 'all');
-          }
-          break;
-        case keybinds.cycle:
-          if (selectedRobotId) {
-            cycleRobotBalls(selectedRobotId);
-          }
-          break;
-        case 'escape':
-          setSelectedRobotId(null);
-          break;
+  const saveSequenceStep = useCallback(
+    (index: number, robots: Robot[], silent = false) => {
+      if (robots.length === 0) {
+        if (!silent) {
+          toast.error('Add robots before saving a sequence step.');
+        }
+        return;
       }
-    };
+      const positions: Record<string, { x: number; y: number }> = {};
+      const rotations: Record<string, number> = {};
+      robots.forEach((robot) => {
+        positions[robot.id] = { ...robot.position };
+        rotations[robot.id] = robot.rotation;
+      });
+      setSequenceSteps((prev) => ({
+        ...prev,
+        [index]: { positions, rotations },
+      }));
+      if (!silent) {
+        toast.success(`Saved step ${index}.`);
+      }
+    },
+    []
+  );
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cycleRobotBalls, handleRobotShoot, isInputLocked, keybinds, rotateSelectedRobot, selectedRobotId, settingsOpen]);
+  useEffect(() => {
+    if (!selectedSequenceStep || sequencePlaying || isApplyingSequenceRef.current) return;
+    saveSequenceStep(selectedSequenceStep, state.robots, true);
+  }, [saveSequenceStep, selectedSequenceStep, sequencePlaying, state.robots]);
 
   useEffect(() => {
     setRobotModes((prev) => {
@@ -484,25 +453,66 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   };
 
   const motifs = ['GPP', 'PGP', 'PPG'];
-  const handleSequenceSave = useCallback(
+
+  const applySequenceStep = useCallback(
     (index: number) => {
-      if (state.robots.length === 0) {
-        toast.error('Add robots before saving a sequence step.');
+      const step = sequenceSteps[index];
+      if (!step) return;
+      isApplyingSequenceRef.current = true;
+      robotsRef.current.forEach((robot) => {
+        const position = step.positions[robot.id];
+        const rotation = step.rotations[robot.id];
+        if (position) {
+          updateRobotPosition(robot.id, position);
+        }
+        if (rotation !== undefined) {
+          updateRobotRotation(robot.id, rotation);
+        }
+      });
+      window.setTimeout(() => {
+        isApplyingSequenceRef.current = false;
+      }, 0);
+    },
+    [sequenceSteps, updateRobotPosition, updateRobotRotation]
+  );
+
+  const handleSelectSequenceStep = useCallback(
+    (index: number) => {
+      setSelectedSequenceStep(index);
+      if (sequenceSteps[index]) {
+        applySequenceStep(index);
         return;
       }
-      const positions: Record<string, { x: number; y: number }> = {};
-      const rotations: Record<string, number> = {};
-      state.robots.forEach((robot) => {
-        positions[robot.id] = { ...robot.position };
-        rotations[robot.id] = robot.rotation;
-      });
-      setSequenceSteps((prev) => ({
-        ...prev,
-        [index]: { positions, rotations },
-      }));
-      toast.success(`Saved step ${index}.`);
+      saveSequenceStep(index, robotsRef.current, true);
     },
-    [state.robots]
+    [applySequenceStep, saveSequenceStep, sequenceSteps]
+  );
+
+  const handleSequenceDeleteAll = useCallback(() => {
+    setSequenceSteps({});
+    setSelectedSequenceStep(null);
+    toast.success('Sequence cleared.');
+  }, []);
+
+  const handleSequenceDeleteSelected = useCallback(() => {
+    if (!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]) return;
+    setSequenceSteps((prev) => {
+      const next = { ...prev };
+      delete next[selectedSequenceStep];
+      return next;
+    });
+    setSelectedSequenceStep(null);
+    toast.success(`Deleted step ${selectedSequenceStep}.`);
+  }, [selectedSequenceStep, sequenceSteps]);
+
+  const handleSequenceStepChange = useCallback(
+    (direction: -1 | 1) => {
+      if (sequencePlaying) return;
+      const current = selectedSequenceStep ?? (direction === 1 ? 0 : MAX_SEQUENCE + 1);
+      const next = ((current - 1 + direction + MAX_SEQUENCE) % MAX_SEQUENCE) + 1;
+      handleSelectSequenceStep(next);
+    },
+    [handleSelectSequenceStep, selectedSequenceStep, sequencePlaying]
   );
 
   const playSequence = useCallback(async () => {
@@ -514,18 +524,119 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setSequencePlaying(true);
     for (let i = 1; i <= MAX_SEQUENCE; i++) {
       const step = sequenceSteps[i];
-      if (step) {
-        Object.entries(step.positions).forEach(([id, position]) => {
-          updateRobotPosition(id, position);
-        });
-        Object.entries(step.rotations).forEach(([id, rotation]) => {
-          updateRobotRotation(id, rotation);
-        });
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
+      if (!step) continue;
+      const startRobots = robotsRef.current.map((robot) => ({
+        id: robot.id,
+        position: { ...robot.position },
+        rotation: robot.rotation,
+      }));
+      isApplyingSequenceRef.current = true;
+      await new Promise<void>((resolve) => {
+        const startTime = window.performance.now();
+        const duration = 650;
+        const tick = (now: number) => {
+          const t = Math.min(1, (now - startTime) / duration);
+          startRobots.forEach((robot) => {
+            const target = step.positions[robot.id] ?? robot.position;
+            const startRot = robot.rotation;
+            const targetRot = step.rotations[robot.id] ?? startRot;
+            updateRobotPosition(robot.id, {
+              x: robot.position.x + (target.x - robot.position.x) * t,
+              y: robot.position.y + (target.y - robot.position.y) * t,
+            });
+            updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
+          });
+          if (t < 1) {
+            window.requestAnimationFrame(tick);
+          } else {
+            resolve();
+          }
+        };
+        window.requestAnimationFrame(tick);
+      });
+      isApplyingSequenceRef.current = false;
+      await new Promise((resolve) => setTimeout(resolve, 650));
     }
     setSequencePlaying(false);
   }, [sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      if (e.target instanceof HTMLTextAreaElement) return;
+      if (isInputLocked) return;
+      if (settingsOpen) return;
+
+      const key = e.key.toLowerCase();
+      switch (key) {
+        case keybinds.select:
+          setActiveTool('select');
+          break;
+        case keybinds.pen:
+          setActiveTool('pen');
+          break;
+        case keybinds.eraser:
+          setActiveTool('eraser');
+          break;
+        case keybinds.rotateLeft:
+          e.preventDefault();
+          rotateSelectedRobot(-15);
+          break;
+        case keybinds.rotateRight:
+          e.preventDefault();
+          rotateSelectedRobot(15);
+          break;
+        case 'a':
+          handleSequenceStepChange(-1);
+          break;
+        case 'd':
+          handleSequenceStepChange(1);
+          break;
+        case keybinds.intake:
+          if (selectedRobotId) {
+            setRobotModes((prev) => ({
+              ...prev,
+              [selectedRobotId]: {
+                intake: !prev[selectedRobotId]?.intake,
+                outtake: prev[selectedRobotId]?.outtake ?? false,
+              },
+            }));
+          }
+          break;
+        case keybinds.outtakeSingle:
+          if (selectedRobotId) {
+            handleRobotShoot(selectedRobotId, 'single');
+          }
+          break;
+        case keybinds.outtakeAll:
+          if (selectedRobotId) {
+            handleRobotShoot(selectedRobotId, 'all');
+          }
+          break;
+        case keybinds.cycle:
+          if (selectedRobotId) {
+            cycleRobotBalls(selectedRobotId);
+          }
+          break;
+        case 'escape':
+          setSelectedRobotId(null);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    cycleRobotBalls,
+    handleRobotShoot,
+    handleSequenceStepChange,
+    isInputLocked,
+    keybinds,
+    rotateSelectedRobot,
+    selectedRobotId,
+    settingsOpen,
+  ]);
   const defaultNameMap = useMemo(() => {
     const map = new Map<string, string>();
     const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
@@ -1538,17 +1649,35 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 </button>
               </div>
               <div className="panel">
-                <div className="panel-header">Sequencer</div>
+                <div className="panel-header flex items-center justify-between">
+                  <span>Sequence</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="tool-button !p-1"
+                        aria-label="Sequence help"
+                        title="Sequence help"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs text-xs">
+                      Press D or A to move forward/backward. Create an animated sequence by moving robots at each step.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <div className="grid grid-cols-5 gap-2">
                   {Array.from({ length: MAX_SEQUENCE }, (_, index) => {
                     const step = index + 1;
                     const isSaved = Boolean(sequenceSteps[step]);
+                    const isSelected = selectedSequenceStep === step;
                     return (
                       <button
                         key={step}
-                        onClick={() => handleSequenceSave(step)}
-                        className={`tool-button text-xs font-mono ${isSaved ? 'active' : ''}`}
-                        title={`Save step ${step}`}
+                        onClick={() => handleSelectSequenceStep(step)}
+                        className={`tool-button text-xs font-mono ${isSelected ? 'active' : ''} ${isSaved && !isSelected ? 'bg-muted/40' : ''}`}
+                        title={isSaved ? `Step ${step}` : `Create step ${step}`}
                       >
                         {step}
                       </button>
@@ -1563,9 +1692,43 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 >
                   {sequencePlaying ? 'Playing...' : 'Play Sequence'}
                 </button>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Click a step to capture all robots, then play to replay the path.
-                </p>
+              </div>
+              <div className="panel">
+                <div className="panel-header flex items-center justify-between">
+                  <span>Delete</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="tool-button !p-1"
+                        aria-label="Delete help"
+                        title="Delete help"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs text-xs">
+                      Clear the entire sequence or remove the currently selected step.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleSequenceDeleteAll}
+                    className="tool-button w-full"
+                    title="Clear all sequence steps"
+                  >
+                    Everything
+                  </button>
+                  <button
+                    onClick={handleSequenceDeleteSelected}
+                    className="tool-button w-full"
+                    title="Delete selected step"
+                    disabled={!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]}
+                  >
+                    {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                  </button>
+                </div>
               </div>
               <div ref={redClassifierRef}>
                 <ClassifierDisplay
@@ -1629,8 +1792,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     [
                       ['Select Tool', 'select'],
                       ['Pen Tool', 'pen'],
-                      ['Dotted Tool', 'dotted'],
-                      ['Arrow Tool', 'arrow'],
                       ['Eraser Tool', 'eraser'],
                       ['Intake Toggle', 'intake'],
                       ['Outtake Single', 'outtakeSingle'],

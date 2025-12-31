@@ -95,14 +95,14 @@ export const ToolPanel = ({
           <button
             onClick={() => onToolChange('dotted')}
             className={cn('tool-button', activeTool === 'dotted' && 'active')}
-            title="Dotted line (D)"
+            title="Dotted line"
           >
             <Minus className="w-4 h-4" />
           </button>
           <button
             onClick={() => onToolChange('arrow')}
             className={cn('tool-button', activeTool === 'arrow' && 'active')}
-            title="Arrow line (A)"
+            title="Arrow line"
           >
             <ArrowRight className="w-4 h-4" />
           </button>
