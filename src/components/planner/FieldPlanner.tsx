@@ -1288,7 +1288,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   return (
     <div className={`h-screen bg-background flex overflow-hidden ${className ?? ''}`}>
       {/* Left Panel */}
-      <div className="w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
+      <div className="panel-left w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
         <ToolPanel
           activeTool={activeTool}
           onToolChange={setActiveTool}
@@ -1504,7 +1504,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Right Panel */}
-      <div className="w-64 p-4 border-l border-border flex-shrink-0 h-full overflow-y-auto">
+      <div className="panel-right w-64 p-4 border-l border-border flex-shrink-0 h-full overflow-y-auto">
         <div className="mb-6">
           <h1 className="font-mono text-lg font-semibold text-primary mb-1">
             FTC DECODE

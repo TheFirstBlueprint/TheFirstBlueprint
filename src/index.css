@@ -299,6 +299,14 @@
     @apply bg-primary text-primary-foreground border-primary glow-primary;
   }
 
+  .theme-light .panel-left .tool-button.active {
+    @apply bg-alliance-blue text-alliance-blue-foreground border-alliance-blue glow-alliance-blue;
+  }
+
+  .theme-light .panel-right .tool-button.active {
+    @apply bg-alliance-red text-alliance-red-foreground border-alliance-red glow-alliance-red;
+  }
+
   .alliance-red {
     @apply bg-alliance-red text-alliance-red-foreground;
   }
