@@ -17,10 +17,9 @@ const BALL_DIAMETER = 20;
 const HUMAN_PLAYER_ZONE_SIZE = DEFAULT_CONFIG.tileSize;
 const HUMAN_PLAYER_ZONE_INSET = 12;
 const HUMAN_PLAYER_SPACING = 24;
-const HUMAN_PLAYER_BOX_COLUMNS = 3;
+const HUMAN_PLAYER_GROUP_GAP = 36;
+const HUMAN_PLAYER_BOX_COLUMNS = 6;
 const HUMAN_PLAYER_BOX_ROWS = 3;
-const HUMAN_PLAYER_TUNNEL_SLOTS = 6;
-const HUMAN_PLAYER_TUNNEL_INSET = 2;
 const OCCUPIED_SLOT_RADIUS = 10;
 const SPIKE_MARKS = {
   blue: [
@@ -55,30 +54,23 @@ const getHumanPlayerZoneStart = (alliance: Alliance) => {
 
 const getHumanPlayerSlots = (alliance: Alliance) => {
   const { zoneStartX, zoneStartY } = getHumanPlayerZoneStart(alliance);
+  const totalSpan = (HUMAN_PLAYER_BOX_COLUMNS - 1) * HUMAN_PLAYER_SPACING + HUMAN_PLAYER_GROUP_GAP;
   const baseX = alliance === 'red'
-    ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (HUMAN_PLAYER_BOX_COLUMNS - 1) * HUMAN_PLAYER_SPACING
+    ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - totalSpan
     : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
   const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
   const boxSlots: Position[] = [];
   for (let row = 0; row < HUMAN_PLAYER_BOX_ROWS; row += 1) {
     for (let col = 0; col < HUMAN_PLAYER_BOX_COLUMNS; col += 1) {
+      const gapOffset = col >= 3 ? HUMAN_PLAYER_GROUP_GAP : 0;
       boxSlots.push({
-        x: baseX + col * HUMAN_PLAYER_SPACING,
+        x: baseX + col * HUMAN_PLAYER_SPACING + gapOffset,
         y: baseY - row * HUMAN_PLAYER_SPACING,
       });
     }
   }
 
-  const tunnelX = alliance === 'red'
-    ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_TUNNEL_INSET - BALL_DIAMETER / 2
-    : zoneStartX + HUMAN_PLAYER_TUNNEL_INSET + BALL_DIAMETER / 2;
-  const tunnelStartY = zoneStartY - HUMAN_PLAYER_TUNNEL_INSET - BALL_DIAMETER / 2;
-  const tunnelSlots: Position[] = Array.from({ length: HUMAN_PLAYER_TUNNEL_SLOTS }, (_, index) => ({
-    x: tunnelX,
-    y: tunnelStartY - index * HUMAN_PLAYER_SPACING,
-  }));
-
-  return { boxSlots, tunnelSlots };
+  return { boxSlots };
 };
 
 const getOccupiedSlots = (balls: Ball[], slots: Position[]) => {
@@ -91,30 +83,30 @@ const getOccupiedSlots = (balls: Ball[], slots: Position[]) => {
   );
 };
 
-const placeBallsInHumanZone = (balls: Ball[], existing: Ball[], alliance: Alliance) => {
-  const { boxSlots, tunnelSlots } = getHumanPlayerSlots(alliance);
-  const occupiedBox = getOccupiedSlots(existing, boxSlots);
-  const occupiedTunnel = getOccupiedSlots(existing, tunnelSlots);
+const placeBallsInSlots = (balls: Ball[], existing: Ball[], slots: Position[]) => {
+  const occupied = getOccupiedSlots(existing, slots);
   const placed: Ball[] = [];
+  const remaining: Ball[] = [];
 
   balls.forEach((ball) => {
-    const nextBoxIndex = occupiedBox.findIndex((filled) => !filled);
-    if (nextBoxIndex !== -1) {
-      occupiedBox[nextBoxIndex] = true;
-      placed.push({ ...ball, position: boxSlots[nextBoxIndex] });
+    const nextIndex = occupied.findIndex((filled) => !filled);
+    if (nextIndex !== -1) {
+      occupied[nextIndex] = true;
+      placed.push({ ...ball, position: slots[nextIndex] });
       return;
     }
-
-    const nextTunnelIndex = occupiedTunnel.findIndex((filled) => !filled);
-    if (nextTunnelIndex !== -1) {
-      occupiedTunnel[nextTunnelIndex] = true;
-      placed.push({ ...ball, position: tunnelSlots[nextTunnelIndex] });
-      return;
-    }
+    remaining.push(ball);
   });
 
-  return placed;
+  return { placed, remaining };
 };
+
+const placeBallsInBox = (balls: Ball[], existing: Ball[], alliance: Alliance) => {
+  const { boxSlots } = getHumanPlayerSlots(alliance);
+  return placeBallsInSlots(balls, existing, boxSlots);
+};
+
+const getOtherAlliance = (alliance: Alliance) => (alliance === 'red' ? 'blue' : 'red');
 
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
@@ -281,8 +273,6 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[targetAlliance];
 
       if (classifier.balls.length >= classifier.maxCapacity) {
-        const overflowBall: Ball = { ...ejectedBall, isScored: false, heldByRobotId: null };
-        const placed = placeBallsInHumanZone([overflowBall], prev.balls, targetAlliance);
         return {
           ...prev,
           robots: prev.robots.map((r) =>
@@ -290,7 +280,11 @@ export const useFieldState = () => {
               ? { ...r, heldBalls: r.heldBalls.slice(1) }
               : r
           ),
-          balls: [...prev.balls, ...placed],
+          balls: [...prev.balls],
+          overflowCounts: {
+            ...prev.overflowCounts,
+            [targetAlliance]: prev.overflowCounts[targetAlliance] + 1,
+          },
         };
       }
 
@@ -322,15 +316,8 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[targetAlliance];
       const availableSpace = classifier.maxCapacity - classifier.balls.length;
       const ballsToEject = robot.heldBalls.slice(0, Math.max(0, availableSpace));
-      const overflowBalls = robot.heldBalls.slice(ballsToEject.length);
-      const overflowPlaced = overflowBalls.length > 0
-        ? placeBallsInHumanZone(
-            overflowBalls.map((ball) => ({ ...ball, isScored: false, heldByRobotId: null })),
-            prev.balls,
-            targetAlliance
-          )
-        : [];
 
+      const droppedOverflow = robot.heldBalls.length - ballsToEject.length;
       return {
         ...prev,
         robots: prev.robots.map((r) =>
@@ -348,7 +335,11 @@ export const useFieldState = () => {
             ],
           },
         },
-        balls: [...prev.balls, ...overflowPlaced],
+        balls: [...prev.balls],
+        overflowCounts: {
+          ...prev.overflowCounts,
+          [targetAlliance]: prev.overflowCounts[targetAlliance] + Math.max(0, droppedOverflow),
+        },
       };
     });
   }, []);
@@ -361,11 +352,13 @@ export const useFieldState = () => {
 
       if (!ball) return prev;
       if (classifier.balls.length >= classifier.maxCapacity) {
-        const overflowBall: Ball = { ...ball, isScored: false, heldByRobotId: null };
-        const placed = placeBallsInHumanZone([overflowBall], prev.balls, alliance);
         return {
           ...prev,
-          balls: [...prev.balls.filter((b) => b.id !== ballId), ...placed],
+          balls: [...prev.balls.filter((b) => b.id !== ballId)],
+          overflowCounts: {
+            ...prev.overflowCounts,
+            [alliance]: prev.overflowCounts[alliance] + 1,
+          },
         };
       }
 
@@ -401,11 +394,23 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const depositedBalls = placeBallsInHumanZone(
-        classifier.balls.map((ball) => ({ ...ball, isScored: false, heldByRobotId: null })),
+      const ballsToDeposit = classifier.balls.map((ball) => ({
+        ...ball,
+        isScored: false,
+        heldByRobotId: null,
+      }));
+      const { placed: primaryPlaced, remaining } = placeBallsInBox(
+        ballsToDeposit,
         prev.balls,
         alliance
       );
+      const otherAlliance = getOtherAlliance(alliance);
+      const spillResult = remaining.length
+        ? placeBallsInBox(remaining, [...prev.balls, ...primaryPlaced], otherAlliance)
+        : { placed: [] as Ball[], remaining };
+      const spillPlaced = spillResult.placed;
+      const finalRemaining = spillResult.remaining;
+      const depositedBalls = [...primaryPlaced, ...spillPlaced];
 
       return {
         ...prev,
@@ -413,6 +418,10 @@ export const useFieldState = () => {
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: [] },
+        },
+        overflowCounts: {
+          ...prev.overflowCounts,
+          [alliance]: prev.overflowCounts[alliance] + finalRemaining.length,
         },
       };
     });
@@ -431,7 +440,12 @@ export const useFieldState = () => {
         isScored: false,
         heldByRobotId: null,
       };
-      const placed = placeBallsInHumanZone([poppedBall], prev.balls, alliance);
+      const { placed: primaryPlaced, remaining } = placeBallsInBox([poppedBall], prev.balls, alliance);
+      const otherAlliance = getOtherAlliance(alliance);
+      const spillResult = remaining.length
+        ? placeBallsInBox(remaining, [...prev.balls, ...primaryPlaced], otherAlliance)
+        : { placed: [] as Ball[], remaining };
+      const placed = [...primaryPlaced, ...spillResult.placed];
 
       return {
         ...prev,
@@ -439,6 +453,10 @@ export const useFieldState = () => {
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
+        },
+        overflowCounts: {
+          ...prev.overflowCounts,
+          [alliance]: prev.overflowCounts[alliance] + spillResult.remaining.length,
         },
       };
     });
@@ -470,21 +488,9 @@ export const useFieldState = () => {
         })
       );
 
-      const colors: BallColor[] = ['green', 'purple', 'purple'];
-      const humanZoneArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) => {
-        const seeded = colors.map((color) => ({
-          id: generateId(),
-          color,
-          position: { x: 0, y: 0 },
-          isScored: false,
-          heldByRobotId: null,
-        }));
-        return placeBallsInHumanZone(seeded, [...prev.balls, ...spikeArtifacts], alliance);
-      });
-
       return {
         ...prev,
-        balls: [...spikeArtifacts, ...humanZoneArtifacts],
+        balls: [...spikeArtifacts],
       };
     });
   }, []);
@@ -552,6 +558,10 @@ export const useFieldState = () => {
         red: { ...prev.classifiers.red, balls: [] },
         blue: { ...prev.classifiers.blue, balls: [] },
       },
+      overflowCounts: {
+        red: 0,
+        blue: 0,
+      },
       robots: prev.robots.map((r) => ({ ...r, heldBalls: [] })),
     }));
   }, []);
@@ -573,7 +583,10 @@ export const useFieldState = () => {
   const importState = useCallback((json: string) => {
     try {
       const parsed = JSON.parse(json) as FieldState;
-      setState(parsed);
+      setState({
+        ...parsed,
+        overflowCounts: parsed.overflowCounts ?? { red: 0, blue: 0 },
+      });
       return true;
     } catch {
       return false;

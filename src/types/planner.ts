@@ -51,6 +51,10 @@ export interface FieldState {
     red: Classifier;
     blue: Classifier;
   };
+  overflowCounts: {
+    red: number;
+    blue: number;
+  };
   drawings: DrawingPath[];
 }
 
@@ -80,6 +84,10 @@ export const createInitialState = (): FieldState => ({
   classifiers: {
     red: { alliance: 'red', balls: [], maxCapacity: 9 },
     blue: { alliance: 'blue', balls: [], maxCapacity: 9 },
+  },
+  overflowCounts: {
+    red: 0,
+    blue: 0,
   },
   drawings: [],
 });

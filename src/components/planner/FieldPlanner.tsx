@@ -1772,6 +1772,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onEmpty={() => handleClassifierEmpty('red')}
                   onPopSingle={() => handleClassifierPop('red')}
                   isEmptying={classifierEmptying.red}
+                  overflowCount={state.overflowCounts.red}
                 />
               </div>
               <div ref={blueClassifierRef}>
@@ -1781,6 +1782,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onEmpty={() => handleClassifierEmpty('blue')}
                   onPopSingle={() => handleClassifierPop('blue')}
                   isEmptying={classifierEmptying.blue}
+                  overflowCount={state.overflowCounts.blue}
                 />
               </div>
               <div className="panel">
