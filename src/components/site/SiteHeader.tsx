@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', to: '/' },
@@ -15,19 +16,29 @@ export const SiteHeader = () => {
           <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">FTC Decode</p>
           <h1 className="text-lg font-semibold text-foreground">Strategy Planner</h1>
         </div>
-        <nav className="flex flex-wrap items-center gap-2">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `tool-button text-xs font-mono ${isActive ? 'active' : ''}`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="flex flex-wrap items-center gap-2">
+          <nav className="flex flex-wrap items-center gap-2">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `tool-button text-xs font-mono ${isActive ? 'active' : ''}`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          <Link
+            to="/planner?settings=1"
+            className="tool-button w-10 h-10"
+            title="Settings"
+            aria-label="Open settings"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
     </header>
   );

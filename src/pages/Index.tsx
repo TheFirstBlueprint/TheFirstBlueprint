@@ -45,19 +45,35 @@ const Index = () => {
               </div>
             </section>
 
-            <section className="panel">
-              <div className="panel-header">Quick Start</div>
-              <ol className="space-y-2 text-sm text-muted-foreground">
-                <li>Drop robots and balls onto the field to start building a plan.</li>
-                <li>Use the left panel tools to draw paths and annotate routes.</li>
-                <li>Click a robot to toggle intake/outtake controls and edit details.</li>
-                <li>Use keyboard shortcuts for speed, then adjust them in Settings.</li>
-                <li>Export your plan to share with your drive team.</li>
-              </ol>
-              <Link to="/planner" className="tool-button active mt-6 w-full justify-center">
-                Open Field Planner
-              </Link>
-            </section>
+            <div className="space-y-8">
+              <section className="panel">
+                <div className="panel-header">Quick Start</div>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  <li>Drop robots and balls onto the field to start building a plan.</li>
+                  <li>Use the left panel tools to draw paths and annotate routes.</li>
+                  <li>Click a robot to toggle intake/outtake controls and edit details.</li>
+                  <li>Use keyboard shortcuts for speed, then adjust them in Settings.</li>
+                  <li>Export your plan to share with your drive team.</li>
+                </ol>
+                <Link to="/planner" className="tool-button active mt-6 w-full justify-center">
+                  Open Field Planner
+                </Link>
+              </section>
+              <section className="panel">
+                <div className="panel-header">Instructions</div>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>Drag robots & balls to position</li>
+                  <li>Drop balls on robots to collect</li>
+                  <li>Click robot for controls</li>
+                  <li>Arrow keys rotate selected robot</li>
+                  <li>I to toggle intake, K to shoot all balls</li>
+                  <li>O to shoot one ball</li>
+                  <li>L to cycle held balls</li>
+                  <li>Use pen to draw paths</li>
+                  <li>Export to save strategy</li>
+                </ul>
+              </section>
+            </div>
           </div>
 
           <section className="panel mt-8">

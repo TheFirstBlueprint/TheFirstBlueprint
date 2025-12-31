@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG } from '@/types/planner';
 import fieldImage from '@/assets/ftc-decode-field-2.png';
@@ -8,7 +9,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Save, Settings, X } from 'lucide-react';
+import { Goal, Save, X } from 'lucide-react';
 
 const FIELD_SIZE = 600;
 const FIELD_INCHES = 144;
@@ -110,6 +111,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [timerRunning, setTimerRunning] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('basic');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
@@ -169,6 +171,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     root.classList.remove('theme-basic', 'theme-dark', 'theme-light');
     root.classList.add(`theme-${themeMode}`);
   }, [themeMode]);
+
+  const openSettings = useCallback(() => {
+    setDraftThemeMode(themeMode);
+    setDraftKeybinds(keybinds);
+    setSettingsOpen(true);
+  }, [keybinds, themeMode]);
+
+  useEffect(() => {
+    if (searchParams.get('settings') === '1' && !settingsOpen) {
+      openSettings();
+    }
+  }, [openSettings, searchParams, settingsOpen]);
 
   const rotateSelectedRobot = useCallback(
     (delta: number) => {
@@ -1016,14 +1030,16 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setSelectedRobotId(null);
   };
 
-  const handleOpenSettings = () => {
-    setDraftThemeMode(themeMode);
-    setDraftKeybinds(keybinds);
-    setSettingsOpen(true);
-  };
+  const clearSettingsParam = useCallback(() => {
+    if (!searchParams.has('settings')) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('settings');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleCloseSettings = () => {
     setSettingsOpen(false);
+    clearSettingsParam();
   };
 
   const handleSaveSettings = () => {
@@ -1032,6 +1048,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     window.localStorage.setItem(THEME_STORAGE_KEY, draftThemeMode);
     window.localStorage.setItem(KEYBINDS_STORAGE_KEY, JSON.stringify(draftKeybinds));
     setSettingsOpen(false);
+    clearSettingsParam();
   };
 
   const selectedRobot = selectedRobotId
@@ -1050,14 +1067,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
   return (
     <div className={`h-screen bg-background flex overflow-hidden ${className ?? ''}`}>
-      <button
-        onClick={handleOpenSettings}
-        className="tool-button fixed top-20 right-4 z-40 w-10 h-10"
-        title="Settings"
-        aria-label="Open settings"
-      >
-        <Settings className="w-4 h-4" />
-      </button>
       {/* Left Panel */}
       <div className="w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
         <ToolPanel
@@ -1479,20 +1488,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               </div>
             </div>
 
-            <div className="mt-6 panel">
-              <div className="panel-header">Instructions</div>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>Drag robots & balls to position</li>
-                <li>Drop balls on robots to collect</li>
-                <li>Click robot for controls</li>
-                <li>Arrow keys rotate selected robot</li>
-                <li>I to toggle intake, K to shoot all balls</li>
-                <li>O to shoot one ball</li>
-                <li>L to cycle held balls</li>
-                <li>Use pen to draw paths</li>
-                <li>Export to save strategy</li>
-              </ul>
-            </div>
           </>
         )}
       </div>
