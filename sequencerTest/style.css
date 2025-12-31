@@ -1,0 +1,41 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #0f1923;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#controls {
+  margin-bottom: 12px;
+}
+
+button {
+  background: #1f2933;
+  color: white;
+  border: 1px solid #3b82f6;
+  padding: 6px 10px;
+  margin: 2px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #3b82f6;
+}
+
+#field {
+  width: 600px;
+  height: 600px;
+  background: #111827;
+  position: relative;
+  border: 2px solid #3b82f6;
+}
+
+#square {
+  width: 20px;
+  height: 20px;
+  background: #22d3ee;
+  position: absolute;
+  transition: transform 0.25s linear;
+}

@@ -67,6 +67,7 @@ const DEFAULT_KEYBINDS = {
   rotateLeft: 'arrowleft',
   rotateRight: 'arrowright',
 };
+const MAX_SEQUENCE = 10;
 type ThemeMode = 'basic' | 'dark' | 'light';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 
@@ -114,6 +115,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fieldScale, setFieldScale] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [sequenceSteps, setSequenceSteps] = useState<
+    Record<number, { positions: Record<string, { x: number; y: number }>; rotations: Record<string, number> }>
+  >({});
+  const [sequencePlaying, setSequencePlaying] = useState(false);
   const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
@@ -479,6 +484,48 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   };
 
   const motifs = ['GPP', 'PGP', 'PPG'];
+  const handleSequenceSave = useCallback(
+    (index: number) => {
+      if (state.robots.length === 0) {
+        toast.error('Add robots before saving a sequence step.');
+        return;
+      }
+      const positions: Record<string, { x: number; y: number }> = {};
+      const rotations: Record<string, number> = {};
+      state.robots.forEach((robot) => {
+        positions[robot.id] = { ...robot.position };
+        rotations[robot.id] = robot.rotation;
+      });
+      setSequenceSteps((prev) => ({
+        ...prev,
+        [index]: { positions, rotations },
+      }));
+      toast.success(`Saved step ${index}.`);
+    },
+    [state.robots]
+  );
+
+  const playSequence = useCallback(async () => {
+    if (sequencePlaying) return;
+    if (Object.keys(sequenceSteps).length === 0) {
+      toast.error('Save at least one step to play the sequence.');
+      return;
+    }
+    setSequencePlaying(true);
+    for (let i = 1; i <= MAX_SEQUENCE; i++) {
+      const step = sequenceSteps[i];
+      if (step) {
+        Object.entries(step.positions).forEach(([id, position]) => {
+          updateRobotPosition(id, position);
+        });
+        Object.entries(step.rotations).forEach(([id, rotation]) => {
+          updateRobotRotation(id, rotation);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    }
+    setSequencePlaying(false);
+  }, [sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
   const defaultNameMap = useMemo(() => {
     const map = new Map<string, string>();
     const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
@@ -1101,6 +1148,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           onToolChange={setActiveTool}
           penColor={penColor}
           onPenColorChange={setPenColor}
+          motif={motif}
+          motifs={motifs}
+          onMotifChange={setMotif}
+          onMotifRandomize={handleRandomizeMotif}
           onAddBall={addBall}
           onAddRobot={addRobot}
           canAddRedRobot={canAddRedRobot}
@@ -1487,26 +1538,34 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 </button>
               </div>
               <div className="panel">
-                <div className="panel-header">Motif</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {motifs.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => setMotif(option)}
-                      className={`tool-button ${motif === option ? 'active' : ''}`}
-                      title={`Set motif ${option}`}
-                    >
-                      <span className="text-xs font-mono">{option}</span>
-                    </button>
-                  ))}
+                <div className="panel-header">Sequencer</div>
+                <div className="grid grid-cols-5 gap-2">
+                  {Array.from({ length: MAX_SEQUENCE }, (_, index) => {
+                    const step = index + 1;
+                    const isSaved = Boolean(sequenceSteps[step]);
+                    return (
+                      <button
+                        key={step}
+                        onClick={() => handleSequenceSave(step)}
+                        className={`tool-button text-xs font-mono ${isSaved ? 'active' : ''}`}
+                        title={`Save step ${step}`}
+                      >
+                        {step}
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
-                  onClick={handleRandomizeMotif}
+                  onClick={playSequence}
                   className="tool-button mt-2 w-full"
-                  title="Randomize motif"
+                  title="Play sequence"
+                  disabled={sequencePlaying}
                 >
-                  Randomize
+                  {sequencePlaying ? 'Playing...' : 'Play Sequence'}
                 </button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Click a step to capture all robots, then play to replay the path.
+                </p>
               </div>
               <div ref={redClassifierRef}>
                 <ClassifierDisplay

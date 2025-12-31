@@ -22,6 +22,10 @@ interface ToolPanelProps {
   onToolChange: (tool: Tool) => void;
   penColor: string;
   onPenColorChange: (color: string) => void;
+  motif: string;
+  motifs: string[];
+  onMotifChange: (motif: string) => void;
+  onMotifRandomize: () => void;
   onAddBall: (color: BallColor) => void;
   onAddRobot: (alliance: Alliance) => void;
   canAddRedRobot: boolean;
@@ -43,6 +47,10 @@ export const ToolPanel = ({
   onToolChange,
   penColor,
   onPenColorChange,
+  motif,
+  motifs,
+  onMotifChange,
+  onMotifRandomize,
   onAddBall,
   onAddRobot,
   canAddRedRobot,
@@ -146,6 +154,30 @@ export const ToolPanel = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Motif */}
+      <div className="panel">
+        <div className="panel-header">Motif</div>
+        <div className="grid grid-cols-3 gap-2">
+          {motifs.map((option) => (
+            <button
+              key={option}
+              onClick={() => onMotifChange(option)}
+              className={cn('tool-button', motif === option && 'active')}
+              title={`Set motif ${option}`}
+            >
+              <span className="text-xs font-mono">{option}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onMotifRandomize}
+          className="tool-button mt-2 w-full"
+          title="Randomize motif"
+        >
+          Randomize
+        </button>
       </div>
 
       {/* Add Elements */}
