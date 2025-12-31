@@ -21,6 +21,7 @@ interface RobotElementProps {
   onCycleBalls: () => void;
   onRemoveHeldBall: (ballId: string) => void;
   isLocked: boolean;
+  scale: number;
 }
 
 export const RobotElement = ({
@@ -41,6 +42,7 @@ export const RobotElement = ({
   onCycleBalls,
   onRemoveHeldBall,
   isLocked,
+  scale,
 }: RobotElementProps) => {
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
@@ -54,11 +56,12 @@ export const RobotElement = ({
     onSelect();
 
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
+    const normalizedScale = scale || 1;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!lastMouseRef.current) return;
-      const dx = moveEvent.clientX - lastMouseRef.current.x;
-      const dy = moveEvent.clientY - lastMouseRef.current.y;
+      const dx = (moveEvent.clientX - lastMouseRef.current.x) / normalizedScale;
+      const dy = (moveEvent.clientY - lastMouseRef.current.y) / normalizedScale;
       const basePosition = positionRef.current;
       const halfWidth = dimensions.width / 2;
       const halfHeight = dimensions.height / 2;

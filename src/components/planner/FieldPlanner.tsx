@@ -53,6 +53,7 @@ const LEVER_POSITION = {
 };
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
+const FIELD_SCREEN_RATIO = 0.94;
 const DEFAULT_KEYBINDS = {
   select: 's',
   pen: 'p',
@@ -111,6 +112,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [timerRunning, setTimerRunning] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('basic');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fieldScale, setFieldScale] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
@@ -135,6 +137,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     red: null,
     blue: null,
   });
+  const fieldAreaRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
@@ -172,6 +175,20 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     root.classList.add(`theme-${themeMode}`);
   }, [themeMode]);
 
+  const updateFieldScale = useCallback(() => {
+    const area = fieldAreaRef.current;
+    if (!area) return;
+    const styles = window.getComputedStyle(area);
+    const paddingX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
+    const paddingY = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+    const availableWidth = area.clientWidth - paddingX;
+    const availableHeight = area.clientHeight - paddingY;
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+    const targetSize = Math.min(availableWidth, availableHeight) * FIELD_SCREEN_RATIO;
+    const nextScale = Math.max(0.1, targetSize / FIELD_SIZE);
+    setFieldScale((prev) => (Math.abs(prev - nextScale) > 0.01 ? nextScale : prev));
+  }, []);
+
   const openSettings = useCallback(() => {
     setDraftThemeMode(themeMode);
     setDraftKeybinds(keybinds);
@@ -183,6 +200,15 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       openSettings();
     }
   }, [openSettings, searchParams, settingsOpen]);
+
+  useEffect(() => {
+    updateFieldScale();
+    const area = fieldAreaRef.current;
+    if (!area) return;
+    const observer = new ResizeObserver(updateFieldScale);
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, [updateFieldScale]);
 
   const rotateSelectedRobot = useCallback(
     (delta: number) => {
@@ -740,12 +766,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const rect = fieldRef.current?.getBoundingClientRect();
     if (!rect) return null;
 
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+    const scale = fieldScale || 1;
+    const x = (clientX - rect.left) / scale;
+    const y = (clientY - rect.top) / scale;
+    if (x < 0 || y < 0 || x > FIELD_SIZE || y > FIELD_SIZE) return null;
 
     return getGoalTargetForPosition(x, y);
-  }, [getGoalTargetForPosition]);
+  }, [fieldScale, getGoalTargetForPosition]);
 
   const isPointInRect = useCallback((rect: DOMRect | undefined, clientX: number, clientY: number) => {
     if (!rect) return false;
@@ -1097,13 +1124,22 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Field Area */}
-      <div className="flex-1 flex items-start justify-center p-8 pt-4 field-container">
-        <div
-          className="relative bg-card rounded-lg overflow-hidden shadow-2xl border border-border"
-          style={{ width: FIELD_SIZE, height: FIELD_SIZE }}
-          onClick={handleFieldClick}
-          ref={fieldRef}
-        >
+      <div
+        ref={fieldAreaRef}
+        className="flex-1 flex items-start justify-center p-8 pt-4 field-container"
+      >
+        <div style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}>
+          <div
+            className="relative bg-card rounded-lg overflow-hidden shadow-2xl border border-border"
+            style={{
+              width: FIELD_SIZE,
+              height: FIELD_SIZE,
+              transform: `scale(${fieldScale})`,
+              transformOrigin: 'top left',
+            }}
+            onClick={handleFieldClick}
+            ref={fieldRef}
+          >
           {/* Field Background */}
           <img
             src={fieldImage}
@@ -1133,6 +1169,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onAddDrawing={addDrawing}
             onRemoveDrawing={removeDrawing}
             isLocked={isInputLocked}
+            scale={fieldScale}
           />
 
           {/* Balls */}
@@ -1149,6 +1186,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               onCollectByRobot={(robotId) => robotCollectBall(robotId, ball.id)}
               onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
               isLocked={isInputLocked}
+              scale={fieldScale}
             />
           ))}
 
@@ -1260,9 +1298,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   }))
                 }
                 isLocked={isInputLocked}
+                scale={fieldScale}
               />
             );
           })}
+          </div>
         </div>
       </div>
 

@@ -12,6 +12,7 @@ interface BallElementProps {
   onCollectByRobot: (robotId: string) => void;
   onScoreToClassifier: (ballId: string, alliance: Alliance) => void;
   isLocked: boolean;
+  scale: number;
 }
 
 const BALL_SIZE = 20;
@@ -26,6 +27,7 @@ export const BallElement = ({
   onCollectByRobot,
   onScoreToClassifier,
   isLocked,
+  scale,
 }: BallElementProps) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -35,10 +37,11 @@ export const BallElement = ({
     const startY = e.clientY;
     const startPosX = ball.position.x;
     const startPosY = ball.position.y;
+    const normalizedScale = scale || 1;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
+      const dx = (moveEvent.clientX - startX) / normalizedScale;
+      const dy = (moveEvent.clientY - startY) / normalizedScale;
       const newX = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.width - BALL_SIZE / 2, startPosX + dx));
       const newY = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.height - BALL_SIZE / 2, startPosY + dy));
       onPositionChange(newX, newY);
@@ -61,8 +64,8 @@ export const BallElement = ({
         return;
       }
 
-      const dx = upEvent.clientX - startX;
-      const dy = upEvent.clientY - startY;
+      const dx = (upEvent.clientX - startX) / normalizedScale;
+      const dy = (upEvent.clientY - startY) / normalizedScale;
       const finalX = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.width - BALL_SIZE / 2, startPosX + dx));
       const finalY = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.height - BALL_SIZE / 2, startPosY + dy));
       

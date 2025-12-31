@@ -11,6 +11,7 @@ interface DrawingCanvasProps {
   onAddDrawing: (path: DrawingPath) => void;
   onRemoveDrawing: (id: string) => void;
   isLocked: boolean;
+  scale: number;
 }
 
 let pathIdCounter = 0;
@@ -25,6 +26,7 @@ export const DrawingCanvas = ({
   onAddDrawing,
   onRemoveDrawing,
   isLocked,
+  scale,
 }: DrawingCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -159,9 +161,10 @@ export const DrawingCanvas = ({
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
+    const normalizedScale = scale || 1;
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) / normalizedScale,
+      y: (e.clientY - rect.top) / normalizedScale,
     };
   };
 
