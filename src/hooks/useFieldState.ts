@@ -108,6 +108,11 @@ const placeBallsInBox = (balls: Ball[], existing: Ball[], alliance: Alliance) =>
 
 const getOtherAlliance = (alliance: Alliance) => (alliance === 'red' ? 'blue' : 'red');
 
+const getOverflowSpawnPosition = () => ({
+  x: DEFAULT_CONFIG.fieldWidth / 2,
+  y: DEFAULT_CONFIG.fieldHeight / 2,
+});
+
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
 
@@ -273,6 +278,12 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[targetAlliance];
 
       if (classifier.balls.length >= classifier.maxCapacity) {
+        const overflowBall: Ball = {
+          ...ejectedBall,
+          position: getOverflowSpawnPosition(),
+          isScored: false,
+          heldByRobotId: null,
+        };
         return {
           ...prev,
           robots: prev.robots.map((r) =>
@@ -280,7 +291,7 @@ export const useFieldState = () => {
               ? { ...r, heldBalls: r.heldBalls.slice(1) }
               : r
           ),
-          balls: [...prev.balls],
+          balls: [...prev.balls, overflowBall],
           overflowCounts: {
             ...prev.overflowCounts,
             [targetAlliance]: prev.overflowCounts[targetAlliance] + 1,
@@ -318,6 +329,14 @@ export const useFieldState = () => {
       const ballsToEject = robot.heldBalls.slice(0, Math.max(0, availableSpace));
 
       const droppedOverflow = robot.heldBalls.length - ballsToEject.length;
+      const overflowBalls = robot.heldBalls
+        .slice(ballsToEject.length)
+        .map((ball) => ({
+          ...ball,
+          position: getOverflowSpawnPosition(),
+          isScored: false,
+          heldByRobotId: null,
+        }));
       return {
         ...prev,
         robots: prev.robots.map((r) =>
@@ -335,7 +354,7 @@ export const useFieldState = () => {
             ],
           },
         },
-        balls: [...prev.balls],
+        balls: [...prev.balls, ...overflowBalls],
         overflowCounts: {
           ...prev.overflowCounts,
           [targetAlliance]: prev.overflowCounts[targetAlliance] + Math.max(0, droppedOverflow),
@@ -352,9 +371,15 @@ export const useFieldState = () => {
 
       if (!ball) return prev;
       if (classifier.balls.length >= classifier.maxCapacity) {
+        const overflowBall: Ball = {
+          ...ball,
+          position: getOverflowSpawnPosition(),
+          isScored: false,
+          heldByRobotId: null,
+        };
         return {
           ...prev,
-          balls: [...prev.balls.filter((b) => b.id !== ballId)],
+          balls: [...prev.balls.filter((b) => b.id !== ballId), overflowBall],
           overflowCounts: {
             ...prev.overflowCounts,
             [alliance]: prev.overflowCounts[alliance] + 1,
@@ -411,10 +436,16 @@ export const useFieldState = () => {
       const spillPlaced = spillResult.placed;
       const finalRemaining = spillResult.remaining;
       const depositedBalls = [...primaryPlaced, ...spillPlaced];
+      const overflowBalls = finalRemaining.map((ball) => ({
+        ...ball,
+        position: getOverflowSpawnPosition(),
+        isScored: false,
+        heldByRobotId: null,
+      }));
 
       return {
         ...prev,
-        balls: [...prev.balls, ...depositedBalls],
+        balls: [...prev.balls, ...depositedBalls, ...overflowBalls],
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: [] },
@@ -446,10 +477,16 @@ export const useFieldState = () => {
         ? placeBallsInBox(remaining, [...prev.balls, ...primaryPlaced], otherAlliance)
         : { placed: [] as Ball[], remaining };
       const placed = [...primaryPlaced, ...spillResult.placed];
+      const overflowBalls = spillResult.remaining.map((remainingBall) => ({
+        ...remainingBall,
+        position: getOverflowSpawnPosition(),
+        isScored: false,
+        heldByRobotId: null,
+      }));
 
       return {
         ...prev,
-        balls: [...prev.balls, ...placed],
+        balls: [...prev.balls, ...placed, ...overflowBalls],
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
