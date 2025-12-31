@@ -20,10 +20,10 @@ const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 120;
 const MAGNET_RADIUS = 10;
-const MAGNET_TARGETS = [
-  { x: 0.27, y: 0.761 },
-  { x: 0.7275, y: 0.761 },
-];
+const MAGNET_TARGETS = {
+  blue: [{ x: 0.7275, y: 0.761 }],
+  red: [{ x: 0.27, y: 0.761 }],
+};
 const CLASSIFIER_STACK = {
   top: 126,
   sideInset: 0,
@@ -103,6 +103,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     resetField,
     exportState,
     importState,
+    addHumanPlayerBall,
+    loadRobotBalls,
   } = useFieldState();
 
   const [activeTool, setActiveTool] = useState<Tool>('select');
@@ -832,7 +834,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const handleSetupField = () => {
     clearBalls();
     setupFieldArtifacts();
-    toast.success('Artifacts placed on spike marks.');
+    handleSetupRobots();
+    toast.success('Field setup complete.');
   };
 
   const handleSetupRobots = () => {
@@ -843,20 +846,37 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       const robots = alliance === 'blue' ? blueRobots : redRobots;
       const existing = robots[index];
       if (!existing) {
-        addRobot(alliance, position);
-        return;
+        return addRobot(alliance, position);
       }
       updateRobotPosition(existing.id, position);
+      return existing.id;
     };
 
     const goalInset = 40;
     const tileOffset = DEFAULT_CONFIG.tileSize;
-    const farInset = 60;
-    ensureRobot('blue', 0, { x: goalInset + tileOffset, y: goalInset + tileOffset });
-    ensureRobot('blue', 1, { x: farInset, y: FIELD_SIZE - farInset });
-    ensureRobot('red', 0, { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset });
-    ensureRobot('red', 1, { x: FIELD_SIZE - farInset, y: FIELD_SIZE - farInset });
-    toast.success('Sample robots positioned.');
+    const triangleTopY = FIELD_SIZE - DEFAULT_CONFIG.tileSize;
+    const triangleBottomY = FIELD_SIZE;
+    const centerX = FIELD_SIZE / 2;
+    const leftMid = {
+      x: centerX - DEFAULT_CONFIG.tileSize / 2,
+      y: (triangleTopY + triangleBottomY) / 2,
+    };
+    const rightMid = {
+      x: centerX + DEFAULT_CONFIG.tileSize / 2,
+      y: (triangleTopY + triangleBottomY) / 2,
+    };
+
+    const blueTopId = ensureRobot('blue', 0, { x: goalInset + tileOffset, y: goalInset + tileOffset });
+    const redTopId = ensureRobot('red', 0, { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset });
+    const blueBottomId = ensureRobot('blue', 1, leftMid);
+    const redBottomId = ensureRobot('red', 1, rightMid);
+
+    const loadout = ['purple', 'purple', 'green'] as const;
+    if (blueTopId) loadRobotBalls(blueTopId, [...loadout]);
+    if (redTopId) loadRobotBalls(redTopId, [...loadout]);
+    if (blueBottomId) loadRobotBalls(blueBottomId, []);
+    if (redBottomId) loadRobotBalls(redBottomId, []);
+    return;
   };
 
   const formatTime = (seconds: number) => {
@@ -899,6 +919,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+
+  const handleAddHumanPlayerBall = (alliance: 'red' | 'blue', color: 'green' | 'purple') => {
+    const placed = addHumanPlayerBall(alliance, color);
+    if (!placed) {
+      toast.error('Human player zone is full.');
+    }
+  };
 
   const getGoalTargetForPosition = useCallback((x: number, y: number) => {
     const { width, height } = GOAL_ZONE.blue;
@@ -1015,7 +1042,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       if (!movingRobot) return;
       let nextX = x;
       let nextY = y;
-      for (const target of MAGNET_TARGETS) {
+      const magnetTargets = MAGNET_TARGETS[movingRobot.alliance] ?? [];
+      for (const target of magnetTargets) {
         const targetX = target.x * FIELD_SIZE;
         const targetY = target.y * FIELD_SIZE;
         const dx = targetX - nextX;
@@ -1747,6 +1775,49 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onPopSingle={() => handleClassifierPop('blue')}
                   isEmptying={classifierEmptying.blue}
                 />
+              </div>
+              <div className="panel">
+                <div className="panel-header">Human Player Zone</div>
+                <div className="space-y-3 text-xs text-muted-foreground">
+                  <div>
+                    <div className="mb-2 text-foreground">Blue Zone</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAddHumanPlayerBall('blue', 'green')}
+                        className="tool-button flex-1 gap-1"
+                        title="Add green ball to blue zone"
+                      >
+                        <span className="text-xs">Green</span>
+                      </button>
+                      <button
+                        onClick={() => handleAddHumanPlayerBall('blue', 'purple')}
+                        className="tool-button flex-1 gap-1"
+                        title="Add purple ball to blue zone"
+                      >
+                        <span className="text-xs">Purple</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 text-foreground">Red Zone</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAddHumanPlayerBall('red', 'green')}
+                        className="tool-button flex-1 gap-1"
+                        title="Add green ball to red zone"
+                      >
+                        <span className="text-xs">Green</span>
+                      </button>
+                      <button
+                        onClick={() => handleAddHumanPlayerBall('red', 'purple')}
+                        className="tool-button flex-1 gap-1"
+                        title="Add purple ball to red zone"
+                      >
+                        <span className="text-xs">Purple</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

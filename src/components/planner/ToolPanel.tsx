@@ -14,7 +14,6 @@ import {
   Wand2,
   Download,
   Upload,
-  Users,
 } from 'lucide-react';
 
 interface ToolPanelProps {
@@ -27,7 +26,7 @@ interface ToolPanelProps {
   onMotifChange: (motif: string) => void;
   onMotifRandomize: () => void;
   onAddBall: (color: BallColor) => void;
-  onAddRobot: (alliance: Alliance) => void;
+  onAddRobot: (alliance: Alliance) => string | null;
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
   onClearDrawings: () => void;
@@ -242,11 +241,7 @@ export const ToolPanel = ({
         <div className="panel-header">Field Setup</div>
         <button onClick={onSetupField} className="tool-button gap-1">
           <Wand2 className="w-4 h-4" />
-          <span className="text-xs">Place Artifacts</span>
-        </button>
-        <button onClick={onSetupRobots} className="tool-button gap-1 mt-2">
-          <Users className="w-4 h-4" />
-          <span className="text-xs">Place Sample Robots</span>
+          <span className="text-xs">Setup Field</span>
         </button>
       </div>
 

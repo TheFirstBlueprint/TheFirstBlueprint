@@ -17,9 +17,11 @@ const BALL_DIAMETER = 20;
 const HUMAN_PLAYER_ZONE_SIZE = DEFAULT_CONFIG.tileSize;
 const HUMAN_PLAYER_ZONE_INSET = 12;
 const HUMAN_PLAYER_SPACING = 24;
-const SPIKE_CLEAR_RADIUS = 18;
-const SPIKE_ROW_SPACING = 24;
-const SPIKE_ROW_HALF = SPIKE_ROW_SPACING;
+const HUMAN_PLAYER_BOX_COLUMNS = 3;
+const HUMAN_PLAYER_BOX_ROWS = 3;
+const HUMAN_PLAYER_TUNNEL_SLOTS = 6;
+const HUMAN_PLAYER_TUNNEL_INSET = 2;
+const OCCUPIED_SLOT_RADIUS = 10;
 const SPIKE_MARKS = {
   blue: [
     { x: 0.1621, y: 0.418 },
@@ -45,6 +47,75 @@ const SPIKE_PATTERNS = {
   ],
 } as const;
 
+const getHumanPlayerZoneStart = (alliance: Alliance) => {
+  const zoneStartX = alliance === 'red' ? DEFAULT_CONFIG.fieldWidth - HUMAN_PLAYER_ZONE_SIZE : 0;
+  const zoneStartY = DEFAULT_CONFIG.fieldHeight - HUMAN_PLAYER_ZONE_SIZE;
+  return { zoneStartX, zoneStartY };
+};
+
+const getHumanPlayerSlots = (alliance: Alliance) => {
+  const { zoneStartX, zoneStartY } = getHumanPlayerZoneStart(alliance);
+  const baseX = alliance === 'red'
+    ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (HUMAN_PLAYER_BOX_COLUMNS - 1) * HUMAN_PLAYER_SPACING
+    : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
+  const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
+  const boxSlots: Position[] = [];
+  for (let row = 0; row < HUMAN_PLAYER_BOX_ROWS; row += 1) {
+    for (let col = 0; col < HUMAN_PLAYER_BOX_COLUMNS; col += 1) {
+      boxSlots.push({
+        x: baseX + col * HUMAN_PLAYER_SPACING,
+        y: baseY - row * HUMAN_PLAYER_SPACING,
+      });
+    }
+  }
+
+  const tunnelX = alliance === 'red'
+    ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_TUNNEL_INSET - BALL_DIAMETER / 2
+    : zoneStartX + HUMAN_PLAYER_TUNNEL_INSET + BALL_DIAMETER / 2;
+  const tunnelStartY = zoneStartY - HUMAN_PLAYER_TUNNEL_INSET - BALL_DIAMETER / 2;
+  const tunnelSlots: Position[] = Array.from({ length: HUMAN_PLAYER_TUNNEL_SLOTS }, (_, index) => ({
+    x: tunnelX,
+    y: tunnelStartY - index * HUMAN_PLAYER_SPACING,
+  }));
+
+  return { boxSlots, tunnelSlots };
+};
+
+const getOccupiedSlots = (balls: Ball[], slots: Position[]) => {
+  return slots.map((slot) =>
+    balls.some((ball) => {
+      const dx = ball.position.x - slot.x;
+      const dy = ball.position.y - slot.y;
+      return Math.sqrt(dx * dx + dy * dy) <= OCCUPIED_SLOT_RADIUS;
+    })
+  );
+};
+
+const placeBallsInHumanZone = (balls: Ball[], existing: Ball[], alliance: Alliance) => {
+  const { boxSlots, tunnelSlots } = getHumanPlayerSlots(alliance);
+  const occupiedBox = getOccupiedSlots(existing, boxSlots);
+  const occupiedTunnel = getOccupiedSlots(existing, tunnelSlots);
+  const placed: Ball[] = [];
+
+  balls.forEach((ball) => {
+    const nextBoxIndex = occupiedBox.findIndex((filled) => !filled);
+    if (nextBoxIndex !== -1) {
+      occupiedBox[nextBoxIndex] = true;
+      placed.push({ ...ball, position: boxSlots[nextBoxIndex] });
+      return;
+    }
+
+    const nextTunnelIndex = occupiedTunnel.findIndex((filled) => !filled);
+    if (nextTunnelIndex !== -1) {
+      occupiedTunnel[nextTunnelIndex] = true;
+      placed.push({ ...ball, position: tunnelSlots[nextTunnelIndex] });
+      return;
+    }
+  });
+
+  return placed;
+};
+
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
 
@@ -55,7 +126,7 @@ export const useFieldState = () => {
       state.robots.length >= DEFAULT_CONFIG.maxRobots ||
       allianceCount >= DEFAULT_CONFIG.maxRobotsPerAlliance
     ) {
-      return;
+      return null;
     }
 
     const robot: Robot = {
@@ -71,6 +142,7 @@ export const useFieldState = () => {
     };
 
     setState((prev) => ({ ...prev, robots: [...prev.robots, robot] }));
+    return robot.id;
   }, [state.robots]);
 
   const updateRobotPosition = useCallback((id: string, position: Position) => {
@@ -208,7 +280,19 @@ export const useFieldState = () => {
       const targetAlliance = robot.alliance;
       const classifier = prev.classifiers[targetAlliance];
 
-      if (classifier.balls.length >= classifier.maxCapacity) return prev;
+      if (classifier.balls.length >= classifier.maxCapacity) {
+        const overflowBall: Ball = { ...ejectedBall, isScored: false, heldByRobotId: null };
+        const placed = placeBallsInHumanZone([overflowBall], prev.balls, targetAlliance);
+        return {
+          ...prev,
+          robots: prev.robots.map((r) =>
+            r.id === robotId
+              ? { ...r, heldBalls: r.heldBalls.slice(1) }
+              : r
+          ),
+          balls: [...prev.balls, ...placed],
+        };
+      }
 
       return {
         ...prev,
@@ -237,13 +321,21 @@ export const useFieldState = () => {
       const targetAlliance = robot.alliance;
       const classifier = prev.classifiers[targetAlliance];
       const availableSpace = classifier.maxCapacity - classifier.balls.length;
-      const ballsToEject = robot.heldBalls.slice(0, availableSpace);
+      const ballsToEject = robot.heldBalls.slice(0, Math.max(0, availableSpace));
+      const overflowBalls = robot.heldBalls.slice(ballsToEject.length);
+      const overflowPlaced = overflowBalls.length > 0
+        ? placeBallsInHumanZone(
+            overflowBalls.map((ball) => ({ ...ball, isScored: false, heldByRobotId: null })),
+            prev.balls,
+            targetAlliance
+          )
+        : [];
 
       return {
         ...prev,
         robots: prev.robots.map((r) =>
           r.id === robotId
-            ? { ...r, heldBalls: r.heldBalls.slice(availableSpace) }
+            ? { ...r, heldBalls: [] }
             : r
         ),
         classifiers: {
@@ -256,6 +348,7 @@ export const useFieldState = () => {
             ],
           },
         },
+        balls: [...prev.balls, ...overflowPlaced],
       };
     });
   }, []);
@@ -266,7 +359,15 @@ export const useFieldState = () => {
       const ball = prev.balls.find((b) => b.id === ballId);
       const classifier = prev.classifiers[alliance];
 
-      if (!ball || classifier.balls.length >= classifier.maxCapacity) return prev;
+      if (!ball) return prev;
+      if (classifier.balls.length >= classifier.maxCapacity) {
+        const overflowBall: Ball = { ...ball, isScored: false, heldByRobotId: null };
+        const placed = placeBallsInHumanZone([overflowBall], prev.balls, alliance);
+        return {
+          ...prev,
+          balls: [...prev.balls.filter((b) => b.id !== ballId), ...placed],
+        };
+      }
 
       return {
         ...prev,
@@ -300,22 +401,11 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const columns = 3;
-      const zoneStartX = alliance === 'red' ? DEFAULT_CONFIG.fieldWidth - HUMAN_PLAYER_ZONE_SIZE : 0;
-      const zoneStartY = DEFAULT_CONFIG.fieldHeight - HUMAN_PLAYER_ZONE_SIZE;
-      const baseX = alliance === 'red'
-        ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (columns - 1) * HUMAN_PLAYER_SPACING
-        : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
-      const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
-
-      const depositedBalls = classifier.balls.map((ball, index) => ({
-        ...ball,
-        isScored: false,
-        position: {
-          x: baseX + (index % columns) * HUMAN_PLAYER_SPACING,
-          y: baseY - Math.floor(index / columns) * HUMAN_PLAYER_SPACING,
-        },
-      }));
+      const depositedBalls = placeBallsInHumanZone(
+        classifier.balls.map((ball) => ({ ...ball, isScored: false, heldByRobotId: null })),
+        prev.balls,
+        alliance
+      );
 
       return {
         ...prev,
@@ -334,28 +424,18 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const columns = 3;
-      const zoneStartX = alliance === 'red' ? DEFAULT_CONFIG.fieldWidth - HUMAN_PLAYER_ZONE_SIZE : 0;
-      const zoneStartY = DEFAULT_CONFIG.fieldHeight - HUMAN_PLAYER_ZONE_SIZE;
-      const baseX = alliance === 'red'
-        ? zoneStartX + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2 - (columns - 1) * HUMAN_PLAYER_SPACING
-        : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
-      const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
       const index = classifier.balls.length - 1;
       const ball = classifier.balls[index];
       const poppedBall: Ball = {
         ...ball,
         isScored: false,
         heldByRobotId: null,
-        position: {
-          x: baseX + (index % columns) * HUMAN_PLAYER_SPACING,
-          y: baseY - Math.floor(index / columns) * HUMAN_PLAYER_SPACING,
-        },
       };
+      const placed = placeBallsInHumanZone([poppedBall], prev.balls, alliance);
 
       return {
         ...prev,
-        balls: [...prev.balls, poppedBall],
+        balls: [...prev.balls, ...placed],
         classifiers: {
           ...prev.classifiers,
           [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
@@ -366,26 +446,7 @@ export const useFieldState = () => {
 
   const setupFieldArtifacts = useCallback(() => {
     setState((prev) => {
-      const spikePositions = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
-        SPIKE_MARKS[alliance].flatMap((mark) => {
-          const centerX = mark.x * DEFAULT_CONFIG.fieldWidth;
-          const centerY = mark.y * DEFAULT_CONFIG.fieldHeight;
-          return [-SPIKE_ROW_HALF, 0, SPIKE_ROW_HALF].map((offsetX) => ({
-            x: centerX + offsetX,
-            y: centerY,
-          }));
-        })
-      );
-
-      const filteredBalls = prev.balls.filter((ball) => {
-        return spikePositions.every((pos) => {
-          const dx = ball.position.x - pos.x;
-          const dy = ball.position.y - pos.y;
-          return Math.sqrt(dx * dx + dy * dy) > SPIKE_CLEAR_RADIUS;
-        });
-      });
-
-      const newArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
+      const spikeArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
         SPIKE_MARKS[alliance].flatMap((mark, rowIndex) => {
           const pattern = SPIKE_PATTERNS[alliance][rowIndex];
           const centerX = mark.x * DEFAULT_CONFIG.fieldWidth;
@@ -398,7 +459,7 @@ export const useFieldState = () => {
                 BALL_DIAMETER / 2,
                 Math.min(
                   DEFAULT_CONFIG.fieldWidth - BALL_DIAMETER / 2,
-                  centerX + (index - 1) * SPIKE_ROW_SPACING
+                  centerX + (index - 1) * HUMAN_PLAYER_SPACING
                 )
               ),
               y: centerY,
@@ -409,11 +470,61 @@ export const useFieldState = () => {
         })
       );
 
+      const colors: BallColor[] = ['green', 'purple', 'purple'];
+      const humanZoneArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) => {
+        const seeded = colors.map((color) => ({
+          id: generateId(),
+          color,
+          position: { x: 0, y: 0 },
+          isScored: false,
+          heldByRobotId: null,
+        }));
+        return placeBallsInHumanZone(seeded, [...prev.balls, ...spikeArtifacts], alliance);
+      });
+
       return {
         ...prev,
-        balls: [...filteredBalls, ...newArtifacts],
+        balls: [...spikeArtifacts, ...humanZoneArtifacts],
       };
     });
+  }, []);
+
+  const addHumanPlayerBall = useCallback((alliance: Alliance, color: BallColor) => {
+    const { boxSlots } = getHumanPlayerSlots(alliance);
+    const occupiedBox = getOccupiedSlots(state.balls, boxSlots);
+    const slotIndex = occupiedBox.findIndex((filled) => !filled);
+    if (slotIndex === -1) {
+      return false;
+    }
+    const newBall: Ball = {
+      id: generateId(),
+      color,
+      position: boxSlots[slotIndex],
+      isScored: false,
+      heldByRobotId: null,
+    };
+    setState((prev) => ({
+      ...prev,
+      balls: [...prev.balls, newBall],
+    }));
+    return true;
+  }, [state.balls]);
+
+  const loadRobotBalls = useCallback((robotId: string, colors: BallColor[]) => {
+    setState((prev) => ({
+      ...prev,
+      robots: prev.robots.map((robot) => {
+        if (robot.id !== robotId) return robot;
+        const heldBalls = colors.slice(0, DEFAULT_CONFIG.maxBallsPerRobot).map((color) => ({
+          id: generateId(),
+          color,
+          position: { ...robot.position },
+          isScored: false,
+          heldByRobotId: robotId,
+        }));
+        return { ...robot, heldBalls };
+      }),
+    }));
   }, []);
 
   // Drawing operations
@@ -503,5 +614,8 @@ export const useFieldState = () => {
     // Export/Import
     exportState,
     importState,
+    // Human Player Zone
+    addHumanPlayerBall,
+    loadRobotBalls,
   };
 };
