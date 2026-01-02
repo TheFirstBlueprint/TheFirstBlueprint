@@ -31,9 +31,11 @@ export const BallElement = ({
   scale,
   isGhost,
 }: BallElementProps) => {
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.stopPropagation();
     if (isLocked) return;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -41,7 +43,7 @@ export const BallElement = ({
     const startPosY = ball.position.y;
     const normalizedScale = scale || 1;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const handlePointerMove = (moveEvent: PointerEvent) => {
       const dx = (moveEvent.clientX - startX) / normalizedScale;
       const dy = (moveEvent.clientY - startY) / normalizedScale;
       const newX = Math.max(BALL_SIZE / 2, Math.min(fieldBounds.width - BALL_SIZE / 2, startPosX + dx));
@@ -49,9 +51,9 @@ export const BallElement = ({
       onPositionChange(newX, newY);
     };
 
-    const handleMouseUp = (upEvent: MouseEvent) => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
 
       // Check for robot collision on drop
       const goalTarget = checkGoalDrop(upEvent.clientX, upEvent.clientY);
@@ -77,14 +79,14 @@ export const BallElement = ({
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
   };
 
   return (
     <div
       className={cn(
-        'absolute rounded-full cursor-grab active:cursor-grabbing select-none',
+        'absolute rounded-full cursor-grab active:cursor-grabbing select-none touch-none',
         'border-2 transition-all duration-150',
         'hover:scale-110',
         ball.color === 'green'
@@ -99,7 +101,7 @@ export const BallElement = ({
         height: BALL_SIZE,
         zIndex: 15,
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     />
   );
 };

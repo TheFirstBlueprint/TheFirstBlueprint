@@ -50,15 +50,17 @@ export const RobotElement = ({
   useEffect(() => {
     positionRef.current = robot.position;
   }, [robot.position.x, robot.position.y]);
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.stopPropagation();
     if (isLocked) return;
     onSelect();
 
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
     const normalizedScale = scale || 1;
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const handlePointerMove = (moveEvent: PointerEvent) => {
       if (!lastMouseRef.current) return;
       const dx = (moveEvent.clientX - lastMouseRef.current.x) / normalizedScale;
       const dy = (moveEvent.clientY - lastMouseRef.current.y) / normalizedScale;
@@ -71,14 +73,14 @@ export const RobotElement = ({
       lastMouseRef.current = { x: moveEvent.clientX, y: moveEvent.clientY };
     };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handlePointerUp = () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
       lastMouseRef.current = null;
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -90,7 +92,7 @@ export const RobotElement = ({
   return (
     <div
       className={cn(
-        'absolute cursor-grab active:cursor-grabbing select-none',
+        'absolute cursor-grab active:cursor-grabbing select-none touch-none',
         'transition-shadow duration-200'
       )}
       style={{
@@ -101,7 +103,7 @@ export const RobotElement = ({
         transform: `rotate(${robot.rotation}deg)`,
         zIndex: isSelected ? 50 : 20,
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       onClick={handleClick}
     >
       {/* Robot body */}
