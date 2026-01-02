@@ -233,6 +233,62 @@
     --glow-alliance-red: 0 0 12px hsl(0 75% 45% / 0.3);
     --glow-alliance-blue: 0 0 12px hsl(220 80% 45% / 0.3);
   }
+
+  .theme-sharkans {
+    --background: 220 50% 10%;
+    --foreground: 210 35% 96%;
+
+    --card: 220 45% 14%;
+    --card-foreground: 210 35% 96%;
+
+    --popover: 220 45% 12%;
+    --popover-foreground: 210 35% 96%;
+
+    --primary: 46 90% 55%;
+    --primary-foreground: 220 50% 10%;
+
+    --secondary: 220 40% 18%;
+    --secondary-foreground: 210 30% 92%;
+
+    --muted: 220 35% 16%;
+    --muted-foreground: 215 15% 60%;
+
+    --accent: 206 70% 50%;
+    --accent-foreground: 220 50% 10%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 210 35% 96%;
+
+    --success: 145 60% 45%;
+    --success-foreground: 220 50% 10%;
+
+    --alliance-red: 0 75% 50%;
+    --alliance-red-foreground: 210 35% 96%;
+
+    --alliance-blue: 210 85% 55%;
+    --alliance-blue-foreground: 210 35% 96%;
+
+    --ball-green: 145 75% 45%;
+    --ball-purple: 280 65% 55%;
+
+    --border: 220 30% 22%;
+    --input: 220 35% 20%;
+    --ring: 46 90% 55%;
+
+    --sidebar-background: 220 45% 12%;
+    --sidebar-foreground: 210 35% 92%;
+    --sidebar-primary: 46 90% 55%;
+    --sidebar-primary-foreground: 220 50% 10%;
+    --sidebar-accent: 220 40% 18%;
+    --sidebar-accent-foreground: 210 35% 92%;
+    --sidebar-border: 220 30% 22%;
+    --sidebar-ring: 46 90% 55%;
+
+    --glow-primary: 0 0 18px hsl(46 90% 55% / 0.35);
+    --glow-success: 0 0 14px hsl(145 60% 45% / 0.35);
+    --glow-alliance-red: 0 0 14px hsl(0 75% 50% / 0.35);
+    --glow-alliance-blue: 0 0 14px hsl(210 85% 55% / 0.35);
+  }
 }
 
 @layer base {

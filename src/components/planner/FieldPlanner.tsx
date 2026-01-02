@@ -71,7 +71,7 @@ const DEFAULT_KEYBINDS = {
   rotateRight: 'arrowright',
 };
 const MAX_SEQUENCE = 10;
-type ThemeMode = 'basic' | 'dark' | 'light';
+type ThemeMode = 'basic' | 'dark' | 'light' | 'sharkans';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
@@ -221,7 +221,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('theme-basic', 'theme-dark', 'theme-light');
+    root.classList.remove('theme-basic', 'theme-dark', 'theme-light', 'theme-sharkans');
     root.classList.add(`theme-${themeMode}`);
   }, [themeMode]);
 
@@ -1513,7 +1513,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             }}
           >
             <div
-              className="flex flex-col-reverse rounded-md bg-alliance-blue/20 border border-alliance-blue/50 p-1"
+              className="flex flex-col-reverse rounded-md bg-background/0 border border-border/0 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.blue.extensionCapacity }, (_, index) => {
@@ -1585,7 +1585,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             }}
           >
             <div
-              className="flex flex-col-reverse rounded-md bg-alliance-red/20 border border-alliance-red/50 p-1"
+              className="flex flex-col-reverse rounded-md bg-background/0 border border-border/0 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.red.extensionCapacity }, (_, index) => {
@@ -1593,7 +1593,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`red-extension-${index}`}
-                    className={`rounded-full border border-border/60 ${
+                    className={`rounded-full border border-border/0 ${
                       ball
                         ? ball.color === 'green'
                           ? 'bg-ball-green'
@@ -2015,6 +2015,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   <option value="basic">Basic</option>
                   <option value="dark">Dark</option>
                   <option value="light">Light</option>
+                  <option value="sharkans">Sharkans</option>
                 </select>
               </div>
 

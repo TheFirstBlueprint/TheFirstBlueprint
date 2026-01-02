@@ -19,7 +19,7 @@ const App = () => {
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? "basic";
     const root = document.documentElement;
-    root.classList.remove("theme-basic", "theme-dark", "theme-light");
+    root.classList.remove("theme-basic", "theme-dark", "theme-light", "theme-sharkans");
     root.classList.add(`theme-${storedTheme}`);
   }, []);
 
