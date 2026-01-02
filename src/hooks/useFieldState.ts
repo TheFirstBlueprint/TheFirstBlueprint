@@ -61,15 +61,17 @@ const getHumanPlayerSlots = (alliance: Alliance) => {
     : zoneStartX + HUMAN_PLAYER_ZONE_INSET + BALL_DIAMETER / 2;
   const baseY = zoneStartY + HUMAN_PLAYER_ZONE_SIZE - HUMAN_PLAYER_ZONE_INSET - BALL_DIAMETER / 2;
   const boxSlots: Position[] = [];
-  for (let row = 0; row < HUMAN_PLAYER_BOX_ROWS; row += 1) {
-    for (let col = 0; col < HUMAN_PLAYER_BOX_COLUMNS; col += 1) {
-      const gapOffset = col >= 3 ? HUMAN_PLAYER_GROUP_GAP : 0;
+  const columns = Array.from({ length: HUMAN_PLAYER_BOX_COLUMNS }, (_, index) => index);
+  const orderedColumns = alliance === 'red' ? columns.slice().reverse() : columns;
+  orderedColumns.forEach((col) => {
+    const gapOffset = col >= 3 ? HUMAN_PLAYER_GROUP_GAP : 0;
+    for (let row = 0; row < HUMAN_PLAYER_BOX_ROWS; row += 1) {
       boxSlots.push({
         x: baseX + col * HUMAN_PLAYER_SPACING + gapOffset,
         y: baseY - row * HUMAN_PLAYER_SPACING,
       });
     }
-  }
+  });
 
   return { boxSlots };
 };

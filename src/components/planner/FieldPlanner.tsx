@@ -28,7 +28,7 @@ const MAGNET_TARGETS = {
 };
 const CLASSIFIER_STACK = {
   top: 126,
-  sideInset: 0,
+  sideInset: -4,
   slotSize: 14,
   gap: 4,
   padding: 6,
