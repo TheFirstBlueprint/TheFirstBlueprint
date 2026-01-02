@@ -186,7 +186,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       const y =
         top +
         CLASSIFIER_STACK.padding +
-        (state.classifiers[alliance].extensionCapacity - 1 - index) * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap) +
+        index * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap) +
         CLASSIFIER_STACK.slotSize / 2;
       return { x, y };
     },
@@ -1162,19 +1162,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           robotCollectBalls(robotId, inRange);
         }
 
+        const { width, height } = getRobotDimensions(robot);
+        const robotRect = getRobotRect(candidate.x, candidate.y, width, height);
+        const extensionSlotRadius = CLASSIFIER_STACK.slotSize / 2;
         const extensionCandidates = (['blue', 'red'] as const).flatMap((alliance) =>
           state.classifiers[alliance].extensionBalls.map((ball, index) => {
             const pos = getExtensionSlotPosition(alliance, index);
             const dx = pos.x - candidate.x;
             const dy = pos.y - candidate.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            return { alliance, ball, distance };
+            return { alliance, ball, distance, pos };
           })
         );
         const extensionInRange = extensionCandidates
-          .filter(({ distance }) => {
-            const { width, height } = getRobotDimensions(robot);
-            return distance < Math.max(width, height) / 2 + 10;
+          .filter(({ pos }) => {
+            const withinX = pos.x >= robotRect.left - extensionSlotRadius && pos.x <= robotRect.right + extensionSlotRadius;
+            const withinY = pos.y >= robotRect.top - extensionSlotRadius && pos.y <= robotRect.bottom + extensionSlotRadius;
+            return withinX && withinY;
           })
           .sort((a, b) => a.distance - b.distance);
 
@@ -1531,7 +1535,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             }}
           >
             <div
-              className="flex flex-col-reverse rounded-md bg-background/0 border border-border/0 p-1"
+              className="flex flex-col rounded-md bg-background/0 border border-border/0 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.blue.extensionCapacity }, (_, index) => {
@@ -1603,7 +1607,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             }}
           >
             <div
-              className="flex flex-col-reverse rounded-md bg-background/0 border border-border/0 p-1"
+              className="flex flex-col rounded-md bg-background/0 border border-border/0 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
               {Array.from({ length: state.classifiers.red.extensionCapacity }, (_, index) => {
