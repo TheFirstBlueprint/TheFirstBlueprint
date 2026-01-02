@@ -26,7 +26,7 @@ interface ToolPanelProps {
   motifs: string[];
   onMotifChange: (motif: string) => void;
   onMotifRandomize: () => void;
-  onAddBall: (color: BallColor) => void;
+  onAddHumanPlayerBall: (alliance: Alliance, color: BallColor) => void;
   onAddRobot: (alliance: Alliance) => string | null;
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
@@ -51,7 +51,7 @@ export const ToolPanel = ({
   motifs,
   onMotifChange,
   onMotifRandomize,
-  onAddBall,
+  onAddHumanPlayerBall,
   onAddRobot,
   canAddRedRobot,
   canAddBlueRobot,
@@ -193,24 +193,50 @@ export const ToolPanel = ({
         <div className="panel-header">Add Elements</div>
         
         <div className="mb-3">
-          <div className="text-xs text-muted-foreground mb-1">Balls</div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onAddBall('green')}
-              className="tool-button flex-1 gap-1"
-              title="Add green ball"
-            >
-              <Circle className="w-4 h-4 fill-ball-green text-ball-green" />
-              <span className="text-xs">Green</span>
-            </button>
-            <button
-              onClick={() => onAddBall('purple')}
-              className="tool-button flex-1 gap-1"
-              title="Add purple ball"
-            >
-              <Circle className="w-4 h-4 fill-ball-purple text-ball-purple" />
-              <span className="text-xs">Purple</span>
-            </button>
+          <div className="text-xs text-muted-foreground mb-1">Human Player Zone</div>
+          <div className="space-y-2">
+            <div>
+              <div className="text-xs text-foreground mb-1">Blue</div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onAddHumanPlayerBall('blue', 'green')}
+                  className="tool-button flex-1 gap-1"
+                  title="Add green ball to blue zone"
+                >
+                  <Circle className="w-4 h-4 fill-ball-green text-ball-green" />
+                  <span className="text-xs">Green</span>
+                </button>
+                <button
+                  onClick={() => onAddHumanPlayerBall('blue', 'purple')}
+                  className="tool-button flex-1 gap-1"
+                  title="Add purple ball to blue zone"
+                >
+                  <Circle className="w-4 h-4 fill-ball-purple text-ball-purple" />
+                  <span className="text-xs">Purple</span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-foreground mb-1">Red</div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onAddHumanPlayerBall('red', 'green')}
+                  className="tool-button flex-1 gap-1"
+                  title="Add green ball to red zone"
+                >
+                  <Circle className="w-4 h-4 fill-ball-green text-ball-green" />
+                  <span className="text-xs">Green</span>
+                </button>
+                <button
+                  onClick={() => onAddHumanPlayerBall('red', 'purple')}
+                  className="tool-button flex-1 gap-1"
+                  title="Add purple ball to red zone"
+                >
+                  <Circle className="w-4 h-4 fill-ball-purple text-ball-purple" />
+                  <span className="text-xs">Purple</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

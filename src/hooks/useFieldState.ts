@@ -14,6 +14,7 @@ import {
 let idCounter = 0;
 const generateId = () => `id-${++idCounter}-${Date.now()}`;
 const BALL_DIAMETER = 20;
+const MAX_TOTAL_BALLS = 36;
 const HUMAN_PLAYER_ZONE_SIZE = DEFAULT_CONFIG.tileSize;
 const HUMAN_PLAYER_ZONE_INSET = 12;
 const HUMAN_PLAYER_SPACING = 24;
@@ -114,6 +115,15 @@ const getClassifierCapacityLeft = (classifier: FieldState['classifiers'][Allianc
   return Math.max(0, baseLeft + extensionLeft);
 };
 
+const getTotalBallCount = (state: FieldState) => {
+  const robotBalls = state.robots.reduce((total, robot) => total + robot.heldBalls.length, 0);
+  const classifierBalls = state.classifiers.red.balls.length
+    + state.classifiers.blue.balls.length
+    + state.classifiers.red.extensionBalls.length
+    + state.classifiers.blue.extensionBalls.length;
+  return state.balls.length + robotBalls + classifierBalls;
+};
+
 export const useFieldState = () => {
   const [state, setState] = useState<FieldState>(createInitialState());
 
@@ -185,7 +195,12 @@ export const useFieldState = () => {
       heldByRobotId: null,
     };
 
-    setState((prev) => ({ ...prev, balls: [...prev.balls, ball] }));
+    setState((prev) => {
+      if (getTotalBallCount(prev) >= MAX_TOTAL_BALLS) {
+        return prev;
+      }
+      return { ...prev, balls: [...prev.balls, ball] };
+    });
   }, []);
 
   const updateBallPosition = useCallback((id: string, position: Position) => {
@@ -361,6 +376,46 @@ export const useFieldState = () => {
     });
   }, []);
 
+  const collectClassifierExtensionBalls = useCallback((robotId: string, alliance: Alliance, ballIds: string[]) => {
+    setState((prev) => {
+      const robot = prev.robots.find((item) => item.id === robotId);
+      if (!robot || robot.heldBalls.length >= DEFAULT_CONFIG.maxBallsPerRobot) {
+        return prev;
+      }
+      const classifier = prev.classifiers[alliance];
+      const availableSpace = DEFAULT_CONFIG.maxBallsPerRobot - robot.heldBalls.length;
+      const extensionMap = new Map(classifier.extensionBalls.map((ball) => [ball.id, ball]));
+      const ballsToCollect = ballIds
+        .map((id) => extensionMap.get(id))
+        .filter((ball): ball is Ball => Boolean(ball))
+        .slice(0, availableSpace);
+      if (ballsToCollect.length === 0) return prev;
+
+      const collectedIds = new Set(ballsToCollect.map((ball) => ball.id));
+      return {
+        ...prev,
+        robots: prev.robots.map((item) =>
+          item.id === robotId
+            ? {
+                ...item,
+                heldBalls: [
+                  ...item.heldBalls,
+                  ...ballsToCollect.map((ball) => ({ ...ball, heldByRobotId: robotId, isScored: false })),
+                ],
+              }
+            : item
+        ),
+        classifiers: {
+          ...prev.classifiers,
+          [alliance]: {
+            ...classifier,
+            extensionBalls: classifier.extensionBalls.filter((ball) => !collectedIds.has(ball.id)),
+          },
+        },
+      };
+    });
+  }, []);
+
   // Score ball directly to classifier (from goal)
   const scoreBallToClassifier = useCallback((ballId: string, alliance: Alliance) => {
     setState((prev) => {
@@ -514,9 +569,13 @@ export const useFieldState = () => {
         })
       );
 
+      const totalWithoutField = getTotalBallCount(prev) - prev.balls.length;
+      const available = Math.max(0, MAX_TOTAL_BALLS - totalWithoutField);
       return {
         ...prev,
-        balls: [...spikeArtifacts],
+        balls: available <= 0
+          ? [...prev.balls]
+          : [...prev.balls, ...spikeArtifacts].slice(0, prev.balls.length + available),
       };
     });
   }, []);
@@ -535,28 +594,40 @@ export const useFieldState = () => {
       isScored: false,
       heldByRobotId: null,
     };
-    setState((prev) => ({
-      ...prev,
-      balls: [...prev.balls, newBall],
-    }));
+    setState((prev) => {
+      if (getTotalBallCount(prev) >= MAX_TOTAL_BALLS) {
+        return prev;
+      }
+      return {
+        ...prev,
+        balls: [...prev.balls, newBall],
+      };
+    });
     return true;
   }, [state.balls]);
 
   const loadRobotBalls = useCallback((robotId: string, colors: BallColor[]) => {
-    setState((prev) => ({
-      ...prev,
-      robots: prev.robots.map((robot) => {
-        if (robot.id !== robotId) return robot;
-        const heldBalls = colors.slice(0, DEFAULT_CONFIG.maxBallsPerRobot).map((color) => ({
+    setState((prev) => {
+      const robot = prev.robots.find((item) => item.id === robotId);
+      if (!robot) return prev;
+      const totalWithoutRobot = getTotalBallCount(prev) - robot.heldBalls.length;
+      const available = Math.max(0, MAX_TOTAL_BALLS - totalWithoutRobot);
+      const heldBalls = colors
+        .slice(0, Math.min(DEFAULT_CONFIG.maxBallsPerRobot, available))
+        .map((color) => ({
           id: generateId(),
           color,
           position: { ...robot.position },
           isScored: false,
           heldByRobotId: robotId,
         }));
-        return { ...robot, heldBalls };
-      }),
-    }));
+      return {
+        ...prev,
+        robots: prev.robots.map((item) => (
+          item.id === robotId ? { ...item, heldBalls } : item
+        )),
+      };
+    });
   }, []);
 
   // Drawing operations
@@ -644,6 +715,7 @@ export const useFieldState = () => {
     removeRobot,
     robotCollectBall,
     robotCollectBalls,
+    collectClassifierExtensionBalls,
     removeRobotBall,
     robotEjectSingle,
     robotEjectAll,

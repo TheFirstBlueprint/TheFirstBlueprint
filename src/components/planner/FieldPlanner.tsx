@@ -89,9 +89,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     robotEjectAll,
     robotCollectBall,
     robotCollectBalls,
+    collectClassifierExtensionBalls,
     removeRobotBall,
     cycleRobotBalls,
-    addBall,
     updateBallPosition,
     removeBall,
     scoreBallToClassifier,
@@ -167,6 +167,28 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     state.classifiers.red.extensionBalls.forEach((ball) => ids.add(ball.id));
     return ids;
   }, [state.classifiers]);
+
+  const getExtensionSlotPosition = useCallback(
+    (alliance: 'red' | 'blue', index: number) => {
+      const top =
+        CLASSIFIER_STACK.top +
+        CLASSIFIER_STACK.padding * 2 +
+        CLASSIFIER_STACK.slotSize * state.classifiers[alliance].maxCapacity +
+        CLASSIFIER_STACK.gap * (state.classifiers[alliance].maxCapacity - 1) +
+        CLASSIFIER_EXTENSION_OFFSET;
+      const left = alliance === 'blue'
+        ? CLASSIFIER_STACK.sideInset
+        : FIELD_SIZE - CLASSIFIER_STACK.sideInset - CLASSIFIER_STACK.slotSize - CLASSIFIER_STACK.padding * 2;
+      const x = left + CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2;
+      const y =
+        top +
+        CLASSIFIER_STACK.padding +
+        (state.classifiers[alliance].extensionCapacity - 1 - index) * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap) +
+        CLASSIFIER_STACK.slotSize / 2;
+      return { x, y };
+    },
+    [state.classifiers]
+  );
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
     if (themeMode === 'dark') return fieldImageDark;
@@ -1115,6 +1137,40 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         if (inRange.length > 0) {
           robotCollectBalls(robotId, inRange);
         }
+
+        const extensionCandidates = (['blue', 'red'] as const).flatMap((alliance) =>
+          state.classifiers[alliance].extensionBalls.map((ball, index) => {
+            const pos = getExtensionSlotPosition(alliance, index);
+            const dx = pos.x - candidate.x;
+            const dy = pos.y - candidate.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return { alliance, ball, distance };
+          })
+        );
+        const extensionInRange = extensionCandidates
+          .filter(({ distance }) => {
+            const { width, height } = getRobotDimensions(robot);
+            return distance < Math.max(width, height) / 2 + 10;
+          })
+          .sort((a, b) => a.distance - b.distance);
+
+        if (extensionInRange.length > 0) {
+          const maxToCollect = DEFAULT_CONFIG.maxBallsPerRobot - robot.heldBalls.length;
+          const selected = extensionInRange.slice(0, Math.max(0, maxToCollect));
+          const grouped = selected.reduce<Record<'red' | 'blue', string[]>>(
+            (acc, item) => {
+              acc[item.alliance].push(item.ball.id);
+              return acc;
+            },
+            { red: [], blue: [] }
+          );
+          if (grouped.red.length) {
+            collectClassifierExtensionBalls(robotId, 'red', grouped.red);
+          }
+          if (grouped.blue.length) {
+            collectClassifierExtensionBalls(robotId, 'blue', grouped.blue);
+          }
+        }
       }
 
       if (modes.outtake && robot.heldBalls.length > 0) {
@@ -1132,9 +1188,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       clampToField,
       resolveSolidOverlap,
       resolveGoalTriangleOverlap,
+      collectClassifierExtensionBalls,
+      getExtensionSlotPosition,
       robotCollectBalls,
       robotModes,
       state.balls,
+      state.classifiers,
       state.robots,
       updateRobotPosition,
     ]
@@ -1307,7 +1366,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           motifs={motifs}
           onMotifChange={setMotif}
           onMotifRandomize={handleRandomizeMotif}
-          onAddBall={addBall}
+          onAddHumanPlayerBall={addHumanPlayerBall}
           onAddRobot={addRobot}
           canAddRedRobot={canAddRedRobot}
           canAddBlueRobot={canAddBlueRobot}
