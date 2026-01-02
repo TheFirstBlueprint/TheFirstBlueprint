@@ -245,6 +245,10 @@
     font-family: var(--font-sans);
   }
 
+  body.planner-no-scroll {
+    overflow: hidden;
+  }
+
   .font-mono {
     font-family: var(--font-mono);
   }

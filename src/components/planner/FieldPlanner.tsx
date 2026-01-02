@@ -226,6 +226,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, [themeMode]);
 
   useEffect(() => {
+    document.body.classList.add('planner-no-scroll');
+    return () => {
+      document.body.classList.remove('planner-no-scroll');
+    };
+  }, []);
+
+  useEffect(() => {
     robotsRef.current = state.robots;
   }, [state.robots]);
 
