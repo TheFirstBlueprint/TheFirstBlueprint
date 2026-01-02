@@ -162,6 +162,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+  const magnetTargetsPx = useMemo(
+    () => ({
+      red: MAGNET_TARGETS.red[0]
+        ? { x: MAGNET_TARGETS.red[0].x * FIELD_SIZE, y: MAGNET_TARGETS.red[0].y * FIELD_SIZE }
+        : null,
+      blue: MAGNET_TARGETS.blue[0]
+        ? { x: MAGNET_TARGETS.blue[0].x * FIELD_SIZE, y: MAGNET_TARGETS.blue[0].y * FIELD_SIZE }
+        : null,
+    }),
+    []
+  );
   const classifierBallIds = useMemo(() => {
     const ids = new Set<string>();
     state.classifiers.blue.balls.forEach((ball) => ids.add(ball.id));
@@ -455,6 +466,44 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       bottom: y + halfHeight,
     };
   }, []);
+
+  const isDoubleParked = useCallback(
+    (alliance: 'red' | 'blue') => {
+      const target = magnetTargetsPx[alliance];
+      if (!target) return false;
+      const robots = state.robots.filter((robot) => robot.alliance === alliance);
+      if (robots.length < 2) return false;
+      for (let i = 0; i < robots.length - 1; i++) {
+        const a = robots[i];
+        const aDx = a.position.x - target.x;
+        const aDy = a.position.y - target.y;
+        const aMagnetized = Math.sqrt(aDx * aDx + aDy * aDy) <= MAGNET_RADIUS;
+        if (!aMagnetized) continue;
+        const aDim = getRobotDimensions(a);
+        const aRect = getRobotRect(a.position.x, a.position.y, aDim.width, aDim.height);
+        for (let j = i + 1; j < robots.length; j++) {
+          const b = robots[j];
+          const bDx = b.position.x - target.x;
+          const bDy = b.position.y - target.y;
+          const bMagnetized = Math.sqrt(bDx * bDx + bDy * bDy) <= MAGNET_RADIUS;
+          if (!bMagnetized) continue;
+          const bDim = getRobotDimensions(b);
+          const bRect = getRobotRect(b.position.x, b.position.y, bDim.width, bDim.height);
+          const overlaps =
+            aRect.left < bRect.right &&
+            aRect.right > bRect.left &&
+            aRect.top < bRect.bottom &&
+            aRect.bottom > bRect.top;
+          if (overlaps) return true;
+        }
+      }
+      return false;
+    },
+    [getRobotDimensions, getRobotRect, magnetTargetsPx, state.robots]
+  );
+
+  const isRedDoubleParked = isDoubleParked('red');
+  const isBlueDoubleParked = isDoubleParked('blue');
 
   const isRobotTouchingLever = useCallback(
     (robot: typeof state.robots[number], lever: { x: number; y: number }) => {
@@ -1386,22 +1435,24 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       {/* Left Panel */}
       <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
-          <ToolPanel
-              activeTool={activeTool}
-              onToolChange={setActiveTool}
-              penColor={penColor}
-              onPenColorChange={setPenColor}
-              motif={motif}
-              motifs={motifs}
-              onMotifChange={setMotif}
-              onMotifRandomize={handleRandomizeMotif}
-              onAddHumanPlayerBall={addHumanPlayerBall}
-              onAddRobot={addRobot}
-              canAddRedRobot={canAddRedRobot}
-              canAddBlueRobot={canAddBlueRobot}
-              onClearDrawings={clearDrawings}
-              onClearBalls={clearBalls}
-              onClearRobots={clearRobots}
+        <ToolPanel
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
+            penColor={penColor}
+            onPenColorChange={setPenColor}
+            motif={motif}
+            motifs={motifs}
+            onMotifChange={setMotif}
+            onMotifRandomize={handleRandomizeMotif}
+            onAddHumanPlayerBall={addHumanPlayerBall}
+            onAddRobot={addRobot}
+            canAddRedRobot={canAddRedRobot}
+            canAddBlueRobot={canAddBlueRobot}
+            isRedDoubleParked={isRedDoubleParked}
+            isBlueDoubleParked={isBlueDoubleParked}
+            onClearDrawings={clearDrawings}
+            onClearBalls={clearBalls}
+            onClearRobots={clearRobots}
               onResetField={resetField}
               onSetupField={handleSetupField}
               onSetupRobots={handleSetupRobots}

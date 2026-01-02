@@ -30,6 +30,8 @@ interface ToolPanelProps {
   onAddRobot: (alliance: Alliance) => string | null;
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
+  isRedDoubleParked: boolean;
+  isBlueDoubleParked: boolean;
   onClearDrawings: () => void;
   onClearBalls: () => void;
   onClearRobots: () => void;
@@ -55,6 +57,8 @@ export const ToolPanel = ({
   onAddRobot,
   canAddRedRobot,
   canAddBlueRobot,
+  isRedDoubleParked,
+  isBlueDoubleParked,
   onClearDrawings,
   onClearBalls,
   onClearRobots,
@@ -267,6 +271,14 @@ export const ToolPanel = ({
               <Square className="w-4 h-4 fill-alliance-blue text-alliance-blue" />
               <span className="text-xs">Blue</span>
             </button>
+          </div>
+          <div className="mt-2 flex justify-between text-[10px] font-mono uppercase tracking-wide">
+            <span className={cn('text-alliance-red', !isRedDoubleParked && 'opacity-40')}>
+              {isRedDoubleParked ? 'Double Parked' : ' '}
+            </span>
+            <span className={cn('text-alliance-blue', !isBlueDoubleParked && 'opacity-40')}>
+              {isBlueDoubleParked ? 'Double Parked' : ' '}
+            </span>
           </div>
         </div>
       </div>
