@@ -11,7 +11,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Info, Save, X } from 'lucide-react';
+import { Goal, Info, Minus, Plus, Save, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FIELD_SIZE = 600;
@@ -70,7 +70,8 @@ const DEFAULT_KEYBINDS = {
   rotateLeft: 'arrowleft',
   rotateRight: 'arrowright',
 };
-const MAX_SEQUENCE = 10;
+const MIN_SEQUENCE = 10;
+const MAX_SEQUENCE = 50;
 type ThemeMode = 'basic' | 'dark' | 'light' | 'sharkans';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
@@ -127,6 +128,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
   const [sequencePlaying, setSequencePlaying] = useState(false);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(null);
+  const [maxSequence, setMaxSequence] = useState(MIN_SEQUENCE);
   const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
@@ -357,6 +359,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, [saveSequenceStep, selectedSequenceStep, sequencePlaying, state.robots]);
 
   useEffect(() => {
+    if (selectedSequenceStep && selectedSequenceStep > maxSequence) {
+      setSelectedSequenceStep(maxSequence);
+    }
+  }, [maxSequence, selectedSequenceStep]);
+
+  useEffect(() => {
     setRobotModes((prev) => {
       const next: Record<string, { intake: boolean; outtake: boolean }> = {};
       state.robots.forEach((robot) => {
@@ -554,14 +562,21 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     toast.success(`Deleted step ${selectedSequenceStep}.`);
   }, [selectedSequenceStep, sequenceSteps]);
 
+  const handleSequenceLengthChange = useCallback((delta: -1 | 1) => {
+    setMaxSequence((prev) => {
+      const next = Math.max(MIN_SEQUENCE, Math.min(MAX_SEQUENCE, prev + delta));
+      return next;
+    });
+  }, []);
+
   const handleSequenceStepChange = useCallback(
     (direction: -1 | 1) => {
       if (sequencePlaying) return;
-      const current = selectedSequenceStep ?? (direction === 1 ? 0 : MAX_SEQUENCE + 1);
-      const next = ((current - 1 + direction + MAX_SEQUENCE) % MAX_SEQUENCE) + 1;
+      const current = selectedSequenceStep ?? (direction === 1 ? 0 : maxSequence + 1);
+      const next = ((current - 1 + direction + maxSequence) % maxSequence) + 1;
       handleSelectSequenceStep(next);
     },
-    [handleSelectSequenceStep, selectedSequenceStep, sequencePlaying]
+    [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
 
   const playSequence = useCallback(async () => {
@@ -571,7 +586,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       return;
     }
     setSequencePlaying(true);
-    for (let i = 1; i <= MAX_SEQUENCE; i++) {
+    for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
       const startRobots = robotsRef.current.map((robot) => ({
@@ -607,7 +622,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
     setSequencePlaying(false);
-  }, [sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [maxSequence, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1843,24 +1858,46 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               <div className="panel">
                 <div className="panel-header flex items-center justify-between">
                   <span>Sequence</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="tool-button !p-1"
-                        aria-label="Sequence help"
-                        title="Sequence help"
-                      >
-                        <Info className="w-4 h-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs text-xs">
-                      Press D or A to move forward/backward. Create an animated sequence by moving robots at each step.
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="tool-button !p-1"
+                          aria-label="Sequence help"
+                          title="Sequence help"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs text-xs">
+                        Press D or A to move forward/backward. Create an animated sequence by moving robots at each step.
+                      </TooltipContent>
+                    </Tooltip>
+                    <button
+                      type="button"
+                      className="tool-button !p-1"
+                      onClick={() => handleSequenceLengthChange(-1)}
+                      title="Remove sequence steps"
+                      aria-label="Remove sequence steps"
+                      disabled={maxSequence <= MIN_SEQUENCE}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="tool-button !p-1"
+                      onClick={() => handleSequenceLengthChange(1)}
+                      title="Add sequence steps"
+                      aria-label="Add sequence steps"
+                      disabled={maxSequence >= MAX_SEQUENCE}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {Array.from({ length: MAX_SEQUENCE }, (_, index) => {
+                  {Array.from({ length: maxSequence }, (_, index) => {
                     const step = index + 1;
                     const isSaved = Boolean(sequenceSteps[step]);
                     const isSelected = selectedSequenceStep === step;
