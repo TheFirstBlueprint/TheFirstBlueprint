@@ -1362,38 +1362,40 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
-    <div className={`h-screen bg-background flex overflow-hidden ${className ?? ''}`}>
+    <div className={`h-[100dvh] bg-background flex overflow-hidden ${className ?? ''}`}>
       {/* Left Panel */}
-      <div className="panel-left w-64 p-4 border-r border-border flex-shrink-0 h-full overflow-y-auto">
-        <ToolPanel
-          activeTool={activeTool}
-          onToolChange={setActiveTool}
-          penColor={penColor}
-          onPenColorChange={setPenColor}
-          motif={motif}
-          motifs={motifs}
-          onMotifChange={setMotif}
-          onMotifRandomize={handleRandomizeMotif}
-          onAddHumanPlayerBall={addHumanPlayerBall}
-          onAddRobot={addRobot}
-          canAddRedRobot={canAddRedRobot}
-          canAddBlueRobot={canAddBlueRobot}
-          onClearDrawings={clearDrawings}
-          onClearBalls={clearBalls}
-          onClearRobots={clearRobots}
-          onResetField={resetField}
-          onSetupField={handleSetupField}
-          onSetupRobots={handleSetupRobots}
-          onExport={handleExport}
-          onImport={handleImport}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+      <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0">
+        <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
+          <ToolPanel
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
+            penColor={penColor}
+            onPenColorChange={setPenColor}
+            motif={motif}
+            motifs={motifs}
+            onMotifChange={setMotif}
+            onMotifRandomize={handleRandomizeMotif}
+            onAddHumanPlayerBall={addHumanPlayerBall}
+            onAddRobot={addRobot}
+            canAddRedRobot={canAddRedRobot}
+            canAddBlueRobot={canAddBlueRobot}
+            onClearDrawings={clearDrawings}
+            onClearBalls={clearBalls}
+            onClearRobots={clearRobots}
+            onResetField={resetField}
+            onSetupField={handleSetupField}
+            onSetupRobots={handleSetupRobots}
+            onExport={handleExport}
+            onImport={handleImport}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
       </div>
 
       {/* Field Area */}
@@ -1657,17 +1659,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Right Panel */}
-      <div className="panel-right w-64 p-4 border-l border-border flex-shrink-0 h-full overflow-y-auto">
-        <div className="mb-6">
-          <h1 className="font-mono text-lg font-semibold text-primary mb-1">
-            FTC DECODE
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Strategy Planner 2025-26
-          </p>
-        </div>
+      <div className="panel-right w-64 border-l border-border flex-shrink-0 h-full min-h-0">
+        <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
+          <div className="mb-6">
+            <h1 className="font-mono text-lg font-semibold text-primary mb-1">
+              FTC DECODE
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Strategy Planner 2025-26
+            </p>
+          </div>
 
-        {robotPanelOpen && selectedRobot && robotDraft ? (
+          {robotPanelOpen && selectedRobot && robotDraft ? (
           <div
             className="space-y-4"
             onKeyDown={(e) => {
@@ -1938,53 +1941,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   overflowCount={state.overflowCounts.blue}
                 />
               </div>
-              <div className="panel">
-                <div className="panel-header">Human Player Zone</div>
-                <div className="space-y-3 text-xs text-muted-foreground">
-                  <div>
-                    <div className="mb-2 text-foreground">Blue Zone</div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAddHumanPlayerBall('blue', 'green')}
-                        className="tool-button flex-1 gap-1"
-                        title="Add green ball to blue zone"
-                      >
-                        <span className="text-xs">Green</span>
-                      </button>
-                      <button
-                        onClick={() => handleAddHumanPlayerBall('blue', 'purple')}
-                        className="tool-button flex-1 gap-1"
-                        title="Add purple ball to blue zone"
-                      >
-                        <span className="text-xs">Purple</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="mb-2 text-foreground">Red Zone</div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAddHumanPlayerBall('red', 'green')}
-                        className="tool-button flex-1 gap-1"
-                        title="Add green ball to red zone"
-                      >
-                        <span className="text-xs">Green</span>
-                      </button>
-                      <button
-                        onClick={() => handleAddHumanPlayerBall('red', 'purple')}
-                        className="tool-button flex-1 gap-1"
-                        title="Add purple ball to red zone"
-                      >
-                        <span className="text-xs">Purple</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
           </>
-        )}
+          )}
+        </div>
       </div>
 
       {settingsOpen && (
