@@ -562,7 +562,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     toast.success(`Deleted step ${selectedSequenceStep}.`);
   }, [selectedSequenceStep, sequenceSteps]);
 
-  const handleSequenceLengthChange = useCallback((delta: -1 | 1) => {
+  const handleSequenceLengthChange = useCallback((delta: number) => {
     setMaxSequence((prev) => {
       const next = Math.max(MIN_SEQUENCE, Math.min(MAX_SEQUENCE, prev + delta));
       return next;
@@ -1863,6 +1863,26 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 <div className="panel-header flex items-center justify-between">
                   <span>Sequence</span>
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="tool-button !p-1"
+                      onClick={() => handleSequenceLengthChange(-5)}
+                      title="Remove sequence steps"
+                      aria-label="Remove sequence steps"
+                      disabled={maxSequence <= MIN_SEQUENCE}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="tool-button !p-1"
+                      onClick={() => handleSequenceLengthChange(5)}
+                      title="Add sequence steps"
+                      aria-label="Add sequence steps"
+                      disabled={maxSequence >= MAX_SEQUENCE}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -1878,26 +1898,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         Press D or A to move forward/backward. Create an animated sequence by moving robots at each step.
                       </TooltipContent>
                     </Tooltip>
-                    <button
-                      type="button"
-                      className="tool-button !p-1"
-                      onClick={() => handleSequenceLengthChange(-1)}
-                      title="Remove sequence steps"
-                      aria-label="Remove sequence steps"
-                      disabled={maxSequence <= MIN_SEQUENCE}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="tool-button !p-1"
-                      onClick={() => handleSequenceLengthChange(1)}
-                      title="Add sequence steps"
-                      aria-label="Add sequence steps"
-                      disabled={maxSequence >= MAX_SEQUENCE}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
