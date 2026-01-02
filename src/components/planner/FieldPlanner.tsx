@@ -57,7 +57,8 @@ const LEVER_POSITION = {
 };
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
-const FIELD_SCREEN_RATIO = 0.94;
+const FIELD_SCREEN_RATIO = 0.8;
+const FIELD_SCALE_MULTIPLIER = 1.1;
 const DEFAULT_KEYBINDS = {
   select: 's',
   pen: 'p',
@@ -238,7 +239,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const availableHeight = area.clientHeight - paddingY;
     if (availableWidth <= 0 || availableHeight <= 0) return;
     const targetSize = Math.min(availableWidth, availableHeight) * FIELD_SCREEN_RATIO;
-    const nextScale = Math.max(0.1, targetSize / FIELD_SIZE);
+    const nextScale = Math.max(0.1, (targetSize / FIELD_SIZE) * FIELD_SCALE_MULTIPLIER);
     setFieldScale((prev) => (Math.abs(prev - nextScale) > 0.01 ? nextScale : prev));
   }, []);
 
