@@ -305,6 +305,14 @@
     overflow: hidden;
   }
 
+  body.planner-no-scroll #root {
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    text-align: initial;
+  }
+
   .font-mono {
     font-family: var(--font-mono);
   }

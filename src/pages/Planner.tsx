@@ -13,9 +13,9 @@ const Planner = () => {
           content="Interactive FTC DECODE field planner for building strategies and robot paths."
         />
       </Helmet>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
         <SiteHeader />
-        <div className="flex-1">
+        <div className="flex-1 min-h-0">
           <FieldPlanner className="h-full" />
         </div>
       </div>

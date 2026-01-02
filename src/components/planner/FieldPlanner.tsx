@@ -232,6 +232,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
+
   useEffect(() => {
     robotsRef.current = state.robots;
   }, [state.robots]);
@@ -1362,41 +1363,41 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
-    <div className={`h-[100dvh] bg-background flex overflow-hidden ${className ?? ''}`}>
+    <div className={`h-[100dvh] bg-background flex ${className ?? ''}`}>
       {/* Left Panel */}
-      <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0">
+      <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
           <ToolPanel
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
-            penColor={penColor}
-            onPenColorChange={setPenColor}
-            motif={motif}
-            motifs={motifs}
-            onMotifChange={setMotif}
-            onMotifRandomize={handleRandomizeMotif}
-            onAddHumanPlayerBall={addHumanPlayerBall}
-            onAddRobot={addRobot}
-            canAddRedRobot={canAddRedRobot}
-            canAddBlueRobot={canAddBlueRobot}
-            onClearDrawings={clearDrawings}
-            onClearBalls={clearBalls}
-            onClearRobots={clearRobots}
-            onResetField={resetField}
-            onSetupField={handleSetupField}
-            onSetupRobots={handleSetupRobots}
-            onExport={handleExport}
-            onImport={handleImport}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
+              penColor={penColor}
+              onPenColorChange={setPenColor}
+              motif={motif}
+              motifs={motifs}
+              onMotifChange={setMotif}
+              onMotifRandomize={handleRandomizeMotif}
+              onAddHumanPlayerBall={addHumanPlayerBall}
+              onAddRobot={addRobot}
+              canAddRedRobot={canAddRedRobot}
+              canAddBlueRobot={canAddBlueRobot}
+              onClearDrawings={clearDrawings}
+              onClearBalls={clearBalls}
+              onClearRobots={clearRobots}
+              onResetField={resetField}
+              onSetupField={handleSetupField}
+              onSetupRobots={handleSetupRobots}
+              onExport={handleExport}
+              onImport={handleImport}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
         </div>
-      </div>
 
       {/* Field Area */}
       <div
@@ -1659,18 +1660,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Right Panel */}
-      <div className="panel-right w-64 border-l border-border flex-shrink-0 h-full min-h-0">
+       <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
           <div className="mb-6">
-            <h1 className="font-mono text-lg font-semibold text-primary mb-1">
-              FTC DECODE
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Strategy Planner 2025-26
-            </p>
-          </div>
+              <h1 className="font-mono text-lg font-semibold text-primary mb-1">
+                FTC DECODE
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Strategy Planner 2025-26
+              </p>
+            </div>
 
-          {robotPanelOpen && selectedRobot && robotDraft ? (
+        {robotPanelOpen && selectedRobot && robotDraft ? (
           <div
             className="space-y-4"
             onKeyDown={(e) => {
@@ -1944,8 +1945,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             </div>
 
           </>
-          )}
-        </div>
+        )}
       </div>
 
       {settingsOpen && (
@@ -2038,6 +2038,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
