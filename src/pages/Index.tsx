@@ -2,95 +2,139 @@ import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { SiteHeader } from '@/components/site/SiteHeader';
 
-const VIDEO_EMBED_URL = 'https://www.youtube.com/embed/dQw4w9WgXcQ';
-const VIDEO_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-
 const Index = () => {
   return (
     <>
       <Helmet>
-        <title>FTC DECODE Strategy Planner | Home</title>
+        <title>Thefirstblueprint | Home</title>
         <meta
           name="description"
-          content="Home base for the FTC DECODE strategy planner with quick access, instructions, and updates."
+          content="Thefirstblueprint home for FTC and FRC planning tools."
         />
       </Helmet>
       <div className="min-h-screen bg-background field-container">
         <SiteHeader />
-        <main className="mx-auto w-full max-w-6xl px-6 py-10">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <section className="panel">
-              <div className="panel-header">Featured Walkthrough</div>
-              <div className="aspect-video w-full overflow-hidden rounded-lg border border-border">
-                <iframe
-                  src={VIDEO_EMBED_URL}
-                  title="FTC DECODE Strategy Planner Walkthrough"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <a
-                  href={VIDEO_LINK_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="tool-button"
-                >
-                  Open Video Link
-                </a>
-                <p className="text-xs text-muted-foreground">
-                  Replace the URLs at the top of this file to customize the embed.
-                </p>
-              </div>
-            </section>
-
-            <div className="space-y-8">
-              <section className="panel">
-                <div className="panel-header">Quick Start</div>
-                <ol className="space-y-2 text-sm text-muted-foreground">
-                  <li>Drop robots and balls onto the field to start building a plan.</li>
-                  <li>Use the left panel tools to draw paths and annotate routes.</li>
-                  <li>Click a robot to toggle intake/outtake controls and edit details.</li>
-                  <li>Use keyboard shortcuts for speed, then adjust them in Settings.</li>
-                  <li>Export your plan to share with your drive team.</li>
-                </ol>
-                <Link to="/planner" className="tool-button active mt-6 w-full justify-center">
-                  Open Field Planner
-                </Link>
-              </section>
-              <section className="panel">
-                <div className="panel-header">Instructions</div>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>Drag robots & balls to position</li>
-                  <li>Drop balls on robots to collect</li>
-                  <li>Click robot for controls</li>
-                  <li>Arrow keys rotate selected robot</li>
-                  <li>I to toggle intake, K to shoot all balls</li>
-                  <li>O to shoot one ball</li>
-                  <li>L to cycle held balls</li>
-                  <li>Use pen to draw paths</li>
-                  <li>Export to save strategy</li>
-                </ul>
-              </section>
-            </div>
+        <main className="relative mx-auto w-full max-w-6xl px-6 py-12">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute -top-24 left-[-8%] h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+            <div className="absolute top-40 right-[-6%] h-72 w-72 rounded-full bg-alliance-blue/20 blur-3xl" />
+            <div className="absolute bottom-0 left-1/3 h-40 w-72 rounded-full bg-white/5 blur-2xl" />
           </div>
 
-          <section className="panel mt-8">
-            <div className="panel-header">Planner Highlights</div>
-            <div className="grid gap-4 md:grid-cols-3 text-sm text-muted-foreground">
-              <div>
-                <h3 className="text-foreground font-semibold mb-1">Fast Strategy Drafting</h3>
-                <p>Drag-and-drop robots, balls, and drawings with snap-safe mechanics.</p>
+          <header className="mb-10">
+            <h1 className="font-mono text-4xl font-semibold uppercase tracking-[0.12em] text-foreground">
+              Thefirstblueprint
+            </h1>
+            <h2 className="mt-3 text-2xl font-semibold text-foreground">
+              Build smarter match plans in minutes.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+              Choose your league, drop in a modular field image, and start organizing strategy with
+              clean, flexible layouts.
+            </p>
+          </header>
+
+          <section className="grid gap-6 lg:grid-cols-2">
+            <Link
+              to="/planner"
+              className="group relative min-h-[360px] overflow-hidden rounded-2xl border border-border bg-card/80 p-6 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+            >
+              <div className="absolute inset-y-0 right-0 w-[55%] bg-gradient-to-br from-primary/30 via-transparent to-transparent" />
+              <div className="absolute right-6 top-6 h-32 w-44 rounded-xl border border-white/10 bg-gradient-to-br from-white/15 via-white/5 to-transparent">
+                <div className="flex h-full items-end justify-end p-2 text-[10px] font-mono uppercase tracking-widest text-white/50">
+                  Image slot
+                </div>
               </div>
-              <div>
-                <h3 className="text-foreground font-semibold mb-1">Match Prep Ready</h3>
-                <p>Use the built-in timer and classifier controls to simulate match flow.</p>
+              <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                    FTC Planning
+                  </p>
+                  <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                    FTC Planning
+                  </h3>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                  <p className="text-sm text-muted-foreground">
+                    Map robot paths, annotate strategy cycles, and export your setup for match day.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                  <span>Enter planner</span>
+                  <span className="text-primary">Open</span>
+                </div>
               </div>
-              <div>
-                <h3 className="text-foreground font-semibold mb-1">Team Collaboration</h3>
-                <p>Export plans as JSON to share setups between mentors and drivers.</p>
+            </Link>
+
+            <div className="relative min-h-[360px] overflow-hidden rounded-2xl border border-border bg-card/60 p-6">
+              <div className="absolute inset-y-0 right-0 w-[55%] bg-gradient-to-br from-alliance-red/20 via-transparent to-transparent" />
+              <div className="absolute right-6 top-6 h-32 w-44 rounded-xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
+                <div className="flex h-full items-end justify-end p-2 text-[10px] font-mono uppercase tracking-widest text-white/40">
+                  Image slot
+                </div>
               </div>
+              <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                    FRC Planning
+                  </p>
+                  <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                    FRC Planning
+                  </h3>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                  <p className="text-sm text-muted-foreground">FRC planning coming soon.</p>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                  <span>Stay tuned</span>
+                  <span className="text-muted-foreground">Locked</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-2xl border border-border bg-card/80 p-6">
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                Contact us
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-foreground">Stay in the loop.</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Drop your name and email so we can keep your team updated.
+              </p>
+              <form className="mt-4 grid gap-3">
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Team member name"
+                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground"
+                />
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  placeholder="team@email.com"
+                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground"
+                />
+                <button type="button" className="tool-button active mt-2 w-full">
+                  Contact us
+                </button>
+              </form>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card/70 p-6">
+              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                Our goal
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-foreground">
+                Helping all teams organize to maximize winability and what not.
+              </h3>
+              <blockquote className="mt-6 border-l border-border pl-4 text-sm text-muted-foreground">
+                "Took us to Worlds." - Team so and so
+              </blockquote>
             </div>
           </section>
         </main>

@@ -14,7 +14,7 @@ const Planner = () => {
         />
       </Helmet>
       <div className="h-screen bg-background flex flex-col overflow-hidden">
-        <SiteHeader />
+        <SiteHeader showBackButton />
         <div className="flex-1 min-h-0">
           <FieldPlanner className="h-full" />
         </div>
