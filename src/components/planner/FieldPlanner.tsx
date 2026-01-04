@@ -238,12 +238,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     root.classList.add(`theme-${themeMode}`);
   }, [themeMode]);
 
-  useEffect(() => {
-    document.body.classList.add('planner-no-scroll');
-    return () => {
-      document.body.classList.remove('planner-no-scroll');
-    };
-  }, []);
 
 
   useEffect(() => {

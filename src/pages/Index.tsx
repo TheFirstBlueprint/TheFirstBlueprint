@@ -1,6 +1,5 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { SiteHeader } from '@/components/site/SiteHeader';
 
 const Index = () => {
   return (
@@ -13,7 +12,6 @@ const Index = () => {
         />
       </Helmet>
       <div className="min-h-screen bg-background field-container">
-        <SiteHeader />
         <main className="relative mx-auto w-full max-w-6xl px-6 py-12">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute -top-24 left-[-8%] h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
