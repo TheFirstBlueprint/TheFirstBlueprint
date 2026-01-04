@@ -52,6 +52,7 @@ export const RobotElement = ({
   }, [robot.position.x, robot.position.y]);
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target instanceof HTMLElement && e.target.closest('button')) return;
     e.stopPropagation();
     if (isLocked) return;
     onSelect();
@@ -185,6 +186,7 @@ export const RobotElement = ({
         <div
           className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex gap-1"
           style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-45); }}
