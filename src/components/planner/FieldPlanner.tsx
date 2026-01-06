@@ -11,7 +11,6 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
-import { Goal, Info, Minus, Plus, Save, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FIELD_SIZE = 600;
@@ -121,7 +120,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
   const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('basic');
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fieldScale, setFieldScale] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -129,7 +128,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [sequencePlaying, setSequencePlaying] = useState(false);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(null);
   const [maxSequence, setMaxSequence] = useState(MIN_SEQUENCE);
-  const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('basic');
+  const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('dark');
   const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [robotPanelOpen, setRobotPanelOpen] = useState(false);
@@ -1425,11 +1424,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
-    <div className={`h-[100dvh] bg-background flex ${className ?? ''}`}>
+    <div className={`h-[100dvh] bg-background flex planner-shell ${className ?? ''}`}>
       {/* Left Panel */}
-      <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
-        <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
-        <ToolPanel
+      <div className="panel-left w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
+          <ToolPanel
             activeTool={activeTool}
             onToolChange={setActiveTool}
             penColor={penColor}
@@ -1447,30 +1446,30 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onClearDrawings={clearDrawings}
             onClearBalls={clearBalls}
             onClearRobots={clearRobots}
-              onResetField={resetField}
-              onSetupField={handleSetupField}
-              onSetupRobots={handleSetupRobots}
-              onExport={handleExport}
-              onImport={handleImport}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
+            onResetField={resetField}
+            onSetupField={handleSetupField}
+            onSetupRobots={handleSetupRobots}
+            onExport={handleExport}
+            onImport={handleImport}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileChange}
+            className="hidden"
+          />
         </div>
+      </div>
 
       {/* Field Area */}
       <div
         ref={fieldAreaRef}
-        className="flex-1 flex items-start justify-center p-8 pt-4 field-container"
+        className="flex-1 flex items-start justify-center p-8 pt-6 field-container"
       >
-        <div style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}>
+        <div className="relative z-10" style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}>
           <div
-            className="relative bg-card rounded-lg overflow-hidden shadow-2xl border border-border"
+            className="relative field-surface"
             style={{
               width: FIELD_SIZE,
               height: FIELD_SIZE,
@@ -1488,12 +1487,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             draggable={false}
           />
           {classifierEmptying.blue && (
-            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-300 text-yellow-900 text-xs font-mono flex items-center justify-center border border-yellow-500 shadow">
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-300/90 text-amber-950 text-xs font-mono flex items-center justify-center border border-amber-400/80 shadow">
               o
             </div>
           )}
           {classifierEmptying.red && (
-            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-300 text-yellow-900 text-xs font-mono flex items-center justify-center border border-yellow-500 shadow">
+            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-300/90 text-amber-950 text-xs font-mono flex items-center justify-center border border-amber-400/80 shadow">
               o
             </div>
           )}
@@ -1724,16 +1723,16 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Right Panel */}
-       <div className="panel-left w-64 border-r border-border flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
-        <div className="h-full overflow-y-auto overscroll-contain p-4 pb-24">
+      <div className="panel-right w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
           <div className="mb-6">
-              <h1 className="font-mono text-lg font-semibold text-primary mb-1">
-                FTC DECODE
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Strategy Planner 2025-26
-              </p>
-            </div>
+            <h1 className="font-title text-xl uppercase tracking-[0.2em] text-primary mb-1">
+              FTC DECODE
+            </h1>
+            <p className="font-display text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+              Strategy Planner 2025-26
+            </p>
+          </div>
 
         {robotPanelOpen && selectedRobot && robotDraft ? (
           <div
@@ -1755,7 +1754,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     className="tool-button !p-1"
                     title="Close robot settings"
                   >
-                    <X className="w-4 h-4" />
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      close
+                    </span>
                   </button>
                   <button
                     onClick={handleRobotSave}
@@ -1763,7 +1764,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     title="Save robot settings"
                     disabled={!canSaveRobot}
                   >
-                    <Save className="w-4 h-4" />
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      save
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1788,7 +1791,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                    className="w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 text-sm text-foreground shadow-inner shadow-black/20"
                   />
                 </div>
                 <div>
@@ -1811,7 +1814,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                           : prev
                       );
                     }}
-                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                    className="w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 text-sm text-foreground shadow-inner shadow-black/20"
                   />
                 </div>
                 <div>
@@ -1827,7 +1830,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         setRobotDraft((prev) => (prev ? { ...prev, name: next } : prev));
                       }
                     }}
-                    className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                    className="w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 text-sm text-foreground shadow-inner shadow-black/20"
                   />
                   {!nameIsValid && (
                     <p className="mt-1 text-xs text-destructive">Name must be 1-5 digits.</p>
@@ -1916,7 +1919,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                       aria-label="Remove sequence steps"
                       disabled={maxSequence <= MIN_SEQUENCE}
                     >
-                      <Minus className="w-4 h-4" />
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        remove
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -1926,7 +1931,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                       aria-label="Add sequence steps"
                       disabled={maxSequence >= MAX_SEQUENCE}
                     >
-                      <Plus className="w-4 h-4" />
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        add
+                      </span>
                     </button>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1936,7 +1943,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                           aria-label="Sequence help"
                           title="Sequence help"
                         >
-                          <Info className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                          info
+                        </span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="max-w-xs text-xs">
@@ -1982,7 +1991,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         aria-label="Delete help"
                         title="Delete help"
                       >
-                        <Info className="w-4 h-4" />
+                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                          info
+                        </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs text-xs">
@@ -2035,10 +2046,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-6">
           <div className="panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-mono text-sm uppercase tracking-wider text-muted-foreground">
+              <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 Settings
               </h2>
               <button
@@ -2047,7 +2058,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 title="Close settings"
                 aria-label="Close settings"
               >
-                <X className="w-4 h-4" />
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  close
+                </span>
               </button>
             </div>
 
@@ -2057,7 +2070,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 <select
                   value={draftThemeMode}
                   onChange={(e) => setDraftThemeMode(e.target.value as ThemeMode)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm text-foreground shadow-inner shadow-black/20"
                 >
                   <option value="basic">Basic</option>
                   <option value="dark">Dark</option>
@@ -2093,7 +2106,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                             [key]: normalizeKey(e.target.value),
                           }))
                         }
-                        className="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+                        className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-sm text-foreground shadow-inner shadow-black/20"
                         placeholder="Key"
                       />
                     </label>

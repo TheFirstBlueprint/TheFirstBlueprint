@@ -1,6 +1,5 @@
 import { Classifier } from '@/types/planner';
 import { cn } from '@/lib/utils';
-import { Trash2 } from 'lucide-react';
 
 interface ClassifierDisplayProps {
   classifier: Classifier;
@@ -50,7 +49,7 @@ export const ClassifierDisplay = ({
   });
 
   return (
-    <div className={cn('panel', isEmptying && 'bg-yellow-100/60 border border-yellow-200')}>
+    <div className={cn('panel', isEmptying && 'bg-amber-400/10 border border-amber-400/40')}>
       <div className="flex items-center justify-between mb-2">
         <span
           className={cn(
@@ -81,7 +80,9 @@ export const ClassifierDisplay = ({
             )}
             title="Empty classifier"
           >
-            <Trash2 className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              delete
+            </span>
           </button>
         </div>
       </div>
@@ -92,7 +93,7 @@ export const ClassifierDisplay = ({
             key={`row-${rowIndex}`}
             className={cn(
               'grid grid-cols-3 gap-1 rounded-md p-1',
-              rowMatchesTop[rowIndex] && 'bg-white/20'
+              rowMatchesTop[rowIndex] && 'bg-primary/10'
             )}
           >
             {row.map((ball, index) => {

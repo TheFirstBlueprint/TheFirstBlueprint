@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Robot } from '@/types/planner';
 import { cn } from '@/lib/utils';
-import { RotateCw, ChevronUp, Trash2, Pencil } from 'lucide-react';
 
 interface RobotElementProps {
   robot: Robot;
@@ -133,7 +132,9 @@ export const RobotElement = ({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center">
-            <ChevronUp className="w-6 h-6 text-foreground/90 -mt-1" />
+            <span className="material-symbols-outlined text-[22px] text-foreground/90 -mt-1" aria-hidden="true">
+              north
+            </span>
             <span className="text-xs font-mono text-foreground/90">{displayName}</span>
           </div>
         )}
@@ -193,21 +194,27 @@ export const RobotElement = ({
             className="tool-button !p-1"
             title="Rotate left"
           >
-            <RotateCw className="w-3 h-3 scale-x-[-1]" />
+            <span className="material-symbols-outlined text-[16px] scale-x-[-1]" aria-hidden="true">
+              rotate_right
+            </span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(45); }}
             className="tool-button !p-1"
             title="Rotate right"
           >
-            <RotateCw className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              rotate_right
+            </span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(); }}
             className="tool-button !p-1"
             title="Edit robot"
           >
-            <Pencil className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              edit
+            </span>
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleIntake(); }}
@@ -246,7 +253,9 @@ export const RobotElement = ({
             className="tool-button !p-1 text-destructive"
             title="Remove robot"
           >
-            <Trash2 className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              delete
+            </span>
           </button>
         </div>
       )}

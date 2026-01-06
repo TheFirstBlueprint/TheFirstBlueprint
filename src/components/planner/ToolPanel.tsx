@@ -1,21 +1,5 @@
 import { Tool, BallColor, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
-import {
-  MousePointer2,
-  Pencil,
-  Minus,
-  ArrowRight,
-  Eraser,
-  Circle,
-  Square,
-  RectangleHorizontal,
-  Trash2,
-  RotateCcw,
-  Wand2,
-  Download,
-  Upload,
-  PieChart,
-} from 'lucide-react';
 
 interface ToolPanelProps {
   activeTool: Tool;
@@ -88,63 +72,81 @@ export const ToolPanel = ({
             className={cn('tool-button', activeTool === 'select' && 'active')}
             title="Select (S)"
           >
-            <MousePointer2 className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              mouse
+            </span>
           </button>
           <button
             onClick={() => onToolChange('pen')}
             className={cn('tool-button', activeTool === 'pen' && 'active')}
             title="Pen (P)"
           >
-            <Pencil className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              edit
+            </span>
           </button>
           <button
             onClick={() => onToolChange('dotted')}
             className={cn('tool-button', activeTool === 'dotted' && 'active')}
             title="Dotted line"
           >
-            <Minus className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              remove
+            </span>
           </button>
           <button
             onClick={() => onToolChange('arrow')}
             className={cn('tool-button', activeTool === 'arrow' && 'active')}
             title="Arrow line"
           >
-            <ArrowRight className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              arrow_right_alt
+            </span>
           </button>
           <button
             onClick={() => onToolChange('box')}
             className={cn('tool-button', activeTool === 'box' && 'active')}
             title="Box"
           >
-            <Square className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              crop_square
+            </span>
           </button>
           <button
             onClick={() => onToolChange('rectangle')}
             className={cn('tool-button', activeTool === 'rectangle' && 'active')}
             title="Rectangle"
           >
-            <RectangleHorizontal className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              rectangle
+            </span>
           </button>
           <button
             onClick={() => onToolChange('circle')}
             className={cn('tool-button', activeTool === 'circle' && 'active')}
             title="Circle"
           >
-            <Circle className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              radio_button_unchecked
+            </span>
           </button>
           <button
             onClick={() => onToolChange('arc')}
             className={cn('tool-button', activeTool === 'arc' && 'active')}
             title="Arc"
           >
-            <PieChart className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              pie_chart
+            </span>
           </button>
           <button
             onClick={() => onToolChange('eraser')}
             className={cn('tool-button', activeTool === 'eraser' && 'active')}
             title="Eraser (E)"
           >
-            <Eraser className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              ink_eraser
+            </span>
           </button>
         </div>
 
@@ -207,7 +209,9 @@ export const ToolPanel = ({
                   className="tool-button flex-1 gap-1"
                   title="Add green ball to blue zone"
                 >
-                  <Circle className="w-4 h-4 fill-ball-green text-ball-green" />
+                  <span className="material-symbols-outlined text-[16px] text-ball-green" aria-hidden="true">
+                    fiber_manual_record
+                  </span>
                   <span className="text-xs">Green</span>
                 </button>
                 <button
@@ -215,7 +219,9 @@ export const ToolPanel = ({
                   className="tool-button flex-1 gap-1"
                   title="Add purple ball to blue zone"
                 >
-                  <Circle className="w-4 h-4 fill-ball-purple text-ball-purple" />
+                  <span className="material-symbols-outlined text-[16px] text-ball-purple" aria-hidden="true">
+                    fiber_manual_record
+                  </span>
                   <span className="text-xs">Purple</span>
                 </button>
               </div>
@@ -228,7 +234,9 @@ export const ToolPanel = ({
                   className="tool-button flex-1 gap-1"
                   title="Add green ball to red zone"
                 >
-                  <Circle className="w-4 h-4 fill-ball-green text-ball-green" />
+                  <span className="material-symbols-outlined text-[16px] text-ball-green" aria-hidden="true">
+                    fiber_manual_record
+                  </span>
                   <span className="text-xs">Green</span>
                 </button>
                 <button
@@ -236,7 +244,9 @@ export const ToolPanel = ({
                   className="tool-button flex-1 gap-1"
                   title="Add purple ball to red zone"
                 >
-                  <Circle className="w-4 h-4 fill-ball-purple text-ball-purple" />
+                  <span className="material-symbols-outlined text-[16px] text-ball-purple" aria-hidden="true">
+                    fiber_manual_record
+                  </span>
                   <span className="text-xs">Purple</span>
                 </button>
               </div>
@@ -256,7 +266,9 @@ export const ToolPanel = ({
               )}
               title="Add red alliance robot"
             >
-              <Square className="w-4 h-4 fill-alliance-red text-alliance-red" />
+              <span className="material-symbols-outlined text-[18px] text-alliance-red" aria-hidden="true">
+                crop_square
+              </span>
               <span className="text-xs">Red</span>
             </button>
             <button
@@ -268,7 +280,9 @@ export const ToolPanel = ({
               )}
               title="Add blue alliance robot"
             >
-              <Square className="w-4 h-4 fill-alliance-blue text-alliance-blue" />
+              <span className="material-symbols-outlined text-[18px] text-alliance-blue" aria-hidden="true">
+                crop_square
+              </span>
               <span className="text-xs">Blue</span>
             </button>
           </div>
@@ -287,7 +301,9 @@ export const ToolPanel = ({
       <div className="panel">
         <div className="panel-header">Field Setup</div>
         <button onClick={onSetupField} className="tool-button gap-1">
-          <Wand2 className="w-4 h-4" />
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+            auto_fix_high
+          </span>
           <span className="text-xs">Setup Field</span>
         </button>
       </div>
@@ -297,19 +313,27 @@ export const ToolPanel = ({
         <div className="panel-header">Clear</div>
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onClearDrawings} className="tool-button gap-1">
-            <Pencil className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              edit
+            </span>
             <span className="text-xs">Drawings</span>
           </button>
           <button onClick={onClearBalls} className="tool-button gap-1">
-            <Circle className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              fiber_manual_record
+            </span>
             <span className="text-xs">Balls</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
-            <Square className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              crop_square
+            </span>
             <span className="text-xs">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive">
-            <RotateCcw className="w-3 h-3" />
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              restart_alt
+            </span>
             <span className="text-xs">Reset All</span>
           </button>
         </div>
@@ -320,11 +344,15 @@ export const ToolPanel = ({
         <div className="panel-header">Save / Load</div>
         <div className="flex gap-2">
           <button onClick={onExport} className="tool-button flex-1 gap-1">
-            <Download className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              download
+            </span>
             <span className="text-xs">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
-            <Upload className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              upload
+            </span>
             <span className="text-xs">Import</span>
           </button>
         </div>

@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? "basic";
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? "dark";
     const root = document.documentElement;
     root.classList.remove("theme-basic", "theme-dark", "theme-light", "theme-sharkans");
     root.classList.add(`theme-${storedTheme}`);
