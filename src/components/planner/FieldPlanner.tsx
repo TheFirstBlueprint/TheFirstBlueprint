@@ -13,7 +13,7 @@ import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const FIELD_SIZE = 600;
+const FIELD_SIZE = 600; 
 const FIELD_INCHES = 144;
 const GOAL_WIDTH = 120;
 const GOAL_HEIGHT = 156;
@@ -25,9 +25,12 @@ const MAGNET_TARGETS = {
   blue: [{ x: 0.7275, y: 0.761 }],
   red: [{ x: 0.27, y: 0.761 }],
 };
+const SECRET_TUNNEL_ZONE_INSET = 0;
+const CLASSIFIER_STACK_INSET = 0;
+const CLASSIFIER_EXTENSION_INSET = -4;
 const CLASSIFIER_STACK = {
   top: 126,
-  sideInset: -4,
+  sideInset: CLASSIFIER_STACK_INSET,
   slotSize: 14,
   gap: 4,
   padding: 6,
@@ -36,8 +39,8 @@ const CLASSIFIER_EXTENSION_OFFSET = 8;
 const MAX_ROBOT_INCHES = 18;
 const MIN_ROBOT_INCHES = 1;
 const CLASSIFIER_ZONE = {
-  blue: { x: 0, y: 126, width: 14, height: 162 },
-  red: { x: FIELD_SIZE - 14, y: 126, width: 14, height: 162 },
+  blue: { x: SECRET_TUNNEL_ZONE_INSET, y: 126, width: 14, height: 162 },
+  red: { x: FIELD_SIZE - SECRET_TUNNEL_ZONE_INSET - 14, y: 126, width: 14, height: 162 },
 };
 const GOAL_ZONE = {
   blue: { x: 0, y: 0, width: GOAL_WIDTH, height: GOAL_HEIGHT },
@@ -190,8 +193,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         CLASSIFIER_STACK.gap * (state.classifiers[alliance].maxCapacity - 1) +
         CLASSIFIER_EXTENSION_OFFSET;
       const left = alliance === 'blue'
-        ? CLASSIFIER_STACK.sideInset
-        : FIELD_SIZE - CLASSIFIER_STACK.sideInset - CLASSIFIER_STACK.slotSize - CLASSIFIER_STACK.padding * 2;
+        ? CLASSIFIER_EXTENSION_INSET
+        : FIELD_SIZE - CLASSIFIER_EXTENSION_INSET - CLASSIFIER_STACK.slotSize - CLASSIFIER_STACK.padding * 2;
       const x = left + CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2;
       const y =
         top +
@@ -1574,7 +1577,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 CLASSIFIER_STACK.slotSize * state.classifiers.blue.maxCapacity +
                 CLASSIFIER_STACK.gap * (state.classifiers.blue.maxCapacity - 1) +
                 CLASSIFIER_EXTENSION_OFFSET,
-              left: CLASSIFIER_STACK.sideInset,
+              left: CLASSIFIER_EXTENSION_INSET,
               padding: CLASSIFIER_STACK.padding,
             }}
           >
@@ -1646,7 +1649,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 CLASSIFIER_STACK.slotSize * state.classifiers.red.maxCapacity +
                 CLASSIFIER_STACK.gap * (state.classifiers.red.maxCapacity - 1) +
                 CLASSIFIER_EXTENSION_OFFSET,
-              right: CLASSIFIER_STACK.sideInset,
+              right: CLASSIFIER_EXTENSION_INSET,
               padding: CLASSIFIER_STACK.padding,
             }}
           >

@@ -135,9 +135,18 @@ export const ToolPanel = ({
             className={cn('tool-button', activeTool === 'arc' && 'active')}
             title="Arc"
           >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              pie_chart
-            </span>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 18A12 12 0 0 1 18 6" />
+            </svg>
           </button>
           <button
             onClick={() => onToolChange('eraser')}

@@ -436,6 +436,14 @@
     @apply bg-alliance-red text-alliance-red-foreground border-alliance-red glow-alliance-red;
   }
 
+  .theme-dark .panel-left .tool-button.active {
+    @apply bg-alliance-blue text-alliance-blue-foreground border-alliance-blue glow-alliance-blue;
+  }
+
+  .theme-dark .panel-right .tool-button.active {
+    @apply bg-alliance-red text-alliance-red-foreground border-alliance-red glow-alliance-red;
+  }
+
   .alliance-red {
     @apply bg-alliance-red text-alliance-red-foreground;
   }
