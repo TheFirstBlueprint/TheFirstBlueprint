@@ -3,20 +3,61 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 
 const PATCH_NOTES = [
   {
-    version: 'v0.4.0',
-    date: '2025-01-10',
+    version: 'v1.37',
+    date: '2026-01-06',
     entries: [
-      'Added theme selector (basic/dark/light).',
-      'Introduced configurable keybinds and settings panel.',
-      'Updated goal hitbox geometry to match triangle boundaries.',
+      'Quick frontend audit of the planner screen',
+      'Visual hotfixes',
+      'Changed arc icon'
     ],
   },
   {
-    version: 'v0.3.0',
-    date: '2025-01-02',
+    version: 'v1.36',
+    date: '2026-01-06',
     entries: [
-      'Classifier scoring and emptying polish.',
-      'Improved robot sizing and interaction feedback.',
+      'Huge UI/UX changes, including font and color',
+      'Quick hotfixes for frontend of field',
+      'Brought other pages of webiste up to date',
+      'Color ideation'
+    ],
+  },
+  {
+    version: 'v1.34',
+    date: '2026-01-03',
+    entries: [
+      'Quick hotfix for keybindings on the pc version (removed some mobile support)'
+    ],
+  },
+  {
+    version: 'v1.33',
+    date: '2026-01-03',
+    entries: [
+      'We broke it.'
+    ],
+  },
+  {
+    version: 'v1.32',
+    date: '2026-01-03',
+    entries: [
+      'Changed website structure - included a front page and navigation changes',
+      'Created design elements for the front page (setup for frc as well)',
+    ],
+  },
+  {
+    version: 'v1.31',
+    date: '2026-01-02',
+    entries: [
+      'Changed website structure - included a front page and navigation changes',
+      'Created design elements for the front page (setup for frc as well)',
+    ],
+  },
+  {
+    version: 'v1.30',
+    date: '2026-01-02',
+    entries: [
+      'Altered overflow positioning in the human play zone (top to bottom instead of left-right)',
+      'Added incremental changes for the sequencer',
+      'Info hovers for sequencer + others',
     ],
   },
 ];
