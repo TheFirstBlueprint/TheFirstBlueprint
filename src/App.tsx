@@ -17,10 +17,14 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? "dark";
-    const root = document.documentElement;
-    root.classList.remove("theme-basic", "theme-dark", "theme-light", "theme-sharkans");
-    root.classList.add(`theme-${storedTheme}`);
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const normalizedTheme =
+      storedTheme === "basic"
+        ? "base"
+        : storedTheme === "base" || storedTheme === "dark" || storedTheme === "light"
+          ? storedTheme
+          : "dark";
+    document.documentElement.setAttribute("data-theme", normalizedTheme);
   }, []);
 
   return (

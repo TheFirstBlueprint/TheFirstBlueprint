@@ -74,11 +74,17 @@ const DEFAULT_KEYBINDS = {
 };
 const MIN_SEQUENCE = 10;
 const MAX_SEQUENCE = 50;
-type ThemeMode = 'basic' | 'dark' | 'light' | 'sharkans';
+type ThemeMode = 'base' | 'dark' | 'light';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
   rotations: Record<string, number>;
+};
+
+const normalizeThemeMode = (value: string | null): ThemeMode => {
+  if (value === 'base' || value === 'dark' || value === 'light') return value;
+  if (value === 'basic') return 'base';
+  return 'dark';
 };
 
 export const FieldPlanner = ({ className }: { className?: string }) => {
@@ -115,7 +121,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   } = useFieldState();
 
   const [activeTool, setActiveTool] = useState<Tool>('select');
-  const [penColor, setPenColor] = useState('#22d3ee');
+  const [penColor, setPenColor] = useState('#2b76d2');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
   const [motif, setMotif] = useState('GPP');
   const [robotModes, setRobotModes] = useState<Record<string, { intake: boolean; outtake: boolean }>>({});
@@ -164,6 +170,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
+  const classifierBallSize = CLASSIFIER_STACK.slotSize * 0.86;
   const magnetTargetsPx = useMemo(
     () => ({
       red: MAGNET_TARGETS.red[0]
@@ -214,11 +221,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-    if (storedTheme) {
-      setThemeMode(storedTheme);
-      setDraftThemeMode(storedTheme);
-    }
+    const storedTheme = normalizeThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
+    setThemeMode(storedTheme);
+    setDraftThemeMode(storedTheme);
 
     const storedKeybinds = window.localStorage.getItem(KEYBINDS_STORAGE_KEY);
     if (storedKeybinds) {
@@ -235,10 +240,16 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove('theme-basic', 'theme-dark', 'theme-light', 'theme-sharkans');
-    root.classList.add(`theme-${themeMode}`);
+    document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
 
 
@@ -1490,12 +1501,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             draggable={false}
           />
           {classifierEmptying.blue && (
-            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-300/90 text-amber-950 text-xs font-mono flex items-center justify-center border border-amber-400/80 shadow">
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-warning/20 text-warning-foreground text-xs font-mono flex items-center justify-center border border-warning/50 shadow">
               o
             </div>
           )}
           {classifierEmptying.red && (
-            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-amber-300/90 text-amber-950 text-xs font-mono flex items-center justify-center border border-amber-400/80 shadow">
+            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-warning/20 text-warning-foreground text-xs font-mono flex items-center justify-center border border-warning/50 shadow">
               o
             </div>
           )}
@@ -1552,18 +1563,24 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`blue-slot-${index}`}
-                    className={`rounded-full border border-border/60 ${
-                      ball
-                        ? ball.color === 'green'
-                          ? 'bg-ball-green'
-                          : 'bg-ball-purple'
-                        : 'bg-muted/30'
-                    }`}
+                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
                     }}
-                  />
+                  >
+                    {ball && (
+                      <div
+                        className={`rounded-full border border-border/40 ${
+                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                        }`}
+                        style={{
+                          width: classifierBallSize,
+                          height: classifierBallSize,
+                        }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1590,18 +1607,24 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`blue-extension-${index}`}
-                    className={`rounded-full border border-border/60 ${
-                      ball
-                        ? ball.color === 'green'
-                          ? 'bg-ball-green'
-                          : 'bg-ball-purple'
-                        : 'bg-muted/30'
-                    }`}
+                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
                     }}
-                  />
+                  >
+                    {ball && (
+                      <div
+                        className={`rounded-full border border-border/40 ${
+                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                        }`}
+                        style={{
+                          width: classifierBallSize,
+                          height: classifierBallSize,
+                        }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1624,18 +1647,24 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`red-slot-${index}`}
-                    className={`rounded-full border border-border/60 ${
-                      ball
-                        ? ball.color === 'green'
-                          ? 'bg-ball-green'
-                          : 'bg-ball-purple'
-                        : 'bg-muted/30'
-                    }`}
+                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
                     }}
-                  />
+                  >
+                    {ball && (
+                      <div
+                        className={`rounded-full border border-border/40 ${
+                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                        }`}
+                        style={{
+                          width: classifierBallSize,
+                          height: classifierBallSize,
+                        }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -1662,18 +1691,24 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 return (
                   <div
                     key={`red-extension-${index}`}
-                    className={`rounded-full border border-border/0 ${
-                      ball
-                        ? ball.color === 'green'
-                          ? 'bg-ball-green'
-                          : 'bg-ball-purple'
-                        : 'bg-muted/30'
-                    }`}
+                    className="flex items-center justify-center rounded-md border border-border/40 bg-muted/20"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
                     }}
-                  />
+                  >
+                    {ball && (
+                      <div
+                        className={`rounded-full border border-border/30 ${
+                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                        }`}
+                        style={{
+                          width: classifierBallSize,
+                          height: classifierBallSize,
+                        }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -2049,7 +2084,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overlay-scrim backdrop-blur-sm px-4 py-6">
           <div className="panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -2075,10 +2110,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onChange={(e) => setDraftThemeMode(e.target.value as ThemeMode)}
                   className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm text-foreground shadow-inner shadow-black/20"
                 >
-                  <option value="basic">Basic</option>
-                  <option value="dark">Dark</option>
+                  <option value="base">Base</option>
+                  <option value="dark">Dark Tactical</option>
                   <option value="light">Light</option>
-                  <option value="sharkans">Sharkans</option>
                 </select>
               </div>
 

@@ -5,23 +5,23 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>Thefirstblueprint | Home</title>
+        <title>thefirstblueprint | Home</title>
         <meta
           name="description"
           content="Thefirstblueprint home for FTC and FRC planning tools."
         />
       </Helmet>
-      <div className="min-h-screen bg-background field-container">
-        <main className="relative mx-auto w-full max-w-6xl px-6 py-12">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-24 left-[-8%] h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute top-40 right-[-6%] h-72 w-72 rounded-full bg-alliance-blue/20 blur-3xl" />
-            <div className="absolute bottom-0 left-1/3 h-40 w-72 rounded-full bg-white/5 blur-2xl" />
-          </div>
+      <div className="min-h-screen bg-background frontpage-shell">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 blueprint-grid" />
+        <div aria-hidden="true" className="corner-brackets" />
 
+        <main className="relative mx-auto w-full max-w-6xl px-6 py-12">
           <header className="mb-10">
-            <h1 className="font-mono text-4xl font-semibold uppercase tracking-[0.12em] text-foreground">
-              Thefirstblueprint
+            <p className="font-mono text-xs uppercase tracking-[0.36em] text-muted-foreground">
+              Robotics command center
+            </p>
+            <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
+              thefirstblueprint
             </h1>
             <h2 className="mt-3 text-2xl font-semibold text-foreground">
               Build smarter match plans in minutes.
@@ -32,71 +32,72 @@ const Index = () => {
             </p>
           </header>
 
-          <section className="grid gap-6 lg:grid-cols-2">
-            <Link
-              to="/planner"
-              className="group relative min-h-[360px] overflow-hidden rounded-2xl border border-border bg-card/80 p-6 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-            >
-              <div className="absolute inset-y-0 right-0 w-[55%] bg-gradient-to-br from-primary/30 via-transparent to-transparent" />
-              <div className="absolute right-6 top-6 h-32 w-44 rounded-xl border border-white/10 bg-gradient-to-br from-white/15 via-white/5 to-transparent">
-                <div className="flex h-full items-end justify-end p-2 text-[10px] font-mono uppercase tracking-widest text-white/50">
-                  Image slot
+          <section className="relative">
+            <div aria-hidden="true" className="hero-radial" />
+            <div className="relative z-10 grid gap-6 lg:grid-cols-2">
+              <Link
+                to="/planner"
+                className="command-card group min-h-[360px] p-6"
+              >
+                <div className="card-media card-media--blue" aria-hidden="true">
+                  <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
+                    Module slot
+                  </div>
                 </div>
-              </div>
-              <div className="relative z-10 flex h-full flex-col justify-between gap-6">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                    FTC Planning
-                  </p>
-                  <h3 className="mt-2 text-3xl font-semibold text-foreground">
-                    FTC Planning
-                  </h3>
+                <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                      FTC planning
+                    </p>
+                    <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                      FTC planning
+                    </h3>
+                  </div>
+                  <div className="command-card__panel p-4">
+                    <p className="text-sm text-muted-foreground">
+                      Map robot paths, annotate strategy cycles, and export your setup for match day.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                    <span>Enter planner</span>
+                    <span className="text-alliance-blue">Open</span>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-                  <p className="text-sm text-muted-foreground">
-                    Map robot paths, annotate strategy cycles, and export your setup for match day.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                  <span>Enter planner</span>
-                  <span className="text-primary">Open</span>
-                </div>
-              </div>
-            </Link>
+              </Link>
 
-            <div className="relative min-h-[360px] overflow-hidden rounded-2xl border border-border bg-card/60 p-6">
-              <div className="absolute inset-y-0 right-0 w-[55%] bg-gradient-to-br from-alliance-red/20 via-transparent to-transparent" />
-              <div className="absolute right-6 top-6 h-32 w-44 rounded-xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
-                <div className="flex h-full items-end justify-end p-2 text-[10px] font-mono uppercase tracking-widest text-white/40">
-                  Image slot
+              <div className="command-card command-card--locked min-h-[360px] p-6">
+                <div className="card-media card-media--red" aria-hidden="true">
+                  <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
+                    Module slot
+                  </div>
                 </div>
-              </div>
-              <div className="relative z-10 flex h-full flex-col justify-between gap-6">
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                    FRC Planning
-                  </p>
-                  <h3 className="mt-2 text-3xl font-semibold text-foreground">
-                    FRC Planning
-                  </h3>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-                  <p className="text-sm text-muted-foreground">FRC planning coming soon.</p>
-                </div>
-                <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                  <span>Stay tuned</span>
-                  <span className="text-muted-foreground">Locked</span>
+                <div className="relative z-10 flex h-full flex-col justify-between gap-6">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                      FRC planning
+                    </p>
+                    <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                      FRC planning (coming soon)
+                    </h3>
+                  </div>
+                  <div className="command-card__panel p-4">
+                    <p className="text-sm text-muted-foreground">
+                      The FRC command deck is in design. More modules arrive soon.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                    <span>Stay tuned</span>
+                    <span className="text-muted-foreground">Locked</span>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
           <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-2xl border border-border bg-card/80 p-6">
-              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Contact us
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-foreground">Stay in the loop.</h3>
+            <div className="panel">
+              <div className="panel-header">Contact</div>
+              <h3 className="text-xl font-semibold text-foreground">Stay in the loop.</h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Drop your name and email so we can keep your team updated.
               </p>
@@ -123,18 +124,20 @@ const Index = () => {
               </form>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card/70 p-6">
-              <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Our goal
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-foreground">
-                Helping all teams organize to maximize winability and what not.
+            <div className="panel">
+              <div className="panel-header">Mission</div>
+              <h3 className="text-xl font-semibold text-foreground">
+                Helping teams organize to maximize winability and what not.
               </h3>
               <blockquote className="mt-6 border-l border-border pl-4 text-sm text-muted-foreground">
                 "Took us to Worlds." - Team so and so
               </blockquote>
             </div>
           </section>
+
+          <footer className="mt-10 text-[11px] text-muted-foreground/80">
+            Field imagery and certain reference assets are sourced from publicly available web content under Creative Commons or similar reuse allowances. This project is non-commercial and not monetized.
+          </footer>
         </main>
       </div>
     </>

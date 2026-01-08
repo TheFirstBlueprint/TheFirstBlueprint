@@ -26,7 +26,7 @@ interface ToolPanelProps {
   onImport: () => void;
 }
 
-const PEN_COLORS = ['#22d3ee', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
+const PEN_COLORS = ['#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
 
 export const ToolPanel = ({
   activeTool,
