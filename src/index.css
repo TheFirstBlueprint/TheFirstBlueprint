@@ -468,8 +468,8 @@
   }
 
   .field-surface {
-    @apply rounded-2xl overflow-hidden border border-border;
-    border-radius: calc(var(--radius-lg) + 0.25rem);
+    @apply overflow-hidden border border-border;
+    border-radius: 0;
     background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 130%);
     box-shadow: var(--shadow-field);
   }

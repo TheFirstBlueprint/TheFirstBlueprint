@@ -1596,9 +1596,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               {Array.from({ length: state.classifiers.blue.maxCapacity }, (_, index) => {
                 const ball = state.classifiers.blue.balls[index];
                 return (
-                  <div
-                    key={`blue-slot-${index}`}
-                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
+                    <div
+                      key={`blue-slot-${index}`}
+                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
@@ -1641,9 +1641,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               {Array.from({ length: state.classifiers.blue.extensionCapacity }, (_, index) => {
                 const ball = state.classifiers.blue.extensionBalls[index];
                 return (
-                  <div
-                    key={`blue-extension-${index}`}
-                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
+                    <div
+                      key={`blue-extension-${index}`}
+                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
@@ -1681,9 +1681,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               {Array.from({ length: state.classifiers.red.maxCapacity }, (_, index) => {
                 const ball = state.classifiers.red.balls[index];
                 return (
-                  <div
-                    key={`red-slot-${index}`}
-                    className="flex items-center justify-center rounded-md border border-border/60 bg-muted/20"
+                    <div
+                      key={`red-slot-${index}`}
+                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
@@ -1726,9 +1726,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               {Array.from({ length: state.classifiers.red.extensionCapacity }, (_, index) => {
                 const ball = state.classifiers.red.extensionBalls[index];
                 return (
-                  <div
-                    key={`red-extension-${index}`}
-                    className="flex items-center justify-center rounded-md border border-border/40 bg-muted/20"
+                    <div
+                      key={`red-extension-${index}`}
+                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                     style={{
                       width: CLASSIFIER_STACK.slotSize,
                       height: CLASSIFIER_STACK.slotSize,
