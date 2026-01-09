@@ -86,6 +86,9 @@
     --shadow-panel: 0 18px 40px hsl(var(--background) / 0.65), inset 0 0 0 1px hsl(var(--border) / 0.5);
     --shadow-panel-hover: 0 24px 52px hsl(var(--background) / 0.7), inset 0 0 0 1px hsl(var(--border) / 0.7);
     --shadow-field: 0 28px 60px hsl(var(--background) / 0.7), inset 0 0 0 1px hsl(var(--border) / 0.6);
+
+    --selection-bg: 213 66% 40%;
+    --selection-foreground: 210 20% 98%;
   }
 
   html[data-theme="dark"] {
@@ -147,6 +150,9 @@
     --glow-primary: inset 0 0 12px hsl(var(--primary) / 0.25), 0 0 0 1px hsl(var(--primary) / 0.35);
     --glow-alliance-red: inset 0 0 10px hsl(var(--alliance-red) / 0.25), 0 0 0 1px hsl(var(--alliance-red) / 0.35);
     --glow-alliance-blue: inset 0 0 10px hsl(var(--alliance-blue) / 0.25), 0 0 0 1px hsl(var(--alliance-blue) / 0.35);
+
+    --selection-bg: 213 66% 82%;
+    --selection-foreground: 220 28% 14.7%;
   }
 
   html[data-theme="sharkans"] {
@@ -209,6 +215,11 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background-color: hsl(var(--selection-bg));
+    color: hsl(var(--selection-foreground));
   }
 
   .font-mono {

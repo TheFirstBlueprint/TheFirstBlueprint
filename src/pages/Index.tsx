@@ -104,31 +104,28 @@ const Index = () => {
           <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="panel">
               <div className="panel-header">Contact</div>
-              <h3 className="text-xl font-semibold text-foreground">Stay in the loop.</h3>
+              <h3 className="text-xl font-semibold text-foreground">Feedback</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Drop your name and email so we can keep your team updated.
+                Use the forms below to share feedback or report a bug.
               </p>
-              <form className="mt-4 grid gap-3">
-                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Team member name"
-                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground"
-                />
-                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="team@email.com"
-                  className="w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm text-foreground"
-                />
-                <button type="button" className="tool-button active mt-2 w-full">
-                  Contact us
-                </button>
-              </form>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <a
+                  className="tool-button active w-full text-sm"
+                  href="https://docs.google.com/forms/d/e/1FAIpQLScuZw-Olh9r-3xb1CchwMov8MTVGyKRlQKF0YCC_CXBm581Zg/viewform?usp=dialog"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Feedback form
+                </a>
+                <a
+                  className="tool-button active w-full text-sm"
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSfjtssKj7C5Dr80AMW0kl5BnlD3t9F-cb2SVH_KBGnHuM84uw/viewform?usp=dialog"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Bug report form
+                </a>
+              </div>
             </div>
 
             <div className="panel">

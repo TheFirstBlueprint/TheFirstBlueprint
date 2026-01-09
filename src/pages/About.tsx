@@ -47,32 +47,76 @@ const About = () => {
           </section>
 
           <section className="panel mt-8">
-            <div className="panel-header">Forms</div>
-            <p className="text-xs text-muted-foreground mb-4">
-              Share feedback or report a bug using the forms below.
+            <div className="panel-header">Contact Us</div>
+            <p className="text-sm text-muted-foreground">
+              Reach out for questions, collaborations, or updates.
             </p>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  mail
+                </span>
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                    Email
+                  </p>
+                  <p className="text-sm text-foreground">team@ftcdecode.org</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  call
+                </span>
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                    Phone
+                  </p>
+                  <p className="text-sm text-foreground">555-555-5555</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <a
-                className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
-                href="https://docs.google.com/forms/d/e/1FAIpQLScuZw-Olh9r-3xb1CchwMov8MTVGyKRlQKF0YCC_CXBm581Zg/viewform?usp=dialog"
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-primary/60"
+                href="https://www.youtube.com/@ftcdecode"
                 rel="noreferrer"
                 target="_blank"
               >
-                <h3 className="text-base font-semibold text-foreground">Feedback Form</h3>
-                <p className="text-xs text-muted-foreground">
-                  Tell us what you like or want improved.
-                </p>
+                <svg
+                  className="h-5 w-5 text-foreground"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M23 7.5c0-2-1.6-3.5-3.6-3.5H4.6C2.6 4 1 5.5 1 7.5v9c0 2 1.6 3.5 3.6 3.5h14.8c2 0 3.6-1.5 3.6-3.5v-9zm-13 7.1V9.4l5.6 2.6L10 14.6z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                    YouTube
+                  </p>
+                  <p className="text-sm text-foreground">youtube.com/@ftcdecode</p>
+                </div>
               </a>
               <a
-                className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary/60"
-                href="https://docs.google.com/forms/d/e/1FAIpQLSfjtssKj7C5Dr80AMW0kl5BnlD3t9F-cb2SVH_KBGnHuM84uw/viewform?usp=dialog"
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-primary/60"
+                href="https://www.instagram.com/ftcdecode"
                 rel="noreferrer"
                 target="_blank"
               >
-                <h3 className="text-base font-semibold text-foreground">Bug Report Form</h3>
-                <p className="text-xs text-muted-foreground">
-                  Report issues or unexpected behavior.
-                </p>
+                <svg
+                  className="h-5 w-5 text-foreground"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 5.2A3.8 3.8 0 1 0 12 19.8 3.8 3.8 0 0 0 12 8.2zm6-1.8a1 1 0 1 0-1 1 1 1 0 0 0 1-1zM12 10a2 2 0 1 1-2 2 2 2 0 0 1 2-2z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                    Instagram
+                  </p>
+                  <p className="text-sm text-foreground">instagram.com/ftcdecode</p>
+                </div>
               </a>
             </div>
           </section>
