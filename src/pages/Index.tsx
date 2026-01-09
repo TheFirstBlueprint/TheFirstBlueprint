@@ -131,7 +131,7 @@ const Index = () => {
             <div className="panel">
               <div className="panel-header">Mission</div>
               <h3 className="text-xl font-semibold text-foreground">
-                Helping teams organize to maximize winability and what not.
+                Enabling strategic excellence for every team, from rookie to world-class.
               </h3>
               <blockquote className="mt-6 border-l border-border pl-4 text-sm text-muted-foreground">
                 "Perfect planning for our shark attack" - Sharkans 27272

@@ -47,8 +47,7 @@ const PATCH_NOTES = [
     version: 'v1.31',
     date: '2026-01-02',
     entries: [
-      'Changed website structure - included a front page and navigation changes',
-      'Created design elements for the front page (setup for frc as well)',
+      'Added parking logic'
     ],
   },
   {

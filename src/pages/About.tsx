@@ -2,9 +2,8 @@ import { Helmet } from 'react-helmet-async';
 import { SiteHeader } from '@/components/site/SiteHeader';
 
 const CONTRIBUTORS = [
-  // { name: 'ChatGPT Codex', role: 'Lead Developer' },
-  { name: 'Jacob James', role: '27272 Code Lead' },
-  { name: 'Prabhnoor Singh', role: '27272 Build Lead' },
+  { name: '27272 Code Lead', role: 'Contributor' },
+  { name: '27272 Build Lead', role: 'Contributor' },
 ];
 
 const About = () => {
@@ -52,33 +51,9 @@ const About = () => {
               Reach out for questions, collaborations, or updates.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                  mail
-                </span>
-                <div>
-                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                    Email
-                  </p>
-                  <p className="text-sm text-foreground">team@ftcdecode.org</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                  call
-                </span>
-                <div>
-                  <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-                    Phone
-                  </p>
-                  <p className="text-sm text-foreground">555-555-5555</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <a
                 className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-primary/60"
-                href="https://www.youtube.com/@ftcdecode"
+                // href="https://www.youtube.com/@ftcdecode"
                 rel="noreferrer"
                 target="_blank"
               >
@@ -94,12 +69,12 @@ const About = () => {
                   <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
                     YouTube
                   </p>
-                  <p className="text-sm text-foreground">youtube.com/@ftcdecode</p>
+                  <p className="text-sm text-foreground">Coming soon!</p>
                 </div>
               </a>
               <a
                 className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-primary/60"
-                href="https://www.instagram.com/ftcdecode"
+                // href="https://www.instagram.com/ftcdecode"  
                 rel="noreferrer"
                 target="_blank"
               >
@@ -115,7 +90,7 @@ const About = () => {
                   <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
                     Instagram
                   </p>
-                  <p className="text-sm text-foreground">instagram.com/ftcdecode</p>
+                  <p className="text-sm text-foreground">Coming soon!</p>
                 </div>
               </a>
             </div>
