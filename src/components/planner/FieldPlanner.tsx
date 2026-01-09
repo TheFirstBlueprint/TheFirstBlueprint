@@ -74,7 +74,7 @@ const DEFAULT_KEYBINDS = {
 };
 const MIN_SEQUENCE = 10;
 const MAX_SEQUENCE = 50;
-type ThemeMode = 'base' | 'dark' | 'light';
+type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
 type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
@@ -82,7 +82,7 @@ type SequenceStep = {
 };
 
 const normalizeThemeMode = (value: string | null): ThemeMode => {
-  if (value === 'base' || value === 'dark' || value === 'light') return value;
+  if (value === 'base' || value === 'dark' || value === 'light' || value === 'sharkans') return value;
   if (value === 'basic') return 'base';
   return 'dark';
 };
@@ -215,6 +215,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
     if (themeMode === 'dark') return fieldImageDark;
+    if (themeMode === 'sharkans') return fieldImageBasic;
     return fieldImageBasic;
   }, [themeMode]);
 
@@ -1949,35 +1950,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 <div className="panel-header flex items-center justify-between">
                   <span>Sequence</span>
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      className="tool-button !p-1"
-                      onClick={() => handleSequenceLengthChange(-5)}
-                      title="Remove sequence steps"
-                      aria-label="Remove sequence steps"
-                      disabled={maxSequence <= MIN_SEQUENCE}
-                    >
-                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                        remove
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className="tool-button !p-1"
-                      onClick={() => handleSequenceLengthChange(5)}
-                      title="Add sequence steps"
-                      aria-label="Add sequence steps"
-                      disabled={maxSequence >= MAX_SEQUENCE}
-                    >
-                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                        add
-                      </span>
-                    </button>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="tool-button !p-1"
+                          className="tool-button !p-1 -ml-1"
                           aria-label="Sequence help"
                           title="Sequence help"
                         >
@@ -2017,6 +1994,32 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 >
                   {sequencePlaying ? 'Playing...' : 'Play Sequence'}
                 </button>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="tool-button w-full"
+                    onClick={() => handleSequenceLengthChange(-5)}
+                    title="Remove sequence steps"
+                    aria-label="Remove sequence steps"
+                    disabled={maxSequence <= MIN_SEQUENCE}
+                  >
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      remove
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="tool-button w-full"
+                    onClick={() => handleSequenceLengthChange(5)}
+                    title="Add sequence steps"
+                    aria-label="Add sequence steps"
+                    disabled={maxSequence >= MAX_SEQUENCE}
+                  >
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                      add
+                    </span>
+                  </button>
+                </div>
               </div>
               <div className="panel">
                 <div className="panel-header flex items-center justify-between">
@@ -2113,6 +2116,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   <option value="base">Base</option>
                   <option value="dark">Dark Tactical</option>
                   <option value="light">Light</option>
+                  <option value="sharkans">Sharkans</option>
                 </select>
               </div>
 

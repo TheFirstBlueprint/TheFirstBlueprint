@@ -21,7 +21,7 @@ const App = () => {
     const normalizedTheme =
       storedTheme === "basic"
         ? "base"
-        : storedTheme === "base" || storedTheme === "dark" || storedTheme === "light"
+        : storedTheme === "base" || storedTheme === "dark" || storedTheme === "light" || storedTheme === "sharkans"
           ? storedTheme
           : "dark";
     document.documentElement.setAttribute("data-theme", normalizedTheme);

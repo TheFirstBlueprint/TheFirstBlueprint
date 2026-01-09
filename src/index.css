@@ -89,31 +89,31 @@
   }
 
   html[data-theme="dark"] {
-    --background: 214.3 24.1% 5.7%;
-    --foreground: 218.2 44% 95.1%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
 
-    --card: 218.2 24.4% 8.8%;
-    --card-foreground: 218.2 44% 95.1%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 216 24% 7%;
-    --popover-foreground: 218.2 44% 95.1%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 96%;
 
-    --secondary: 216 24.6% 12%;
-    --secondary-foreground: 220 31.8% 83.3%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 216 22% 11%;
-    --muted-foreground: 220 31.8% 83.3%;
+    --muted: 0 0% 9%;
+    --muted-foreground: 0 0% 70%;
 
-    --border: 217.5 26.1% 18%;
-    --input: 216 24.6% 12%;
+    --border: 0 0% 18%;
+    --input: 0 0% 10%;
 
-    --sidebar-background: 216 24% 7%;
-    --sidebar-foreground: 218.2 44% 95.1%;
-    --sidebar-accent: 216 22% 11%;
-    --sidebar-border: 217.5 26.1% 18%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-border: 0 0% 18%;
 
-    --overlay: 220 18% 5% / 0.78;
-    --overlay-strong: 220 18% 5% / 0.88;
+    --overlay: 0 0% 5% / 0.78;
+    --overlay-strong: 0 0% 5% / 0.88;
   }
 
   html[data-theme="light"] {
@@ -147,6 +147,57 @@
     --glow-primary: inset 0 0 12px hsl(var(--primary) / 0.25), 0 0 0 1px hsl(var(--primary) / 0.35);
     --glow-alliance-red: inset 0 0 10px hsl(var(--alliance-red) / 0.25), 0 0 0 1px hsl(var(--alliance-red) / 0.35);
     --glow-alliance-blue: inset 0 0 10px hsl(var(--alliance-blue) / 0.25), 0 0 0 1px hsl(var(--alliance-blue) / 0.35);
+  }
+
+  html[data-theme="sharkans"] {
+    --background: 232.2 71.1% 14.9%;
+    --foreground: 203.3 64% 62.9%;
+
+    --card: 232.2 71.1% 14.9%;
+    --card-foreground: 203.3 64% 62.9%;
+
+    --popover: 232.2 71.1% 14.9%;
+    --popover-foreground: 203.3 64% 62.9%;
+
+    --primary: 48.5 100% 50%;
+    --primary-foreground: 232.2 71.1% 14.9%;
+
+    --secondary: 232.2 71.1% 14.9%;
+    --secondary-foreground: 203.3 64% 62.9%;
+
+    --muted: 232.2 71.1% 14.9%;
+    --muted-foreground: 203.3 64% 62.9%;
+
+    --accent: 203.3 64% 62.9%;
+    --accent-foreground: 232.2 71.1% 14.9%;
+
+    --border: 203.3 64% 62.9%;
+    --input: 232.2 71.1% 14.9%;
+    --ring: 48.5 100% 50%;
+
+    --alliance-red: 48.5 100% 50%;
+    --alliance-red-foreground: 232.2 71.1% 14.9%;
+    --alliance-blue: 203.3 64% 62.9%;
+    --alliance-blue-foreground: 232.2 71.1% 14.9%;
+
+    --alliance-red-rgb: 255 206 0;
+    --alliance-blue-rgb: 100 174 221;
+    --alliance-red-soft: 48.5 100% 50% / 0.14;
+    --alliance-blue-soft: 203.3 64% 62.9% / 0.14;
+    --alliance-red-ring: 48.5 100% 50% / 0.55;
+    --alliance-blue-ring: 203.3 64% 62.9% / 0.55;
+
+    --sidebar-background: 232.2 71.1% 14.9%;
+    --sidebar-foreground: 203.3 64% 62.9%;
+    --sidebar-primary: 48.5 100% 50%;
+    --sidebar-primary-foreground: 232.2 71.1% 14.9%;
+    --sidebar-accent: 232.2 71.1% 14.9%;
+    --sidebar-accent-foreground: 203.3 64% 62.9%;
+    --sidebar-border: 203.3 64% 62.9%;
+    --sidebar-ring: 48.5 100% 50%;
+
+    --overlay: 232.2 71.1% 10% / 0.78;
+    --overlay-strong: 232.2 71.1% 10% / 0.88;
   }
 }
 
@@ -242,7 +293,7 @@
       linear-gradient(hsl(var(--border) / 0.2) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--border) / 0.2) 1px, transparent 1px);
     background-size: 80px 80px;
-    opacity: 0.35;
+    opacity: 0.45;
     pointer-events: none;
   }
 
@@ -260,7 +311,7 @@
       linear-gradient(hsl(var(--border) / 0.18) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--border) / 0.18) 1px, transparent 1px);
     background-size: 36px 36px;
-    opacity: 0.2;
+    opacity: 0.32;
   }
 
   .corner-brackets {
@@ -277,7 +328,7 @@
       linear-gradient(hsl(var(--border) / 0.65) 0 0) bottom right / 42px 2px,
       linear-gradient(hsl(var(--border) / 0.65) 0 0) bottom right / 2px 42px;
     background-repeat: no-repeat;
-    opacity: 0.5;
+    opacity: 0.7;
   }
 
   .hero-radial {

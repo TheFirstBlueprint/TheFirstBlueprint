@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
+import fieldShow from '@/assets/field show.png';
 
 const Index = () => {
   return (
@@ -40,6 +41,12 @@ const Index = () => {
                 className="command-card group min-h-[360px] p-6"
               >
                 <div className="card-media card-media--blue" aria-hidden="true">
+                  <img
+                    src={fieldShow}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover opacity-70"
+                    draggable={false}
+                  />
                   <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
                     Module slot
                   </div>

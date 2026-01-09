@@ -36,16 +36,13 @@ export const ClassifierDisplay = ({
   });
 
   const motifColors = motifToColor(motif);
-  const rowMatchesBottom = Array.from({ length: rows }, (_, rowIndex) => {
-    const start = rowIndex * columns;
-    const rowBalls = classifier.balls.slice(start, start + columns);
-    if (rowBalls.length < columns) return false;
-    return rowBalls.every((ball, idx) => ball.color === motifColors[idx]);
-  });
-  const rowMatchesTop = rowMatchesBottom.slice().reverse();
   const rowsView = Array.from({ length: rows }, (_, rowIndex) => {
     const start = rowIndex * columns;
     return slots.slice(start, start + columns);
+  });
+  const rowMatchesTop = rowsView.map((row) => {
+    if (row.some((ball) => !ball)) return false;
+    return row.every((ball, idx) => ball?.color === motifColors[idx]);
   });
 
   return (
@@ -98,7 +95,7 @@ export const ClassifierDisplay = ({
             )}
           >
             {row.map((ball, index) => {
-              const slotIndex = rowIndex * columns + index;
+              const slotIndex = (rows - 1 - rowIndex) * columns + index;
               return (
                 <div
                   key={slotIndex}
