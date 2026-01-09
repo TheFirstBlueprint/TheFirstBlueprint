@@ -150,35 +150,35 @@
   }
 
   html[data-theme="sharkans"] {
-    --background: 232.2 71.1% 14.9%;
+    --background: 230.2 94% 4.5%;
     --foreground: 203.3 64% 62.9%;
 
-    --card: 232.2 71.1% 14.9%;
+    --card: 230.2 94% 4.5%;
     --card-foreground: 203.3 64% 62.9%;
 
-    --popover: 232.2 71.1% 14.9%;
+    --popover: 230.2 94% 4.5%;
     --popover-foreground: 203.3 64% 62.9%;
 
     --primary: 48.5 100% 50%;
-    --primary-foreground: 232.2 71.1% 14.9%;
+    --primary-foreground: 242.2 56% 10%;
 
-    --secondary: 232.2 71.1% 14.9%;
+    --secondary: 230.2 94% 4.5%;
     --secondary-foreground: 203.3 64% 62.9%;
 
-    --muted: 232.2 71.1% 14.9%;
-    --muted-foreground: 203.3 64% 62.9%;
+    --muted: 230.2 94% 4.5%;
+    --muted-foreground: 48.5 100% 50%;
 
     --accent: 203.3 64% 62.9%;
     --accent-foreground: 232.2 71.1% 14.9%;
 
     --border: 203.3 64% 62.9%;
-    --input: 232.2 71.1% 14.9%;
+    --input: 230.2 94% 4.5%;
     --ring: 48.5 100% 50%;
 
     --alliance-red: 48.5 100% 50%;
-    --alliance-red-foreground: 232.2 71.1% 14.9%;
+    --alliance-red-foreground: 230.2 94% 4.5%;
     --alliance-blue: 203.3 64% 62.9%;
-    --alliance-blue-foreground: 232.2 71.1% 14.9%;
+    --alliance-blue-foreground: 230.2 94% 4.5%;
 
     --alliance-red-rgb: 255 206 0;
     --alliance-blue-rgb: 100 174 221;
@@ -187,11 +187,11 @@
     --alliance-red-ring: 48.5 100% 50% / 0.55;
     --alliance-blue-ring: 203.3 64% 62.9% / 0.55;
 
-    --sidebar-background: 232.2 71.1% 14.9%;
+    --sidebar-background: 230.2 94% 4.5%;
     --sidebar-foreground: 203.3 64% 62.9%;
     --sidebar-primary: 48.5 100% 50%;
-    --sidebar-primary-foreground: 232.2 71.1% 14.9%;
-    --sidebar-accent: 232.2 71.1% 14.9%;
+    --sidebar-primary-foreground: 230.2 94% 4.5%;
+    --sidebar-accent: 230.2 94% 4.5%;
     --sidebar-accent-foreground: 203.3 64% 62.9%;
     --sidebar-border: 203.3 64% 62.9%;
     --sidebar-ring: 48.5 100% 50%;
