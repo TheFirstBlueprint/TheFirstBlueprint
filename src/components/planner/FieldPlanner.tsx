@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG, Robot } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
-import fieldImageDark from '@/assets/decode_field_D.png';
+import fieldImageDark from '@/assets/decode_field_B.png';
 import fieldImageLight from '@/assets/decode_field_L.png';
 import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
@@ -26,7 +26,7 @@ const MAGNET_TARGETS = {
   red: [{ x: 0.27, y: 0.761 }],
 };
 const SECRET_TUNNEL_ZONE_INSET = 0;
-const CLASSIFIER_STACK_INSET = 0;
+const CLASSIFIER_STACK_INSET = -4;
 const CLASSIFIER_EXTENSION_INSET = -4;
 const CLASSIFIER_STACK = {
   top: 126,
@@ -168,6 +168,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
+  const redClassifierExtensionRef = useRef<HTMLDivElement>(null);
+  const blueClassifierExtensionRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
   const classifierBallSize = CLASSIFIER_STACK.slotSize * 0.86;
@@ -193,24 +195,56 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
   const getExtensionSlotPosition = useCallback(
     (alliance: 'red' | 'blue', index: number) => {
-      const top =
-        CLASSIFIER_STACK.top +
+      const fieldRect = fieldRef.current?.getBoundingClientRect();
+      const container =
+        alliance === 'blue' ? blueClassifierExtensionRef.current : redClassifierExtensionRef.current;
+      if (!fieldRect || !container) {
+        const fallbackTop =
+          CLASSIFIER_STACK.top +
+          CLASSIFIER_STACK.padding * 2 +
+          CLASSIFIER_STACK.slotSize * state.classifiers[alliance].maxCapacity +
+          CLASSIFIER_STACK.gap * (state.classifiers[alliance].maxCapacity - 1) +
+          CLASSIFIER_EXTENSION_OFFSET;
+        const fallbackLeft =
+          alliance === 'blue'
+            ? CLASSIFIER_EXTENSION_INSET
+            : FIELD_SIZE - CLASSIFIER_EXTENSION_INSET - CLASSIFIER_STACK.slotSize - CLASSIFIER_STACK.padding * 2;
+        return {
+          x: fallbackLeft + CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2,
+          y:
+            fallbackTop +
+            CLASSIFIER_STACK.padding +
+            index * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap) +
+            CLASSIFIER_STACK.slotSize / 2,
+        };
+      }
+
+      const scale = fieldScale || 1;
+      const containerRect = container.getBoundingClientRect();
+      const width = containerRect.width / scale;
+      const height = containerRect.height / scale;
+      if (width === 0 || height === 0) {
+        return { x: 0, y: 0 };
+      }
+
+      const totalWidth = CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.padding * 2;
+      const totalHeight =
         CLASSIFIER_STACK.padding * 2 +
-        CLASSIFIER_STACK.slotSize * state.classifiers[alliance].maxCapacity +
-        CLASSIFIER_STACK.gap * (state.classifiers[alliance].maxCapacity - 1) +
-        CLASSIFIER_EXTENSION_OFFSET;
-      const left = alliance === 'blue'
-        ? CLASSIFIER_EXTENSION_INSET
-        : FIELD_SIZE - CLASSIFIER_EXTENSION_INSET - CLASSIFIER_STACK.slotSize - CLASSIFIER_STACK.padding * 2;
-      const x = left + CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2;
-      const y =
-        top +
-        CLASSIFIER_STACK.padding +
-        index * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap) +
-        CLASSIFIER_STACK.slotSize / 2;
-      return { x, y };
+        CLASSIFIER_STACK.slotSize * state.classifiers[alliance].extensionCapacity +
+        CLASSIFIER_STACK.gap * (state.classifiers[alliance].extensionCapacity - 1);
+      const xPct = (CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2) / totalWidth;
+      const yPct =
+        (CLASSIFIER_STACK.padding + CLASSIFIER_STACK.slotSize / 2 + index * (CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.gap)) /
+        totalHeight;
+
+      const left = (containerRect.left - fieldRect.left) / scale;
+      const top = (containerRect.top - fieldRect.top) / scale;
+      return {
+        x: left + xPct * width,
+        y: top + yPct * height,
+      };
     },
-    [state.classifiers]
+    [fieldScale, state.classifiers]
   );
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
@@ -1587,6 +1621,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             </div>
           </div>
           <div
+            ref={blueClassifierExtensionRef}
             className="absolute z-10 pointer-events-none"
             style={{
               top:
@@ -1671,6 +1706,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             </div>
           </div>
           <div
+            ref={redClassifierExtensionRef}
             className="absolute z-10 pointer-events-none"
             style={{
               top:
