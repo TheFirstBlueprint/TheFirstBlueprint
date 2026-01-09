@@ -141,10 +141,6 @@ const Index = () => {
               </blockquote>
             </div>
           </section>
-
-          <footer className="mt-10 text-[11px] text-muted-foreground/80">
-            Field imagery and certain reference assets are sourced from publicly available web content under Creative Commons or similar reuse allowances. This project is non-commercial and not monetized.
-          </footer>
         </main>
       </div>
     </>
