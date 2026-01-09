@@ -80,20 +80,19 @@ const About = () => {
           <section className="panel mt-8">
             <div className="panel-header">Credits / Third Party Assets</div>
             <p className="text-sm text-muted-foreground">
-              This tool includes field map images from the Pedro-Pathing 
+              This tool includes field map images from the Pedro-Pathing
               Visualizer project, licensed under the Apache License, Version 2.0.
-              © Pedro-Pathing Visualizer contributors.
+              <br></br><br></br>
               Field images have been modified from the original assets.
-
-              A copy of the Apache License, Version 2.0 is provided below.
-              </p>
+<br></br>
+              A copy of the Apache 2.0 License is shown below:
               <br></br>
-              <p>              
-                               Apache License <br></br>
-                           Version 2.0, January 2004 <br></br>
-                        http://www.apache.org/licenses/<br></br>
+              <br></br>
+              Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
 
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION<br></br><br></br>
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
    1. Definitions.
 
