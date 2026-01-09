@@ -31,7 +31,7 @@ const About = () => {
           <section className="panel mt-8">
             <div className="panel-header">Contributors</div>
             <p className="text-xs text-muted-foreground mb-4">
-              Add new contributors by editing the list in this file.
+              "Veni, vidi, contulit" - I came, I saw, I contributed
             </p>
             <div className="grid gap-4 md:grid-cols-2">
               {CONTRIBUTORS.map((contributor) => (

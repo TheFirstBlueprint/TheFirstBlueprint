@@ -6,7 +6,7 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>thefirstblueprint | Home</title>
+        <title>TFBP | Home</title>
         <meta
           name="description"
           content="Thefirstblueprint home for FTC and FRC planning tools."
@@ -22,7 +22,7 @@ const Index = () => {
               Robotics command center
             </p>
             <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
-              thefirstblueprint
+              TheFirstBlueprint
             </h1>
             <h2 className="mt-3 text-2xl font-semibold text-foreground">
               Build smarter match plans in minutes.
@@ -137,7 +137,7 @@ const Index = () => {
                 Helping teams organize to maximize winability and what not.
               </h3>
               <blockquote className="mt-6 border-l border-border pl-4 text-sm text-muted-foreground">
-                "Took us to Worlds." - Team so and so
+                "Perfect planning for our shark attack" - Sharkans 27272
               </blockquote>
             </div>
           </section>
