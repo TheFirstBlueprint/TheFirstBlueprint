@@ -516,8 +516,7 @@ export const useFieldState = () => {
       const classifier = prev.classifiers[alliance];
       if (classifier.balls.length === 0) return prev;
 
-      const index = classifier.balls.length - 1;
-      const ball = classifier.balls[index];
+      const ball = classifier.balls[0];
       const poppedBall: Ball = {
         ...ball,
         isScored: false,
@@ -535,7 +534,7 @@ export const useFieldState = () => {
         balls: [...prev.balls, ...placed],
         classifiers: {
           ...prev.classifiers,
-          [alliance]: { ...classifier, balls: classifier.balls.slice(0, -1) },
+          [alliance]: { ...classifier, balls: classifier.balls.slice(1) },
         },
         overflowCounts: {
           ...prev.overflowCounts,
