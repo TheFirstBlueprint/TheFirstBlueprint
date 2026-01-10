@@ -3,19 +3,13 @@ import { cn } from '@/lib/utils';
 
 interface ClassifierDisplayProps {
   classifier: Classifier;
-  motif: string;
   onEmpty: () => void;
   onPopSingle: () => void;
   isEmptying: boolean;
 }
 
-const motifToColor = (motif: string) => {
-  return motif.split('').map((token) => (token === 'G' ? 'green' : 'purple'));
-};
-
 export const ClassifierDisplay = ({
   classifier,
-  motif,
   onEmpty,
   onPopSingle,
   isEmptying,
@@ -33,14 +27,9 @@ export const ClassifierDisplay = ({
     }
   });
 
-  const motifColors = motifToColor(motif);
   const rowsView = Array.from({ length: rows }, (_, rowIndex) => {
     const start = rowIndex * columns;
     return slots.slice(start, start + columns);
-  });
-  const rowMatchesTop = rowsView.map((row) => {
-    if (row.some((ball) => !ball)) return false;
-    return row.every((ball, idx) => ball?.color === motifColors[idx]);
   });
 
   return (
@@ -86,12 +75,7 @@ export const ClassifierDisplay = ({
         {rowsView.map((row, rowIndex) => (
           <div
             key={`row-${rowIndex}`}
-            className={cn(
-              'grid grid-cols-3 gap-1 rounded-md p-1',
-              rowMatchesTop[rowIndex] && 'classifier-highlight',
-              rowMatchesTop[rowIndex]
-                && (classifier.alliance === 'red' ? 'classifier-highlight-red' : 'classifier-highlight-blue')
-            )}
+            className="grid grid-cols-3 gap-1 rounded-md p-1"
           >
             {row.map((ball, index) => {
               const slotIndex = (rows - 1 - rowIndex) * columns + index;

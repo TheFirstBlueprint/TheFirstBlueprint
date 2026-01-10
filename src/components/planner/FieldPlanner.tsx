@@ -9,7 +9,6 @@ import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
 import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
-import { ClassifierDisplay } from './ClassifierDisplay';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -110,6 +109,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     scoreBallToClassifier,
     emptyClassifier,
     popClassifierBall,
+    clearClassifierBalls,
     setupFieldArtifacts,
     addDrawing,
     removeDrawing,
@@ -146,6 +146,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [robotPanelOpen, setRobotPanelOpen] = useState(false);
   const [classifierEmptying, setClassifierEmptying] = useState({ red: false, blue: false });
   const [rawScores, setRawScores] = useState({ red: 0, blue: 0 });
+  const [activeClassifierMenu, setActiveClassifierMenu] = useState<Alliance | null>(null);
   const [robotDraft, setRobotDraft] = useState<{
     widthIn: number;
     heightIn: number;
@@ -178,6 +179,22 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
   const classifierBallSize = CLASSIFIER_STACK.slotSize * 0.86;
+  const classifierStackWidth = CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.padding * 2;
+  const getClassifierStackHeight = useCallback((classifier: Classifier) => {
+    const baseHeight =
+      CLASSIFIER_STACK.padding * 2 +
+      CLASSIFIER_STACK.slotSize * classifier.maxCapacity +
+      CLASSIFIER_STACK.gap * (classifier.maxCapacity - 1);
+    const extensionHeight =
+      CLASSIFIER_STACK.padding * 2 +
+      CLASSIFIER_STACK.slotSize * classifier.extensionCapacity +
+      CLASSIFIER_STACK.gap * (classifier.extensionCapacity - 1);
+    return baseHeight + CLASSIFIER_EXTENSION_OFFSET + extensionHeight;
+  }, []);
+  const classifierStackHeights = useMemo(() => ({
+    red: getClassifierStackHeight(state.classifiers.red),
+    blue: getClassifierStackHeight(state.classifiers.blue),
+  }), [getClassifierStackHeight, state.classifiers]);
   const magnetTargetsPx = useMemo(
     () => ({
       red: MAGNET_TARGETS.red[0]
@@ -669,6 +686,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
     if (settingsOpen) return;
+    setActiveClassifierMenu(null);
     setSelectedRobotId(null);
   };
 
@@ -683,6 +701,29 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       return total + (actual === expected ? 1 : 0);
     }, 0);
   }, []);
+
+  const getClassifierHighlightGroups = useCallback((classifier: Classifier, motifValue: string) => {
+    const motifTokens = motifValue.split('');
+    const groupCount = Math.ceil(classifier.maxCapacity / 3);
+    return Array.from({ length: groupCount }, (_, groupIndex) => {
+      const slots = Array.from({ length: 3 }, (_, slotIndex) => {
+        const index = groupIndex * 3 + slotIndex;
+        return classifier.balls[index] ?? null;
+      });
+      const matches = slots.every((ball, slotIndex) => {
+        if (!ball || motifTokens.length === 0) return false;
+        const expected = motifTokens[slotIndex % motifTokens.length];
+        const actual = ball.color === 'green' ? 'G' : 'P';
+        return actual === expected;
+      });
+      return { slots, matches };
+    });
+  }, []);
+
+  const classifierHighlightGroups = useMemo(() => ({
+    red: getClassifierHighlightGroups(state.classifiers.red, motif),
+    blue: getClassifierHighlightGroups(state.classifiers.blue, motif),
+  }), [getClassifierHighlightGroups, motif, state.classifiers]);
 
   const motifCounts = useMemo(() => ({
     red: getMotifValidatedCount(state.classifiers.red, motif),
@@ -1507,6 +1548,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [handleClassifierAction, popClassifierBall]
   );
 
+  const handleClassifierDeleteAll = useCallback(
+    (alliance: 'red' | 'blue') => {
+      clearClassifierBalls(alliance);
+    },
+    [clearClassifierBalls]
+  );
+
+  const handleClassifierMenuAction = useCallback((action: () => void) => {
+    action();
+    setActiveClassifierMenu(null);
+  }, []);
+
   const handleRobotSave = () => {
     if (!selectedRobotId || !robotDraft) return;
     const name = robotDraft.name.trim();
@@ -1698,31 +1751,39 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               className="flex flex-col-reverse rounded-md bg-background/70 border border-border/60 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
-              {Array.from({ length: state.classifiers.blue.maxCapacity }, (_, index) => {
-                const ball = state.classifiers.blue.balls[index];
-                return (
-                    <div
-                      key={`blue-slot-${index}`}
-                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
-                    style={{
-                      width: CLASSIFIER_STACK.slotSize,
-                      height: CLASSIFIER_STACK.slotSize,
-                    }}
-                  >
-                    {ball && (
+              {classifierHighlightGroups.blue.map((group, groupIndex) => (
+                <div
+                  key={`blue-group-${groupIndex}`}
+                  className={`flex flex-col-reverse rounded-md ${group.matches ? 'classifier-highlight classifier-highlight-blue' : ''}`}
+                  style={{ gap: CLASSIFIER_STACK.gap }}
+                >
+                  {group.slots.map((ball, slotIndex) => {
+                    const index = groupIndex * 3 + slotIndex;
+                    return (
                       <div
-                        className={`rounded-full border border-border/40 ${
-                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
-                        }`}
+                        key={`blue-slot-${index}`}
+                        className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                         style={{
-                          width: classifierBallSize,
-                          height: classifierBallSize,
+                          width: CLASSIFIER_STACK.slotSize,
+                          height: CLASSIFIER_STACK.slotSize,
                         }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+                      >
+                        {ball && (
+                          <div
+                            className={`rounded-full border border-border/40 ${
+                              ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                            }`}
+                            style={{
+                              width: classifierBallSize,
+                              height: classifierBallSize,
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
           <div
@@ -1783,31 +1844,39 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               className="flex flex-col-reverse rounded-md bg-background/70 border border-border/60 p-1"
               style={{ gap: CLASSIFIER_STACK.gap }}
             >
-              {Array.from({ length: state.classifiers.red.maxCapacity }, (_, index) => {
-                const ball = state.classifiers.red.balls[index];
-                return (
-                    <div
-                      key={`red-slot-${index}`}
-                      className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
-                    style={{
-                      width: CLASSIFIER_STACK.slotSize,
-                      height: CLASSIFIER_STACK.slotSize,
-                    }}
-                  >
-                    {ball && (
+              {classifierHighlightGroups.red.map((group, groupIndex) => (
+                <div
+                  key={`red-group-${groupIndex}`}
+                  className={`flex flex-col-reverse rounded-md ${group.matches ? 'classifier-highlight classifier-highlight-red' : ''}`}
+                  style={{ gap: CLASSIFIER_STACK.gap }}
+                >
+                  {group.slots.map((ball, slotIndex) => {
+                    const index = groupIndex * 3 + slotIndex;
+                    return (
                       <div
-                        className={`rounded-full border border-border/40 ${
-                          ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
-                        }`}
+                        key={`red-slot-${index}`}
+                        className="flex items-center justify-center rounded-md border border-transparent bg-transparent"
                         style={{
-                          width: classifierBallSize,
-                          height: classifierBallSize,
+                          width: CLASSIFIER_STACK.slotSize,
+                          height: CLASSIFIER_STACK.slotSize,
                         }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+                      >
+                        {ball && (
+                          <div
+                            className={`rounded-full border border-border/40 ${
+                              ball.color === 'green' ? 'bg-ball-green' : 'bg-ball-purple'
+                            }`}
+                            style={{
+                              width: classifierBallSize,
+                              height: classifierBallSize,
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
           <div
@@ -1855,6 +1924,108 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               })}
             </div>
           </div>
+
+          <div
+            ref={blueClassifierRef}
+            className="absolute z-20 cursor-pointer"
+            style={{
+              top: CLASSIFIER_STACK.top,
+              left: CLASSIFIER_STACK.sideInset,
+              width: classifierStackWidth,
+              height: classifierStackHeights.blue,
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveClassifierMenu('blue');
+            }}
+          />
+          <div
+            ref={redClassifierRef}
+            className="absolute z-20 cursor-pointer"
+            style={{
+              top: CLASSIFIER_STACK.top,
+              right: CLASSIFIER_STACK.sideInset,
+              width: classifierStackWidth,
+              height: classifierStackHeights.red,
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveClassifierMenu('red');
+            }}
+          />
+
+          {activeClassifierMenu === 'blue' && (
+            <div
+              className="absolute z-30"
+              style={{
+                top: CLASSIFIER_STACK.top,
+                left: CLASSIFIER_STACK.sideInset + classifierStackWidth + 12,
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="panel w-40 space-y-2">
+                <div className="panel-header">Classifier</div>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierEmpty('blue'))}
+                  className="tool-button w-full"
+                  title="Empty classifier"
+                >
+                  Empty
+                </button>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierDeleteAll('blue'))}
+                  className="tool-button w-full"
+                  title="Delete all balls"
+                >
+                  Delete All
+                </button>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierPop('blue'))}
+                  className="tool-button w-full"
+                  title="Remove one ball"
+                >
+                  Remove One
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeClassifierMenu === 'red' && (
+            <div
+              className="absolute z-30"
+              style={{
+                top: CLASSIFIER_STACK.top,
+                left: FIELD_SIZE - CLASSIFIER_STACK.sideInset - classifierStackWidth - 12,
+                transform: 'translateX(-100%)',
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="panel w-40 space-y-2">
+                <div className="panel-header">Classifier</div>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierEmpty('red'))}
+                  className="tool-button w-full"
+                  title="Empty classifier"
+                >
+                  Empty
+                </button>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierDeleteAll('red'))}
+                  className="tool-button w-full"
+                  title="Delete all balls"
+                >
+                  Delete All
+                </button>
+                <button
+                  onClick={() => handleClassifierMenuAction(() => handleClassifierPop('red'))}
+                  className="tool-button w-full"
+                  title="Remove one ball"
+                >
+                  Remove One
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Robots */}
           {state.robots.map((robot) => {
@@ -2240,24 +2411,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
                   </button>
                 </div>
-              </div>
-              <div ref={redClassifierRef}>
-                <ClassifierDisplay
-                  classifier={state.classifiers.red}
-                  motif={motif}
-                  onEmpty={() => handleClassifierEmpty('red')}
-                  onPopSingle={() => handleClassifierPop('red')}
-                  isEmptying={classifierEmptying.red}
-                />
-              </div>
-              <div ref={blueClassifierRef}>
-                <ClassifierDisplay
-                  classifier={state.classifiers.blue}
-                  motif={motif}
-                  onEmpty={() => handleClassifierEmpty('blue')}
-                  onPopSingle={() => handleClassifierPop('blue')}
-                  isEmptying={classifierEmptying.blue}
-                />
               </div>
             </div>
 

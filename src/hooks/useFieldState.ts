@@ -545,6 +545,24 @@ export const useFieldState = () => {
     });
   }, []);
 
+  const clearClassifierBalls = useCallback((alliance: Alliance) => {
+    setState((prev) => {
+      const classifier = prev.classifiers[alliance];
+      if (classifier.balls.length === 0 && classifier.extensionBalls.length === 0) return prev;
+      return {
+        ...prev,
+        classifiers: {
+          ...prev.classifiers,
+          [alliance]: {
+            ...classifier,
+            balls: [],
+            extensionBalls: [],
+          },
+        },
+      };
+    });
+  }, []);
+
   const setupFieldArtifacts = useCallback(() => {
     setState((prev) => {
       const spikeArtifacts = (['blue', 'red'] as Alliance[]).flatMap((alliance) =>
@@ -730,6 +748,7 @@ export const useFieldState = () => {
     // Classifier
     emptyClassifier,
     popClassifierBall,
+    clearClassifierBalls,
     setupFieldArtifacts,
     // Drawing
     addDrawing,
