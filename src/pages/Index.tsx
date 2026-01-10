@@ -26,14 +26,13 @@ const Index = () => {
                   Robotics command center
                 </p>
                 <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
-                  TheFirstBlueprint
+                  Thefirstblueprint
                 </h1>
                 <h2 className="mt-3 text-2xl font-semibold text-foreground">
                   Build smarter match plans in minutes.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-                  Choose your league, drop in a modular field image, and start organizing strategy with
-                  clean, flexible layouts.
+                  Build strategies. Share plans. Win together.
                 </p>
             </div>
               <Link
