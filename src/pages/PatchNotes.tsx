@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { SiteHeader } from '@/components/site/SiteHeader';
+import SiteFooter from '@/components/site/SiteFooter';
 
 const PATCH_NOTES = [
   {
@@ -71,9 +72,9 @@ const PatchNotes = () => {
           content="Latest changes and updates for the FTC DECODE strategy planner."
         />
       </Helmet>
-      <div className="min-h-screen bg-background field-container">
+      <div className="min-h-screen bg-background field-container flex flex-col">
         <SiteHeader />
-        <main className="mx-auto w-full max-w-4xl px-6 py-10">
+        <main className="mx-auto w-full max-w-4xl px-6 py-10 flex-1">
           <div className="panel">
             <div className="panel-header">Patch Notes</div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -96,6 +97,7 @@ const PatchNotes = () => {
             </div>
           </div>
         </main>
+        <SiteFooter />
       </div>
     </>
   );

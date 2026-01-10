@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
-import { NavLink } from 'react-router-dom';
 import { FieldPlanner } from '@/components/planner/FieldPlanner';
 import { SiteHeader } from '@/components/site/SiteHeader';
+import SiteFooter from '@/components/site/SiteFooter';
 
 const Planner = () => {
   return (
@@ -18,6 +18,7 @@ const Planner = () => {
         <div className="flex-1 min-h-0">
           <FieldPlanner className="h-full" />
         </div>
+        <SiteFooter />
       </div>
     </>
   );

@@ -1,9 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { SiteHeader } from '@/components/site/SiteHeader';
+import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
-  { name: '27272 Code Lead', role: 'Contributor' },
-  { name: '27272 Build Lead', role: 'Contributor' },
+  { name: 'Prabhnoor Singh', role: '27272 Build Lead' },
+  { name: 'Jacob James', role: '27272 Code Lead' },
 ];
 
 const About = () => {
@@ -16,9 +17,9 @@ const About = () => {
           content="Learn about the team behind the FTC DECODE strategy planner."
         />
       </Helmet>
-      <div className="min-h-screen bg-background field-container">
+      <div className="min-h-screen bg-background field-container flex flex-col">
         <SiteHeader />
-        <main className="mx-auto w-full max-w-5xl px-6 py-10">
+        <main className="mx-auto w-full max-w-5xl px-6 py-10 flex-1">
           <section className="panel">
             <div className="panel-header">About The Project</div>
             <p className="text-sm text-muted-foreground">
@@ -94,6 +95,49 @@ const About = () => {
                 </div>
               </a>
             </div>
+          </section>
+
+          <section className="panel mt-8">
+            <div className="panel-header">Terms Of Service</div>
+            <p className="text-sm text-muted-foreground">
+              Purpose of the Website<br></br>
+Thefirstblueprint is a non‑commercial platform intended for robotics strategy planning, visualization, and team communication.
+The tools are provided for educational and competitive planning purposes only.
+<br></br><br></br>
+Acceptable Use<br></br>
+You agree to use the website only for lawful purposes and in a way that does not disrupt, damage, or interfere with the site or other users.
+You may not attempt to reverse‑engineer, exploit, overload, or misuse any part of the website or its services.
+<br></br><br></br>
+Content and Assets<br></br>
+Field images, diagrams, and reference materials may be sourced from publicly available resources under Creative Commons or similar reuse allowances.
+All original site design, layout, and tool implementations remain the property of Thefirstblueprint unless otherwise stated.
+<br></br><br></br>
+User Submissions<br></br>
+If you submit feedback, bug reports, or contact information, you grant permission for that information to be used solely for improving the website.
+You are responsible for the content you submit and must not submit harmful, abusive, or misleading material.
+<br></br><br></br>
+Availability and Changes<br></br>
+The website is provided “as is” and may be modified, updated, or taken offline at any time without notice.
+Features and functionality may change as development continues.
+<br></br><br></br>
+No Warranties<br></br>
+We make no guarantees that the website will be error‑free, uninterrupted, or fully accurate at all times.
+Use of the tools is at your own discretion and responsibility.
+<br></br><br></br>
+Limitation of Liability<br></br>
+Thefirstblueprint is not responsible for any losses, damages, or competitive outcomes resulting from the use of the planning tools or reliance on generated strategies.
+<br></br><br></br>
+Third‑Party Links<br></br>
+The website may include links to external services or resources.
+We are not responsible for the content, policies, or practices of third‑party websites.
+<br></br><br></br>
+Privacy<br></br>
+Use of the website is also governed by the Privacy Policy, which explains how standard website data is collected and used.
+<br></br><br></br>
+Updates to These Terms<br></br>
+These Terms of Use may be updated as the website evolves.
+Continued use of the website after updates constitutes acceptance of the revised terms.
+            </p>
           </section>
 
           <section className="panel mt-8">
@@ -311,6 +355,7 @@ const About = () => {
             </p>
           </section>
         </main>
+        <SiteFooter />
       </div>
     </>
   );

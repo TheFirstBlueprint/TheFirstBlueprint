@@ -542,4 +542,8 @@
   .card-media--red {
     background: linear-gradient(140deg, hsl(var(--alliance-red) / 0.24), transparent 65%);
   }
+
+  .about-header{
+    size: 100pt;
+  }
 }

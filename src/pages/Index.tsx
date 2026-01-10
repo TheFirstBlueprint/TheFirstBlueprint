@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import fieldShow from '@/assets/field show.png';
+import SiteFooter from '@/components/site/SiteFooter';
 
 const Index = () => {
   return (
@@ -12,17 +13,17 @@ const Index = () => {
           content="Thefirstblueprint home for FTC and FRC planning tools."
         />
       </Helmet>
-      <div className="min-h-screen bg-background frontpage-shell">
+      <div className="min-h-screen bg-background frontpage-shell flex flex-col">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 blueprint-grid" />
         <div aria-hidden="true" className="corner-brackets" />
 
-        <main className="relative mx-auto w-full max-w-6xl px-6 py-12">
+        <main className="relative mx-auto w-full max-w-6xl px-6 py-12 flex-1">
           <header className="mb-10">
             <p className="font-mono text-xs uppercase tracking-[0.36em] text-muted-foreground">
               Robotics command center
             </p>
             <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
-              TheFirstBlueprint
+              Thefirstblueprint
             </h1>
             <h2 className="mt-3 text-2xl font-semibold text-foreground">
               Build smarter match plans in minutes.
@@ -139,6 +140,7 @@ const Index = () => {
             </div>
           </section>
         </main>
+        <SiteFooter />
       </div>
     </>
   );
