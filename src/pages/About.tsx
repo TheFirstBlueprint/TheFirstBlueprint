@@ -11,7 +11,7 @@ const About = () => {
   return (
     <>
       <Helmet>
-        <title>FTC DECODE Strategy Planner | About</title>
+        <title>Thefirstblueprint | About</title>
         <meta
           name="description"
           content="Learn about the team behind the FTC DECODE strategy planner."

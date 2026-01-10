@@ -66,7 +66,7 @@ const PatchNotes = () => {
   return (
     <>
       <Helmet>
-        <title>FTC DECODE Strategy Planner | Patch Notes</title>
+        <title>Thefirstblueprint | Patch Notes</title>
         <meta
           name="description"
           content="Latest changes and updates for the FTC DECODE strategy planner."
