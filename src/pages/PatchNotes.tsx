@@ -78,7 +78,9 @@ const PatchNotes = () => {
           <div className="panel">
             <div className="panel-header">Patch Notes</div>
             <p className="text-sm text-muted-foreground mb-4">
-              Add new entries to the list in this file to keep updates current.
+              Hey strategizers! We will continue to update this periodically with what we have been 
+              working on, feel free to use either of the forms for extra contact if you would like.
+              We should also have socials running soon, so feel free to reach out there too!  
             </p>
             <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-2">
               {PATCH_NOTES.map((note) => (
