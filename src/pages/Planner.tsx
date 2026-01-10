@@ -7,7 +7,7 @@ const Planner = () => {
   return (
     <>
       <Helmet>
-        <title>FTC DECODE Strategy Planner | Field Planner</title>
+        <title>Thefirstblueprint | Field Planner</title>
         <meta
           name="description"
           content="Interactive FTC DECODE field planner for building strategies and robot paths."

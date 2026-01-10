@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import fieldShow from '@/assets/field show.png';
 import SiteFooter from '@/components/site/SiteFooter';
 
@@ -19,19 +20,31 @@ const Index = () => {
 
         <main className="relative mx-auto w-full max-w-6xl px-6 py-12 flex-1">
           <header className="mb-10">
-            <p className="font-mono text-xs uppercase tracking-[0.36em] text-muted-foreground">
-              Robotics command center
-            </p>
-            <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
-              Thefirstblueprint
-            </h1>
-            <h2 className="mt-3 text-2xl font-semibold text-foreground">
-              Build smarter match plans in minutes.
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-              Choose your league, drop in a modular field image, and start organizing strategy with
-              clean, flexible layouts.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.36em] text-muted-foreground">
+                  Robotics command center
+                </p>
+                <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
+                  TheFirstBlueprint
+                </h1>
+                <h2 className="mt-3 text-2xl font-semibold text-foreground">
+                  Build smarter match plans in minutes.
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+                  Choose your league, drop in a modular field image, and start organizing strategy with
+                  clean, flexible layouts.
+                </p>
+            </div>
+              <Link
+                to="/planner?settings=1"
+                className="tool-button h-10 w-10"
+                title="Settings"
+                aria-label="Open settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
+            </div>
           </header>
 
           <section className="relative">
