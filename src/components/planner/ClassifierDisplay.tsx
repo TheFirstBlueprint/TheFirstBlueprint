@@ -90,7 +90,9 @@ export const ClassifierDisplay = ({
             key={`row-${rowIndex}`}
             className={cn(
               'grid grid-cols-3 gap-1 rounded-md p-1',
-              rowMatchesTop[rowIndex] && 'bg-white/30 border border-white/50'
+              rowMatchesTop[rowIndex] && 'classifier-highlight',
+              rowMatchesTop[rowIndex]
+                && (classifier.alliance === 'red' ? 'classifier-highlight-red' : 'classifier-highlight-blue')
             )}
           >
             {row.map((ball, index) => {

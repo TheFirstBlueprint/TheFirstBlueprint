@@ -442,6 +442,35 @@
     box-shadow: inset 0 0 12px hsl(var(--alliance-red) / 0.35), inset 0 0 0 1px hsl(var(--alliance-red) / 0.4);
   }
 
+  html[data-theme="light"] .tool-button.active,
+  html[data-theme="light"] .panel-left .tool-button.active,
+  html[data-theme="light"] .panel-right .tool-button.active {
+    color: #000000;
+  }
+
+  html[data-theme="sharkans"] .tool-button.active,
+  html[data-theme="sharkans"] .panel-left .tool-button.active,
+  html[data-theme="sharkans"] .panel-right .tool-button.active {
+    color: #F0F0F0;
+  }
+
+  .classifier-highlight {
+    background-color: hsl(0 0% 100% / 0.3);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+  }
+
+  html[data-theme="light"] .classifier-highlight-red,
+  html[data-theme="dark"] .classifier-highlight-red {
+    background-color: hsl(var(--alliance-red) / 0.18);
+    border-color: hsl(var(--alliance-red) / 0.55);
+  }
+
+  html[data-theme="light"] .classifier-highlight-blue,
+  html[data-theme="dark"] .classifier-highlight-blue {
+    background-color: hsl(var(--alliance-blue) / 0.18);
+    border-color: hsl(var(--alliance-blue) / 0.55);
+  }
+
   .alliance-red {
     color: hsl(var(--alliance-red));
     background-color: rgba(var(--alliance-red-rgb), 0.16);

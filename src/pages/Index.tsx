@@ -75,7 +75,7 @@ const Index = () => {
                   </div>
                   <div className="command-card__panel p-4">
                     <p className="text-sm text-muted-foreground">
-                      Map robot paths, annotate strategy cycles, and export your setup for match day.
+                      Map robot paths, annotate strategy cycles, and export your setup for future use.
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
