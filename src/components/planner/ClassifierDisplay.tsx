@@ -7,7 +7,6 @@ interface ClassifierDisplayProps {
   onEmpty: () => void;
   onPopSingle: () => void;
   isEmptying: boolean;
-  overflowCount: number;
 }
 
 const motifToColor = (motif: string) => {
@@ -20,7 +19,6 @@ export const ClassifierDisplay = ({
   onEmpty,
   onPopSingle,
   isEmptying,
-  overflowCount,
 }: ClassifierDisplayProps) => {
   const columns = 3;
   const rows = Math.ceil(classifier.maxCapacity / columns);
@@ -125,9 +123,6 @@ export const ClassifierDisplay = ({
         ))}
       </div>
 
-      <div className="mt-2 text-xs font-mono text-muted-foreground text-center">
-        Overflowed: {overflowCount}
-      </div>
     </div>
   );
 };

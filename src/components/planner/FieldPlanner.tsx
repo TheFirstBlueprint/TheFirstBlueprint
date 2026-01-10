@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
-import { Tool, DEFAULT_CONFIG, Robot } from '@/types/planner';
+import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
 import fieldImageDark from '@/assets/decode_field_B.png';
 import fieldImageLight from '@/assets/decode_field_L.png';
@@ -21,6 +21,9 @@ const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 120;
 const MAGNET_RADIUS = 10;
+const CLASSIFIED_POINTS = 3;
+const OVERFLOW_POINTS = 1;
+const MOTIF_POINTS = 2;
 const MAGNET_TARGETS = {
   blue: [{ x: 0.7275, y: 0.761 }],
   red: [{ x: 0.27, y: 0.761 }],
@@ -142,6 +145,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
   const [robotPanelOpen, setRobotPanelOpen] = useState(false);
   const [classifierEmptying, setClassifierEmptying] = useState({ red: false, blue: false });
+  const [rawScores, setRawScores] = useState({ red: 0, blue: 0 });
   const [robotDraft, setRobotDraft] = useState<{
     widthIn: number;
     heightIn: number;
@@ -162,6 +166,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   });
   const fieldAreaRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
+  const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<Robot[]>([]);
   const isApplyingSequenceRef = useRef(false);
   const redClassifierRef = useRef<HTMLDivElement>(null);
@@ -279,6 +284,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, [themeMode]);
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
+    return () => {
+      document.documentElement.style.removeProperty('--planner-zoom');
+    };
+  }, [fieldScale]);
+
+
+  useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
@@ -306,6 +319,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setFieldScale((prev) => (Math.abs(prev - nextScale) > 0.01 ? nextScale : prev));
   }, []);
 
+  const updatePlannerMetrics = useCallback(() => {
+    const frame = fieldFrameRef.current;
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    document.documentElement.style.setProperty('--planner-field-width', `${rect.width}px`);
+    document.documentElement.style.setProperty('--planner-field-left', `${rect.left}px`);
+  }, []);
+
+  useEffect(() => {
+    updatePlannerMetrics();
+  }, [fieldScale, updatePlannerMetrics]);
+
   const openSettings = useCallback(() => {
     setDraftThemeMode(themeMode);
     setDraftKeybinds(keybinds);
@@ -320,12 +345,20 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
   useEffect(() => {
     updateFieldScale();
+    updatePlannerMetrics();
     const area = fieldAreaRef.current;
     if (!area) return;
-    const observer = new ResizeObserver(updateFieldScale);
+    const observer = new ResizeObserver(() => {
+      updateFieldScale();
+      updatePlannerMetrics();
+    });
     observer.observe(area);
-    return () => observer.disconnect();
-  }, [updateFieldScale]);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--planner-field-width');
+      document.documentElement.style.removeProperty('--planner-field-left');
+    };
+  }, [updateFieldScale, updatePlannerMetrics]);
 
   const rotateSelectedRobot = useCallback(
     (delta: number) => {
@@ -358,19 +391,50 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     return (Math.atan2(dy, dx) * 180) / Math.PI + 90;
   }, []);
 
+  const addRawScore = useCallback((alliance: Alliance, count: number) => {
+    if (count <= 0) return;
+    const classifier = state.classifiers[alliance];
+    let baseLeft = classifier.maxCapacity - classifier.balls.length;
+    let extensionLeft = classifier.extensionCapacity - classifier.extensionBalls.length;
+    let points = 0;
+    let remaining = count;
+    while (remaining > 0) {
+      if (baseLeft > 0) {
+        points += CLASSIFIED_POINTS;
+        baseLeft -= 1;
+      } else if (extensionLeft > 0) {
+        points += OVERFLOW_POINTS;
+        extensionLeft -= 1;
+      } else {
+        break;
+      }
+      remaining -= 1;
+    }
+    if (points > 0) {
+      setRawScores((prev) => ({ ...prev, [alliance]: prev[alliance] + points }));
+    }
+  }, [state.classifiers]);
+
   const handleRobotShoot = useCallback(
     (robotId: string, mode: 'single' | 'all') => {
       if (isInputLocked) return;
       const robot = state.robots.find((item) => item.id === robotId);
       if (!robot || robot.heldBalls.length === 0) return;
+      const classifier = state.classifiers[robot.alliance];
+      const baseLeft = classifier.maxCapacity - classifier.balls.length;
+      const extensionLeft = classifier.extensionCapacity - classifier.extensionBalls.length;
+      const capacityLeft = Math.max(0, baseLeft + extensionLeft);
 
       const originalRotation = robot.rotation;
       const targetRotation = getGoalRotation(robot);
       updateRobotRotation(robotId, targetRotation);
 
       if (mode === 'single') {
+        addRawScore(robot.alliance, 1);
         robotEjectSingle(robotId);
       } else {
+        const ballsToScore = Math.min(robot.heldBalls.length, capacityLeft);
+        addRawScore(robot.alliance, ballsToScore);
         robotEjectAll(robotId);
       }
 
@@ -378,7 +442,15 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         updateRobotRotation(robotId, originalRotation);
       }, 250);
     },
-    [getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.robots, updateRobotRotation]
+    [addRawScore, getGoalRotation, isInputLocked, robotEjectAll, robotEjectSingle, state.classifiers, state.robots, updateRobotRotation]
+  );
+
+  const handleScoreToClassifier = useCallback(
+    (ballId: string, alliance: Alliance) => {
+      addRawScore(alliance, 1);
+      scoreBallToClassifier(ballId, alliance);
+    },
+    [addRawScore, scoreBallToClassifier]
   );
 
   const saveSequenceStep = useCallback(
@@ -601,6 +673,60 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   };
 
   const motifs = ['GPP', 'PGP', 'PPG'];
+
+  const motifToColors = useCallback((value: string) => (
+    value.split('').map((token) => (token === 'G' ? 'green' : 'purple'))
+  ), []);
+
+  const getMotifValidatedCount = useCallback((classifier: Classifier, motifValue: string) => {
+    const columns = 3;
+    const rows = Math.ceil(classifier.maxCapacity / columns);
+    const slots = Array.from(
+      { length: classifier.maxCapacity },
+      () => null as Classifier['balls'][number] | null
+    );
+
+    classifier.balls.forEach((ball, index) => {
+      const targetRow = rows - 1 - Math.floor(index / columns);
+      const targetCol = index % columns;
+      const visualIndex = targetRow * columns + targetCol;
+      if (visualIndex >= 0 && visualIndex < slots.length) {
+        slots[visualIndex] = ball;
+      }
+    });
+
+    const motifColors = motifToColors(motifValue);
+    let count = 0;
+    for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
+      const start = rowIndex * columns;
+      const row = slots.slice(start, start + columns);
+      if (row.some((ball) => !ball)) continue;
+      const matches = row.every((ball, idx) => ball?.color === motifColors[idx]);
+      if (matches) {
+        count += row.length;
+      }
+    }
+    return count;
+  }, [motifToColors]);
+
+  const motifCounts = useMemo(() => ({
+    red: getMotifValidatedCount(state.classifiers.red, motif),
+    blue: getMotifValidatedCount(state.classifiers.blue, motif),
+  }), [getMotifValidatedCount, motif, state.classifiers]);
+
+  const motifScores = useMemo(() => ({
+    red: motifCounts.red * MOTIF_POINTS,
+    blue: motifCounts.blue * MOTIF_POINTS,
+  }), [motifCounts]);
+
+  const overallScores = useMemo(() => ({
+    red: rawScores.red + motifScores.red,
+    blue: rawScores.blue + motifScores.blue,
+  }), [motifScores, rawScores]);
+
+  const handleScoreReset = useCallback(() => {
+    setRawScores({ red: 0, blue: 0 });
+  }, []);
 
   const applySequenceStep = useCallback(
     (index: number) => {
@@ -1516,7 +1642,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         ref={fieldAreaRef}
         className="flex-1 flex items-start justify-center p-8 pt-6 field-container"
       >
-        <div className="relative z-10" style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}>
+        <div
+          ref={fieldFrameRef}
+          className="relative z-10"
+          style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}
+        >
           <div
             className="relative field-surface"
             style={{
@@ -1572,7 +1702,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               checkGoalDrop={getGoalDropTarget}
               checkClassifierDrop={getClassifierDropTarget}
               onCollectByRobot={(robotId) => robotCollectBall(robotId, ball.id)}
-              onScoreToClassifier={(ballId, alliance) => scoreBallToClassifier(ballId, alliance)}
+              onScoreToClassifier={handleScoreToClassifier}
               isLocked={isInputLocked}
               scale={fieldScale}
               isGhost={classifierBallIds.has(ball.id)}
@@ -1936,7 +2066,47 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           </div>
         ) : (
           <>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
+              <div className="panel">
+                <div className="panel-header">Points</div>
+                <div className="space-y-3 text-xs text-muted-foreground">
+                  {(['red', 'blue'] as const).map((alliance) => (
+                    <div
+                      key={alliance}
+                      className="rounded-md border border-border/60 bg-background/40 px-3 py-2"
+                    >
+                      <div
+                        className={`text-[11px] font-mono uppercase tracking-[0.24em] ${
+                          alliance === 'red' ? 'text-alliance-red' : 'text-alliance-blue'
+                        }`}
+                      >
+                        {alliance === 'red' ? 'Red' : 'Blue'} Alliance
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span>Overall Score</span>
+                          <span className="font-mono text-foreground">{overallScores[alliance]}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Raw Score</span>
+                          <span className="font-mono text-foreground">{rawScores[alliance]}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Motif Score</span>
+                          <span className="font-mono text-foreground">{motifScores[alliance]}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleScoreReset}
+                  className="tool-button mt-3 w-full"
+                  title="Reset scores"
+                >
+                  Reset
+                </button>
+              </div>
               <div className="panel">
                 <div className="panel-header">Game Timer</div>
                 <div className="text-center text-2xl font-mono text-foreground">
@@ -2103,7 +2273,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onEmpty={() => handleClassifierEmpty('red')}
                   onPopSingle={() => handleClassifierPop('red')}
                   isEmptying={classifierEmptying.red}
-                  overflowCount={state.overflowCounts.red}
                 />
               </div>
               <div ref={blueClassifierRef}>
@@ -2113,7 +2282,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   onEmpty={() => handleClassifierEmpty('blue')}
                   onPopSingle={() => handleClassifierPop('blue')}
                   isEmptying={classifierEmptying.blue}
-                  overflowCount={state.overflowCounts.blue}
                 />
               </div>
             </div>
