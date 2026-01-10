@@ -181,17 +181,17 @@
     --input: 230.2 94% 4.5%;
     --ring: 48.5 100% 50%;
 
-    --alliance-red: 48.5 100% 50%;
-    --alliance-red-foreground: 230.2 94% 4.5%;
-    --alliance-blue: 203.3 64% 62.9%;
-    --alliance-blue-foreground: 230.2 94% 4.5%;
+    --alliance-red: 0 74% 59%;
+    --alliance-red-foreground: 0 0% 100%;
+    --alliance-blue: 213 66% 50%;
+    --alliance-blue-foreground: 0 0% 100%;
 
-    --alliance-red-rgb: 255 206 0;
-    --alliance-blue-rgb: 100 174 221;
-    --alliance-red-soft: 48.5 100% 50% / 0.14;
-    --alliance-blue-soft: 203.3 64% 62.9% / 0.14;
-    --alliance-red-ring: 48.5 100% 50% / 0.55;
-    --alliance-blue-ring: 203.3 64% 62.9% / 0.55;
+    --alliance-red-rgb: 228 75 75;
+    --alliance-blue-rgb: 43 118 210;
+    --alliance-red-soft: 0 74% 59% / 0.14;
+    --alliance-blue-soft: 213 66% 50% / 0.14;
+    --alliance-red-ring: 0 74% 59% / 0.55;
+    --alliance-blue-ring: 213 66% 50% / 0.55;
 
     --sidebar-background: 230.2 94% 4.5%;
     --sidebar-foreground: 203.3 64% 62.9%;
@@ -204,6 +204,10 @@
 
     --overlay: 232.2 71.1% 10% / 0.78;
     --overlay-strong: 232.2 71.1% 10% / 0.88;
+
+    --sharkans-panel-red: 48.5 100% 50%;
+    --sharkans-panel-blue: 203.3 64% 62.9%;
+    --sharkans-panel-foreground: 230.2 94% 4.5%;
   }
 }
 
@@ -452,6 +456,32 @@
   html[data-theme="sharkans"] .panel-left .tool-button.active,
   html[data-theme="sharkans"] .panel-right .tool-button.active {
     color: #F0F0F0;
+  }
+
+  html[data-theme="sharkans"] .panel-left .tool-button.active {
+    color: #F0F0F0;
+    border-color: hsl(var(--sharkans-panel-blue) / 0.45);
+    background: linear-gradient(180deg, hsl(var(--sharkans-panel-blue) / 0.24) 0%, hsl(var(--sharkans-panel-blue) / 0.12) 100%);
+    box-shadow: inset 0 0 12px hsl(var(--sharkans-panel-blue) / 0.35), inset 0 0 0 1px hsl(var(--sharkans-panel-blue) / 0.4);
+  }
+
+  html[data-theme="sharkans"] .panel-right .tool-button.active {
+    color: #F0F0F0;
+    border-color: hsl(var(--sharkans-panel-red) / 0.45);
+    background: linear-gradient(180deg, hsl(var(--sharkans-panel-red) / 0.24) 0%, hsl(var(--sharkans-panel-red) / 0.12) 100%);
+    box-shadow: inset 0 0 12px hsl(var(--sharkans-panel-red) / 0.35), inset 0 0 0 1px hsl(var(--sharkans-panel-red) / 0.4);
+  }
+
+  html[data-theme="sharkans"] .panel-left .text-alliance-blue {
+    color: hsl(var(--sharkans-panel-blue));
+  }
+
+  html[data-theme="sharkans"] .panel-right .text-alliance-red {
+    color: hsl(var(--sharkans-panel-red));
+  }
+
+  html[data-theme="sharkans"] .robot-indicator {
+    color: hsl(var(--alliance-red-foreground));
   }
 
   .classifier-highlight {

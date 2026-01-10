@@ -3,8 +3,8 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
-  { name: 'Prabhnoor Singh', role: '27272 Build Lead' },
-  { name: 'Jacob James', role: '27272 Code Lead' },
+  { name: '27272 Build Lead', role : ''},
+  { name: '27272 Code Lead', role : ''},
 ];
 
 const About = () => {

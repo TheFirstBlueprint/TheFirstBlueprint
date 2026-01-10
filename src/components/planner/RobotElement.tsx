@@ -132,10 +132,10 @@ export const RobotElement = ({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center">
-            <span className="material-symbols-outlined text-[22px] text-foreground/90 -mt-1" aria-hidden="true">
+            <span className="material-symbols-outlined text-[22px] text-foreground/90 -mt-1 robot-indicator" aria-hidden="true">
               north
             </span>
-            <span className="text-xs font-mono text-foreground/90">{displayName}</span>
+            <span className="text-xs font-mono text-foreground/90 robot-indicator">{displayName}</span>
           </div>
         )}
 
@@ -152,7 +152,7 @@ export const RobotElement = ({
       {robot.heldBalls.length > 0 && (
         <div
           className="absolute top-1/2 -right-4 flex flex-col gap-1"
-          style={{ transform: `translateY(-50%) rotate(-${robot.rotation}deg)` }}
+          style={{ transform: 'translateY(-50%)' }}
         >
           {robot.heldBalls.map((ball, index) => (
             <button
@@ -175,7 +175,7 @@ export const RobotElement = ({
       )}
       {hasImage && displayName && (
         <div
-          className="absolute left-1/2 top-full mt-1 text-xs font-mono text-foreground/90"
+          className="absolute left-1/2 top-full mt-1 text-xs font-mono text-foreground/90 robot-indicator"
           style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
         >
           {displayName}
