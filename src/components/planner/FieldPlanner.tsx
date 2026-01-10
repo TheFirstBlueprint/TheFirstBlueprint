@@ -674,40 +674,15 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
   const motifs = ['GPP', 'PGP', 'PPG'];
 
-  const motifToColors = useCallback((value: string) => (
-    value.split('').map((token) => (token === 'G' ? 'green' : 'purple'))
-  ), []);
-
   const getMotifValidatedCount = useCallback((classifier: Classifier, motifValue: string) => {
-    const columns = 3;
-    const rows = Math.ceil(classifier.maxCapacity / columns);
-    const slots = Array.from(
-      { length: classifier.maxCapacity },
-      () => null as Classifier['balls'][number] | null
-    );
-
-    classifier.balls.forEach((ball, index) => {
-      const targetRow = rows - 1 - Math.floor(index / columns);
-      const targetCol = index % columns;
-      const visualIndex = targetRow * columns + targetCol;
-      if (visualIndex >= 0 && visualIndex < slots.length) {
-        slots[visualIndex] = ball;
-      }
-    });
-
-    const motifColors = motifToColors(motifValue);
-    let count = 0;
-    for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
-      const start = rowIndex * columns;
-      const row = slots.slice(start, start + columns);
-      if (row.some((ball) => !ball)) continue;
-      const matches = row.every((ball, idx) => ball?.color === motifColors[idx]);
-      if (matches) {
-        count += row.length;
-      }
-    }
-    return count;
-  }, [motifToColors]);
+    if (!motifValue) return 0;
+    const motifTokens = motifValue.split('');
+    return classifier.balls.reduce((total, ball, index) => {
+      const expected = motifTokens[index % motifTokens.length];
+      const actual = ball.color === 'green' ? 'G' : 'P';
+      return total + (actual === expected ? 1 : 0);
+    }, 0);
+  }, []);
 
   const motifCounts = useMemo(() => ({
     red: getMotifValidatedCount(state.classifiers.red, motif),
