@@ -1,6 +1,5 @@
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { Settings } from 'lucide-react';
 import fieldShow from '@/assets/field show.png';
 import SiteFooter from '@/components/site/SiteFooter';
 
@@ -26,23 +25,15 @@ const Index = () => {
                   Robotics command center
                 </p>
                 <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
-                  Thefirstblueprint
+                  TheFirstBlueprint
                 </h1>
                 <h2 className="mt-3 text-2xl font-semibold text-foreground">
-                  Build smarter match plans in minutes.
+                  Visual strategy planning for competitive robotics alliances.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
                   Build strategies. Share plans. Win together.
                 </p>
-            </div>
-              <Link
-                to="/planner?settings=1"
-                className="tool-button h-10 w-10"
-                title="Settings"
-                aria-label="Open settings"
-              >
-                <Settings className="h-4 w-4" />
-              </Link>
+              </div>
             </div>
           </header>
 
@@ -50,7 +41,7 @@ const Index = () => {
             <div aria-hidden="true" className="hero-radial" />
             <div className="relative z-10 grid gap-6 lg:grid-cols-2">
               <Link
-                to="/planner"
+                to="/ftc/planner"
                 className="command-card group min-h-[360px] p-6"
               >
                 <div className="card-media card-media--blue" aria-hidden="true">
@@ -70,12 +61,12 @@ const Index = () => {
                       FTC planning
                     </p>
                     <h3 className="mt-2 text-3xl font-semibold text-foreground">
-                      FTC planning
+                      FTC Planning
                     </h3>
                   </div>
                   <div className="command-card__panel p-4">
                     <p className="text-sm text-muted-foreground">
-                      Map robot paths, annotate strategy cycles, and export your setup for future use.
+                      Plan field scenarios, motifs, sequences, and alliance coordination.
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
@@ -85,7 +76,10 @@ const Index = () => {
                 </div>
               </Link>
 
-              <div className="command-card command-card--locked min-h-[360px] p-6">
+              <Link
+                to="/frc/planner"
+                className="command-card group min-h-[360px] p-6"
+              >
                 <div className="card-media card-media--red" aria-hidden="true">
                   <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
                     Module slot
@@ -97,20 +91,20 @@ const Index = () => {
                       FRC planning
                     </p>
                     <h3 className="mt-2 text-3xl font-semibold text-foreground">
-                      FRC planning (coming soon)
+                      FRC Planning
                     </h3>
                   </div>
                   <div className="command-card__panel p-4">
                     <p className="text-sm text-muted-foreground">
-                      The FRC command deck is in design. More modules arrive soon.
+                      Plan match strategy, robot roles, and autonomous paths visually.
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-                    <span>Stay tuned</span>
-                    <span className="text-muted-foreground">Locked</span>
+                    <span>Enter planner</span>
+                    <span className="text-alliance-red">Open</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </section>
 

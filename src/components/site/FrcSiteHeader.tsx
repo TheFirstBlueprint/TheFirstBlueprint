@@ -3,17 +3,17 @@ import { ArrowLeft, Info, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', to: '/' },
-  { label: 'Planner', to: '/ftc/planner' },
-  { label: 'About', to: '/ftc/about' },
-  { label: 'Patch Notes', to: '/ftc/patch-notes' },
+  { label: 'Planner', to: '/frc/planner' },
+  { label: 'About', to: '/frc/about' },
+  { label: 'Patch Notes', to: '/frc/patch-notes' },
 ];
 
-type SiteHeaderProps = {
+type FrcSiteHeaderProps = {
   showBackButton?: boolean;
   backTo?: string;
 };
 
-export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderProps) => {
+export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteHeaderProps) => {
   return (
     <header className="w-full border-b border-border bg-card/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
@@ -29,8 +29,8 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
             </Link>
           )}
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">TheFirstBlueprint | FTC</p>
-            <h1 className="text-lg font-semibold text-foreground">FTC Strategy Planner</h1>
+            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">TheFirstBlueprint | FRC</p>
+            <h1 className="text-lg font-semibold text-foreground">FRC Strategy Planner</h1>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -48,7 +48,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
             ))}
           </nav>
           <Link
-            to="/ftc/settings"
+            to="/frc/settings"
             className="tool-button w-10 h-10"
             title="Settings"
             aria-label="Open settings"
@@ -56,7 +56,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
             <Settings className="w-4 h-4" />
           </Link>
           <Link
-            to="/ftc/instructions"
+            to="/frc/instructions"
             className="tool-button w-10 h-10"
             title="Instructions"
             aria-label="Open instructions"
