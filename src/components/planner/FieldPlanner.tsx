@@ -134,6 +134,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [timerRunning, setTimerRunning] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [fieldScale, setFieldScale] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
@@ -359,6 +360,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       openSettings();
     }
   }, [openSettings, searchParams, settingsOpen]);
+
+  useEffect(() => {
+    if (searchParams.get('instructions') === '1' && !instructionsOpen) {
+      setInstructionsOpen(true);
+    }
+  }, [instructionsOpen, searchParams]);
 
   useEffect(() => {
     updateFieldScale();
@@ -685,7 +692,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const handleFieldClick = () => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
-    if (settingsOpen) return;
+    if (settingsOpen || instructionsOpen) return;
     setActiveClassifierMenu(null);
     setSelectedRobotId(null);
   };
@@ -863,7 +870,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       if (e.target instanceof HTMLInputElement) return;
       if (e.target instanceof HTMLTextAreaElement) return;
       if (isInputLocked) return;
-      if (settingsOpen) return;
+      if (settingsOpen || instructionsOpen) return;
 
       const key = e.key.toLowerCase();
       switch (key) {
@@ -1598,9 +1605,21 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setSearchParams(nextParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const clearInstructionsParam = useCallback(() => {
+    if (!searchParams.has('instructions')) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('instructions');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const handleCloseSettings = () => {
     setSettingsOpen(false);
     clearSettingsParam();
+  };
+
+  const handleCloseInstructions = () => {
+    setInstructionsOpen(false);
+    clearInstructionsParam();
   };
 
   const handleSaveSettings = () => {
@@ -2508,6 +2527,66 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               >
                 Save
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {instructionsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overlay-scrim backdrop-blur-sm px-4 py-6">
+          <div className="panel w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Instructions
+              </h2>
+              <button
+                onClick={handleCloseInstructions}
+                className="tool-button !p-1"
+                title="Close instructions"
+                aria-label="Close instructions"
+              >
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  close
+                </span>
+              </button>
+            </div>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <p className="text-foreground">
+                Welcome to Thefirstblueprint 2025-2026 for FTC! Here are some basic controls to get started:
+              </p>
+              <div className="grid gap-1 text-xs font-mono uppercase tracking-wide text-muted-foreground">
+                <span>I - intake</span>
+                <span>K - shoot all</span>
+                <span>L - cycle balls within bot</span>
+                <span>O - shoots one ball</span>
+                <span>A - cycle sequencer left one step</span>
+                <span>D - cycle sequencer right one step</span>
+              </div>
+              <div className="space-y-3">
+                <p className="text-foreground">How to get started:</p>
+                <p>
+                  Start by clicking the "setup field" button on the left hand side. This sets up bots in a close + far zone configuration with preloads. To interact, simply click and drag on the robots. On the left hand panel are many tools to interact with the field itself, including adding balls, drawing tools, motif controls and save/load.
+                </p>
+                <p className="text-foreground">Here are some of the functions:</p>
+                <p>
+                  Draw tools essentially treat the field as a whiteboard, allowing you to use thefirstblueprint just like a usual whiteboard planning strategy.
+                </p>
+                <p>
+                  Adding balls will add balls to the left or right human player zones up to the maximum decode ball count.
+                </p>
+                <p>
+                  Motif can be controlled to affect the point interface (shown on the right hand side), which will update upon proper motif selection.
+                </p>
+                <p>
+                  The point interface works in a way where the points continue to accumulate throughout the game, and fully reset when clicking the "reset" button. The motif is continuously scored, but does not accumulate the score - it is only added based on current motif state.
+                </p>
+                <p>
+                  For usage of sequencer, refer to the info hover (the "i" icon) on the sequencer panel.
+                </p>
+                <p>
+                  Once you are happy with your sequences or strategy plan, scroll down on the left panel and click "export." This will save a json file that has the full configuration for that specific field instance, which can then be distributed or reuploaded via "import" to load a position.
+                </p>
+                <p className="text-foreground">Happy strategizing!</p>
+              </div>
             </div>
           </div>
         </div>

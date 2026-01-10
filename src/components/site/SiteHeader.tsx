@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { ArrowLeft, Settings } from 'lucide-react';
+import { ArrowLeft, Info, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', to: '/' },
@@ -54,6 +54,14 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
             aria-label="Open settings"
           >
             <Settings className="w-4 h-4" />
+          </Link>
+          <Link
+            to="/planner?instructions=1"
+            className="tool-button w-10 h-10"
+            title="Instructions"
+            aria-label="Open instructions"
+          >
+            <Info className="w-4 h-4" />
           </Link>
         </div>
       </div>
