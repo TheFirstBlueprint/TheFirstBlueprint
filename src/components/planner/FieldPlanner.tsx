@@ -2316,7 +2316,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="left" className="max-w-xs text-xs">
-                        Press D or A to move forward/backward. Create an animated sequence by moving robots at each step.
+                        Press D or A to move forward/backward. Use this tool to create sequences and plan out movements with animation. 
+                        Click on a number to activate that step, make all movements (movements save automatically to the selected slot). 
+                        To set a new position, click on the desired step and start moving the bots. Play sequence when done.
                       </TooltipContent>
                     </Tooltip>
                   </div>
