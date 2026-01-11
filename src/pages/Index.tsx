@@ -51,9 +51,6 @@ const Index = () => {
                     className="absolute inset-0 h-full w-full object-cover opacity-70"
                     draggable={false}
                   />
-                  <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
-                    Module slot
-                  </div>
                 </div>
                 <div className="relative z-10 flex h-full flex-col justify-between gap-6">
                   <div>
@@ -81,9 +78,6 @@ const Index = () => {
                 className="command-card group min-h-[360px] p-6"
               >
                 <div className="card-media card-media--red" aria-hidden="true">
-                  <div className="absolute right-6 top-6 rounded-lg border border-border/60 bg-background/30 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
-                    Module slot
-                  </div>
                 </div>
                 <div className="relative z-10 flex h-full flex-col justify-between gap-6">
                   <div>
