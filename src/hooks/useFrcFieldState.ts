@@ -10,8 +10,15 @@ const createInitialState = (): FrcFieldState => ({
   drawings: [],
 });
 
-export const useFrcFieldState = () => {
-  const [state, setState] = useState<FrcFieldState>(createInitialState());
+const normalizeFrcFieldState = (parsed: FrcFieldState): FrcFieldState => ({
+  robots: parsed.robots ?? [],
+  drawings: parsed.drawings ?? [],
+});
+
+export const useFrcFieldState = (initialState?: FrcFieldState) => {
+  const [state, setState] = useState<FrcFieldState>(
+    () => (initialState ? normalizeFrcFieldState(initialState) : createInitialState())
+  );
 
   const addRobot = useCallback((alliance: Alliance, position: Position, sizeFt?: { width: number; height: number }) => {
     const allianceCount = state.robots.filter((robot) => robot.alliance === alliance).length;
@@ -91,10 +98,7 @@ export const useFrcFieldState = () => {
   const importState = useCallback((json: string) => {
     try {
       const parsed = JSON.parse(json) as FrcFieldState;
-      setState({
-        robots: parsed.robots ?? [],
-        drawings: parsed.drawings ?? [],
-      });
+      setState(normalizeFrcFieldState(parsed));
       return true;
     } catch {
       return false;
