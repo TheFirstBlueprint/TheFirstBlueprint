@@ -12,15 +12,15 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FIELD_FEET_WIDTH = 54;
-const FIELD_FEET_HEIGHT = 27;
+const FIELD_FEET_HEIGHT = 24.5752427184;
 const FIELD_UNITS_PER_FOOT = 10;
 const FIELD_WIDTH = FIELD_FEET_WIDTH * FIELD_UNITS_PER_FOOT;
 const FIELD_HEIGHT = FIELD_FEET_HEIGHT * FIELD_UNITS_PER_FOOT;
 const FIELD_SCREEN_RATIO = 0.8;
 const FIELD_SCALE_MULTIPLIER = 1.1;
-const AUTON_SECONDS = 30;
+const AUTON_SECONDS = 20;
 const TRANSITION_SECONDS = 7;
-const TELEOP_SECONDS = 120;
+const TELEOP_SECONDS = 140;
 const ROBOT_MIN_FT = 1;
 const ROBOT_MAX_FT = 6;
 const DEFAULT_ROBOT_FT = 3;
