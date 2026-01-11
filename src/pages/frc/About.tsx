@@ -4,7 +4,7 @@ import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
   { name: 'FTC Build Lead', role: 'Developer' },
-  { name: 'FTC Code Lead', role: 'Developer' },
+  { name: 'FTC Code Lead', role: 'Developerfefefe' },
 ];
 
 const FrcAbout = () => {

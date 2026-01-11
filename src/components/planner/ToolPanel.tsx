@@ -203,6 +203,17 @@ export const ToolPanel = ({
         </button>
       </div>
 
+      {/* Field Setup */}
+      <div className="panel">
+        <div className="panel-header">Field Setup</div>
+        <button onClick={onSetupField} className="tool-button gap-1">
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+            auto_fix_high
+          </span>
+          <span className="text-xs">Setup Field</span>
+        </button>
+      </div>
+
       {/* Add Elements */}
       <div className="panel">
         <div className="panel-header">Add Elements</div>
@@ -304,17 +315,6 @@ export const ToolPanel = ({
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Field Setup */}
-      <div className="panel">
-        <div className="panel-header">Field Setup</div>
-        <button onClick={onSetupField} className="tool-button gap-1">
-          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-            auto_fix_high
-          </span>
-          <span className="text-xs">Setup Field</span>
-        </button>
       </div>
 
       {/* Clear Controls */}
