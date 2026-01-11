@@ -16,14 +16,14 @@ const FIELD_FEET_HEIGHT = 24.5752427184;
 const FIELD_UNITS_PER_FOOT = 10;
 const FIELD_WIDTH = FIELD_FEET_WIDTH * FIELD_UNITS_PER_FOOT;
 const FIELD_HEIGHT = FIELD_FEET_HEIGHT * FIELD_UNITS_PER_FOOT;
-const FIELD_SCREEN_RATIO = 0.8;
+const FIELD_SCREEN_RATIO = 0.9;
 const FIELD_SCALE_MULTIPLIER = 1.1;
 const AUTON_SECONDS = 20;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 140;
 const ROBOT_MIN_FT = 1;
-const ROBOT_MAX_FT = 6;
-const DEFAULT_ROBOT_FT = 3;
+const ROBOT_MAX_FT = 2.5;
+const DEFAULT_ROBOT_FT = 2.5;
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
@@ -305,8 +305,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     const widthFt = Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robot.widthFt ?? DEFAULT_ROBOT_FT));
     const heightFt = Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robot.heightFt ?? DEFAULT_ROBOT_FT));
     return {
-      width: widthFt * FIELD_UNITS_PER_FOOT,
-      height: heightFt * FIELD_UNITS_PER_FOOT,
+      width: widthFt * FIELD_UNITS_PER_FOOT * 0.5,
+      height: heightFt * FIELD_UNITS_PER_FOOT * 0.5,
     };
   }, []);
 
@@ -656,14 +656,14 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
   const handleSetupField = () => {
     const blueTargets = [
-      { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.2 },
-      { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.5 },
-      { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.8 },
+      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.2 },
+      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.5 },
+      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.8 },
     ];
     const redTargets = [
-      { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.2 },
-      { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.5 },
-      { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.8 },
+      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.2 },
+      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.5 },
+      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.8 },
     ];
 
     const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
