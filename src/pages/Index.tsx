@@ -108,7 +108,7 @@ const Index = () => {
             </div>
           </section>
 
-          <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.8fr_0.9fr]">
             <div className="panel">
               <div className="panel-header">Contact</div>
               <h3 className="text-xl font-semibold text-foreground">Feedback</h3>
@@ -131,6 +131,38 @@ const Index = () => {
                   target="_blank"
                 >
                   Bug report form
+                </a>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-header">Video Links</div>
+              <h3 className="text-xl font-semibold text-foreground">YouTube</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Quick access to team walkthroughs and planner demos.
+              </p>
+              <div className="mt-4 grid gap-3">
+                <a
+                  className="tool-button active w-full text-sm"
+                  href="https://www.youtube.com"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                    play_circle
+                  </span>
+                  FTC videos
+                </a>
+                <a
+                  className="tool-button active w-full text-sm"
+                  href="https://www.youtube.com"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                    play_circle
+                  </span>
+                  FRC videos
                 </a>
               </div>
             </div>
