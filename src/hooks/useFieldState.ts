@@ -126,8 +126,33 @@ const getTotalBallCount = (state: FieldState) => {
   return state.balls.length + robotBalls + classifierBalls;
 };
 
-export const useFieldState = () => {
-  const [state, setState] = useState<FieldState>(createInitialState());
+const normalizeFieldState = (parsed: FieldState): FieldState => {
+  const withClassifiers = {
+    ...parsed,
+    classifiers: {
+      red: {
+        ...parsed.classifiers.red,
+        extensionBalls: parsed.classifiers.red.extensionBalls ?? [],
+        extensionCapacity: parsed.classifiers.red.extensionCapacity ?? 6,
+      },
+      blue: {
+        ...parsed.classifiers.blue,
+        extensionBalls: parsed.classifiers.blue.extensionBalls ?? [],
+        extensionCapacity: parsed.classifiers.blue.extensionCapacity ?? 6,
+      },
+    },
+  };
+
+  return {
+    ...withClassifiers,
+    overflowCounts: parsed.overflowCounts ?? { red: 0, blue: 0 },
+  };
+};
+
+export const useFieldState = (initialState?: FieldState) => {
+  const [state, setState] = useState<FieldState>(
+    () => (initialState ? normalizeFieldState(initialState) : createInitialState())
+  );
 
   // Robot operations
   const addRobot = useCallback((alliance: Alliance, position?: Position) => {
@@ -699,25 +724,7 @@ export const useFieldState = () => {
   const importState = useCallback((json: string) => {
     try {
       const parsed = JSON.parse(json) as FieldState;
-      const withClassifiers = {
-        ...parsed,
-        classifiers: {
-          red: {
-            ...parsed.classifiers.red,
-            extensionBalls: parsed.classifiers.red.extensionBalls ?? [],
-            extensionCapacity: parsed.classifiers.red.extensionCapacity ?? 6,
-          },
-          blue: {
-            ...parsed.classifiers.blue,
-            extensionBalls: parsed.classifiers.blue.extensionBalls ?? [],
-            extensionCapacity: parsed.classifiers.blue.extensionCapacity ?? 6,
-          },
-        },
-      };
-      setState({
-        ...withClassifiers,
-        overflowCounts: parsed.overflowCounts ?? { red: 0, blue: 0 },
-      });
+      setState(normalizeFieldState(parsed));
       return true;
     } catch {
       return false;

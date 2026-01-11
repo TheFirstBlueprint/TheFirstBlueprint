@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
-import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier } from '@/types/planner';
+import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
 import fieldImageDark from '@/assets/decode_field_B.png';
 import fieldImageLight from '@/assets/decode_field_L.png';
@@ -83,6 +83,43 @@ type SequenceStep = {
   rotations: Record<string, number>;
 };
 
+type PersistedFieldPlannerState = {
+  version: 1;
+  fieldState: FieldState;
+  activeTool: Tool;
+  penColor: string;
+  selectedRobotId: string | null;
+  motif: string;
+  robotModes: Record<string, { intake: boolean; outtake: boolean }>;
+  timerMode: 'full' | 'teleop' | 'auton';
+  timerPhase: 'idle' | 'auton' | 'transition' | 'teleop';
+  timeLeft: number;
+  timerRunning: boolean;
+  themeMode: ThemeMode;
+  settingsOpen: boolean;
+  instructionsOpen: boolean;
+  fieldScale: number;
+  sequenceSteps: Record<number, SequenceStep>;
+  sequencePlaying: boolean;
+  selectedSequenceStep: number | null;
+  maxSequence: number;
+  draftThemeMode: ThemeMode;
+  keybinds: Keybinds;
+  draftKeybinds: Keybinds;
+  robotPanelOpen: boolean;
+  rawScores: { red: number; blue: number };
+  activeClassifierMenu: Alliance | null;
+  robotDraft: {
+    widthIn: number;
+    heightIn: number;
+    name: string;
+    imageDataUrl: string | null;
+  } | null;
+  draftRobotId: string | null;
+};
+
+let persistedFtcPlannerState: PersistedFieldPlannerState | null = null;
+
 const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'base' || value === 'dark' || value === 'light' || value === 'sharkans') return value;
   if (value === 'basic') return 'base';
@@ -90,6 +127,7 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
 };
 
 export const FieldPlanner = ({ className }: { className?: string }) => {
+  const persistedState = useMemo(() => persistedFtcPlannerState, []);
   const {
     state,
     addRobot,
@@ -121,40 +159,54 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     importState,
     addHumanPlayerBall,
     loadRobotBalls,
-  } = useFieldState();
+  } = useFieldState(persistedState?.fieldState);
 
-  const [activeTool, setActiveTool] = useState<Tool>('select');
-  const [penColor, setPenColor] = useState('#2b76d2');
-  const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
-  const [motif, setMotif] = useState('GPP');
-  const [robotModes, setRobotModes] = useState<Record<string, { intake: boolean; outtake: boolean }>>({});
-  const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>('full');
-  const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
-  const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
-  const [fieldScale, setFieldScale] = useState(1);
+  const [activeTool, setActiveTool] = useState<Tool>(persistedState?.activeTool ?? 'select');
+  const [penColor, setPenColor] = useState(persistedState?.penColor ?? '#2b76d2');
+  const [selectedRobotId, setSelectedRobotId] = useState<string | null>(persistedState?.selectedRobotId ?? null);
+  const [motif, setMotif] = useState(persistedState?.motif ?? 'GPP');
+  const [robotModes, setRobotModes] = useState<Record<string, { intake: boolean; outtake: boolean }>>(
+    persistedState?.robotModes ?? {}
+  );
+  const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>(
+    persistedState?.timerMode ?? 'full'
+  );
+  const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>(
+    persistedState?.timerPhase ?? 'auton'
+  );
+  const [timeLeft, setTimeLeft] = useState(persistedState?.timeLeft ?? AUTON_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(persistedState?.timerRunning ?? false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(persistedState?.themeMode ?? 'dark');
+  const [settingsOpen, setSettingsOpen] = useState(persistedState?.settingsOpen ?? false);
+  const [instructionsOpen, setInstructionsOpen] = useState(persistedState?.instructionsOpen ?? false);
+  const [fieldScale, setFieldScale] = useState(persistedState?.fieldScale ?? 1);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
-  const [sequencePlaying, setSequencePlaying] = useState(false);
-  const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(null);
-  const [maxSequence, setMaxSequence] = useState(MIN_SEQUENCE);
-  const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>('dark');
-  const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
-  const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
-  const [robotPanelOpen, setRobotPanelOpen] = useState(false);
+  const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>(
+    persistedState?.sequenceSteps ?? {}
+  );
+  const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
+    persistedState?.selectedSequenceStep ?? null
+  );
+  const [maxSequence, setMaxSequence] = useState(persistedState?.maxSequence ?? MIN_SEQUENCE);
+  const [draftThemeMode, setDraftThemeMode] = useState<ThemeMode>(persistedState?.draftThemeMode ?? 'dark');
+  const [keybinds, setKeybinds] = useState<Keybinds>(persistedState?.keybinds ?? DEFAULT_KEYBINDS);
+  const [draftKeybinds, setDraftKeybinds] = useState<Keybinds>(
+    persistedState?.draftKeybinds ?? DEFAULT_KEYBINDS
+  );
+  const [robotPanelOpen, setRobotPanelOpen] = useState(persistedState?.robotPanelOpen ?? false);
   const [classifierEmptying, setClassifierEmptying] = useState({ red: false, blue: false });
-  const [rawScores, setRawScores] = useState({ red: 0, blue: 0 });
-  const [activeClassifierMenu, setActiveClassifierMenu] = useState<Alliance | null>(null);
+  const [rawScores, setRawScores] = useState(persistedState?.rawScores ?? { red: 0, blue: 0 });
+  const [activeClassifierMenu, setActiveClassifierMenu] = useState<Alliance | null>(
+    persistedState?.activeClassifierMenu ?? null
+  );
   const [robotDraft, setRobotDraft] = useState<{
     widthIn: number;
     heightIn: number;
     name: string;
     imageDataUrl: string | null;
-  } | null>(null);
-  const [draftRobotId, setDraftRobotId] = useState<string | null>(null);
+  } | null>(persistedState?.robotDraft ?? null);
+  const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
@@ -277,6 +329,65 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, [themeMode]);
 
   const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
+
+  useEffect(() => {
+    persistedFtcPlannerState = {
+      version: 1,
+      fieldState: state,
+      activeTool,
+      penColor,
+      selectedRobotId,
+      motif,
+      robotModes,
+      timerMode,
+      timerPhase,
+      timeLeft,
+      timerRunning,
+      themeMode,
+      settingsOpen,
+      instructionsOpen,
+      fieldScale,
+      sequenceSteps,
+      sequencePlaying,
+      selectedSequenceStep,
+      maxSequence,
+      draftThemeMode,
+      keybinds,
+      draftKeybinds,
+      robotPanelOpen,
+      rawScores,
+      activeClassifierMenu,
+      robotDraft,
+      draftRobotId,
+    };
+  }, [
+    activeClassifierMenu,
+    activeTool,
+    draftKeybinds,
+    draftRobotId,
+    draftThemeMode,
+    fieldScale,
+    instructionsOpen,
+    keybinds,
+    maxSequence,
+    motif,
+    penColor,
+    rawScores,
+    robotDraft,
+    robotModes,
+    robotPanelOpen,
+    selectedRobotId,
+    selectedSequenceStep,
+    sequencePlaying,
+    sequenceSteps,
+    settingsOpen,
+    state,
+    themeMode,
+    timeLeft,
+    timerMode,
+    timerPhase,
+    timerRunning,
+  ]);
 
   useEffect(() => {
     const storedTheme = normalizeThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));

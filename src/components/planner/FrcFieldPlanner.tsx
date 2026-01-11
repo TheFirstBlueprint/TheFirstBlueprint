@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
 import { Tool, Alliance } from '@/types/planner';
-import { FrcRobot } from '@/types/frcPlanner';
+import { FrcFieldState, FrcRobot } from '@/types/frcPlanner';
 import fieldImageBasic from '@/assets/basic_rebuilt_field.png';
 import fieldImageDark from '@/assets/black_rebuilt_field.png';
 import fieldImageLight from '@/assets/white_rebuilt_field.png';
@@ -47,6 +47,35 @@ type SequenceStep = {
   rotations: Record<string, number>;
 };
 
+type PersistedFrcPlannerState = {
+  version: 1;
+  fieldState: FrcFieldState;
+  activeTool: Tool;
+  penColor: string;
+  selectedRobotId: string | null;
+  timerMode: 'full' | 'teleop' | 'auton';
+  timerPhase: 'idle' | 'auton' | 'transition' | 'teleop';
+  timeLeft: number;
+  timerRunning: boolean;
+  themeMode: ThemeMode;
+  fieldScale: number;
+  sequenceSteps: Record<number, SequenceStep>;
+  sequencePlaying: boolean;
+  selectedSequenceStep: number | null;
+  maxSequence: number;
+  keybinds: Keybinds;
+  robotPanelOpen: boolean;
+  robotDraft: {
+    widthFt: number;
+    heightFt: number;
+    name: string;
+    imageDataUrl: string | null;
+  } | null;
+  draftRobotId: string | null;
+};
+
+let persistedFrcPlannerState: PersistedFrcPlannerState | null = null;
+
 const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'base' || value === 'dark' || value === 'light' || value === 'sharkans') return value;
   if (value === 'darkTactical') return 'dark';
@@ -55,6 +84,7 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
 };
 
 export const FrcFieldPlanner = ({ className }: { className?: string }) => {
+  const persistedState = useMemo(() => persistedFrcPlannerState, []);
   const {
     state,
     addRobot,
@@ -69,30 +99,38 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     resetField,
     exportState,
     importState,
-  } = useFrcFieldState();
+  } = useFrcFieldState(persistedState?.fieldState);
 
-  const [activeTool, setActiveTool] = useState<Tool>('select');
-  const [penColor, setPenColor] = useState('#2b76d2');
-  const [selectedRobotId, setSelectedRobotId] = useState<string | null>(null);
-  const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>('full');
-  const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
-  const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
-  const [fieldScale, setFieldScale] = useState(1);
-  const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
-  const [sequencePlaying, setSequencePlaying] = useState(false);
-  const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(null);
-  const [maxSequence, setMaxSequence] = useState(MIN_SEQUENCE);
-  const [keybinds, setKeybinds] = useState<Keybinds>(DEFAULT_KEYBINDS);
-  const [robotPanelOpen, setRobotPanelOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<Tool>(persistedState?.activeTool ?? 'select');
+  const [penColor, setPenColor] = useState(persistedState?.penColor ?? '#2b76d2');
+  const [selectedRobotId, setSelectedRobotId] = useState<string | null>(persistedState?.selectedRobotId ?? null);
+  const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>(
+    persistedState?.timerMode ?? 'full'
+  );
+  const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>(
+    persistedState?.timerPhase ?? 'auton'
+  );
+  const [timeLeft, setTimeLeft] = useState(persistedState?.timeLeft ?? AUTON_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(persistedState?.timerRunning ?? false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(persistedState?.themeMode ?? 'dark');
+  const [fieldScale, setFieldScale] = useState(persistedState?.fieldScale ?? 1);
+  const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>(
+    persistedState?.sequenceSteps ?? {}
+  );
+  const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
+    persistedState?.selectedSequenceStep ?? null
+  );
+  const [maxSequence, setMaxSequence] = useState(persistedState?.maxSequence ?? MIN_SEQUENCE);
+  const [keybinds, setKeybinds] = useState<Keybinds>(persistedState?.keybinds ?? DEFAULT_KEYBINDS);
+  const [robotPanelOpen, setRobotPanelOpen] = useState(persistedState?.robotPanelOpen ?? false);
   const [robotDraft, setRobotDraft] = useState<{
     widthFt: number;
     heightFt: number;
     name: string;
     imageDataUrl: string | null;
-  } | null>(null);
-  const [draftRobotId, setDraftRobotId] = useState<string | null>(null);
+  } | null>(persistedState?.robotDraft ?? null);
+  const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const fieldAreaRef = useRef<HTMLDivElement>(null);
@@ -101,6 +139,49 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const robotsRef = useRef<FrcRobot[]>([]);
   const isApplyingSequenceRef = useRef(false);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+
+  useEffect(() => {
+    persistedFrcPlannerState = {
+      version: 1,
+      fieldState: state,
+      activeTool,
+      penColor,
+      selectedRobotId,
+      timerMode,
+      timerPhase,
+      timeLeft,
+      timerRunning,
+      themeMode,
+      fieldScale,
+      sequenceSteps,
+      sequencePlaying,
+      selectedSequenceStep,
+      maxSequence,
+      keybinds,
+      robotPanelOpen,
+      robotDraft,
+      draftRobotId,
+    };
+  }, [
+    activeTool,
+    draftRobotId,
+    fieldScale,
+    keybinds,
+    maxSequence,
+    penColor,
+    robotDraft,
+    robotPanelOpen,
+    selectedRobotId,
+    selectedSequenceStep,
+    sequencePlaying,
+    sequenceSteps,
+    state,
+    themeMode,
+    timeLeft,
+    timerMode,
+    timerPhase,
+    timerRunning,
+  ]);
 
   useEffect(() => {
     const storedTheme = normalizeThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
