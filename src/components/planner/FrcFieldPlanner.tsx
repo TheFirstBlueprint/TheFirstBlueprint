@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
 import { Tool, Alliance } from '@/types/planner';
 import { FrcRobot } from '@/types/frcPlanner';
+import fieldImageBasic from '@/assets/basic_rebuilt_field.png';
+import fieldImageDark from '@/assets/black_rebuilt_field.png';
+import fieldImageLight from '@/assets/white_rebuilt_field.png';
 import { FrcRobotElement } from './FrcRobotElement';
 import { DrawingCanvas } from './DrawingCanvas';
 import { FrcToolPanel } from './FrcToolPanel';
@@ -46,6 +49,7 @@ type SequenceStep = {
 
 const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'base' || value === 'dark' || value === 'light' || value === 'sharkans') return value;
+  if (value === 'darkTactical') return 'dark';
   if (value === 'basic') return 'base';
   return 'dark';
 };
@@ -74,6 +78,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const [timerPhase, setTimerPhase] = useState<'idle' | 'auton' | 'transition' | 'teleop'>('auton');
   const [timeLeft, setTimeLeft] = useState(AUTON_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
   const [fieldScale, setFieldScale] = useState(1);
   const [sequenceSteps, setSequenceSteps] = useState<Record<number, SequenceStep>>({});
   const [sequencePlaying, setSequencePlaying] = useState(false);
@@ -100,6 +105,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   useEffect(() => {
     const storedTheme = normalizeThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
     document.documentElement.setAttribute('data-theme', storedTheme);
+    setThemeMode(storedTheme);
 
     const storedKeybinds = window.localStorage.getItem(KEYBINDS_STORAGE_KEY);
     if (storedKeybinds) {
@@ -111,6 +117,26 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => {
+      const attrTheme = root.getAttribute('data-theme');
+      const nextTheme = normalizeThemeMode(attrTheme ?? window.localStorage.getItem(THEME_STORAGE_KEY));
+      setThemeMode(nextTheme);
+    };
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const fieldImage = useMemo(() => {
+    if (themeMode === 'light') return fieldImageLight;
+    if (themeMode === 'dark') return fieldImageDark;
+    if (themeMode === 'sharkans') return fieldImageBasic;
+    return fieldImageBasic;
+  }, [themeMode]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
@@ -723,6 +749,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
               height: FIELD_HEIGHT,
               transform: `scale(${fieldScale})`,
               transformOrigin: 'top left',
+              backgroundImage: `url(${fieldImage})`,
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'contain',
             }}
             onClick={handleFieldClick}
             ref={fieldRef}
