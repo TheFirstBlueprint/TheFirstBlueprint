@@ -34,6 +34,7 @@ export const FrcRobotElement = ({
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
   const hasImage = Boolean(robot.imageDataUrl);
+  const badgeScale = Math.min(1.4, Math.max(0.85, 1 / (scale || 1)));
 
   useEffect(() => {
     positionRef.current = robot.position;
@@ -125,6 +126,13 @@ export const FrcRobotElement = ({
             <span className="text-xs font-mono text-foreground/90 robot-indicator">{displayName}</span>
           </div>
         )}
+      </div>
+      <div
+        className="absolute -top-2 -right-2 rounded-full px-2 py-0.5 text-[10px] font-mono text-black bg-amber-300 border border-amber-500 shadow"
+        style={{ transform: `rotate(-${robot.rotation}deg) scale(${badgeScale})` }}
+        aria-label={`Fuel count ${robot.fuelCount}`}
+      >
+        {robot.fuelCount}
       </div>
       {hasImage && displayName && (
         <div

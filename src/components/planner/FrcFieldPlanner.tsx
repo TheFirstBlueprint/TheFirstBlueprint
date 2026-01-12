@@ -1,21 +1,24 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
-import { Tool, Alliance } from '@/types/planner';
-import { FrcFieldState, FrcRobot } from '@/types/frcPlanner';
+import { Tool, Alliance, Position } from '@/types/planner';
+import { FrcFieldState, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
 import fieldImageBasic from '@/assets/basic_rebuilt_field.png';
 import fieldImageDark from '@/assets/black_rebuilt_field.png';
 import fieldImageLight from '@/assets/white_rebuilt_field.png';
 import { FrcRobotElement } from './FrcRobotElement';
+import { FrcFuelElement } from './FrcFuelElement';
 import { DrawingCanvas } from './DrawingCanvas';
 import { FrcToolPanel } from './FrcToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const FIELD_FEET_WIDTH = 54;
-const FIELD_FEET_HEIGHT = 24.5752427184;
-const FIELD_UNITS_PER_FOOT = 10;
-const FIELD_WIDTH = FIELD_FEET_WIDTH * FIELD_UNITS_PER_FOOT;
-const FIELD_HEIGHT = FIELD_FEET_HEIGHT * FIELD_UNITS_PER_FOOT;
+const FIELD_FEET_HEIGHT = 27;
+const FIELD_UNITS_PER_FOOT = 12;
+const FIELD_WIDTH_IN = FIELD_FEET_WIDTH * FIELD_UNITS_PER_FOOT;
+const FIELD_HEIGHT_IN = FIELD_FEET_HEIGHT * FIELD_UNITS_PER_FOOT;
+const FIELD_WIDTH = FIELD_WIDTH_IN;
+const FIELD_HEIGHT = FIELD_HEIGHT_IN;
 const FIELD_SCREEN_RATIO = 0.9;
 const FIELD_SCALE_MULTIPLIER = 1.1;
 const AUTON_SECONDS = 20;
@@ -24,6 +27,21 @@ const TELEOP_SECONDS = 140;
 const ROBOT_MIN_FT = 1;
 const ROBOT_MAX_FT = 2.5;
 const DEFAULT_ROBOT_FT = 2.5;
+const STARTING_FUEL = 8;
+const MAX_FUEL_CAPACITY = 100;
+const FUEL_DIAMETER_IN = 5.91;
+const FUEL_RADIUS_IN = 2.955;
+const FUEL_PER_CHUTE = 24;
+const NEUTRAL_ZONE_WIDTH_IN = 206;
+const NEUTRAL_ZONE_HEIGHT_IN = 72;
+const GOAL_ZONES = {
+  blue: { x: 0.05, y: 0.08, width: 0.18, height: 0.2 },
+  red: { x: 0.77, y: 0.08, width: 0.18, height: 0.2 },
+};
+const CHUTE_ZONES = {
+  blue: { x: 0.05, y: 0.72, width: 0.18, height: 0.22 },
+  red: { x: 0.77, y: 0.72, width: 0.18, height: 0.22 },
+};
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
@@ -45,6 +63,12 @@ type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
   rotations: Record<string, number>;
+};
+
+type ShotFuel = {
+  id: string;
+  start: Position;
+  target: Position;
 };
 
 type PersistedFrcPlannerState = {
@@ -72,6 +96,7 @@ type PersistedFrcPlannerState = {
     imageDataUrl: string | null;
   } | null;
   draftRobotId: string | null;
+  hasFuelSetup: boolean;
 };
 
 let persistedFrcPlannerState: PersistedFrcPlannerState | null = null;
@@ -83,6 +108,45 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
   return 'dark';
 };
 
+const ShotFuelElement = ({
+  shot,
+  radius,
+  onComplete,
+}: {
+  shot: ShotFuel;
+  radius: number;
+  onComplete: (id: string) => void;
+}) => {
+  const [position, setPosition] = useState(shot.start);
+
+  useEffect(() => {
+    const raf = window.requestAnimationFrame(() => {
+      setPosition(shot.target);
+    });
+    const timeout = window.setTimeout(() => onComplete(shot.id), 450);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
+    };
+  }, [onComplete, shot.id, shot.target]);
+
+  return (
+    <div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        left: position.x - radius,
+        top: position.y - radius,
+        width: radius * 2,
+        height: radius * 2,
+        background: 'radial-gradient(circle at 30% 30%, #ffe4a3 0%, #f59e0b 55%, #b45309 100%)',
+        boxShadow: '0 0 6px rgba(0,0,0,0.25)',
+        transition: 'left 420ms linear, top 420ms linear',
+        zIndex: 16,
+      }}
+    />
+  );
+};
+
 export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const persistedState = useMemo(() => persistedFrcPlannerState, []);
   const {
@@ -92,11 +156,16 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     updateRobotRotation,
     updateRobotDetails,
     removeRobot,
+    seedRobots,
+    setFuel,
+    updateFuelPosition,
+    removeFuel,
     addDrawing,
     removeDrawing,
     clearDrawings,
+    clearFuel,
     clearRobots,
-    resetField,
+    setGoalMode,
     exportState,
     importState,
   } = useFrcFieldState(persistedState?.fieldState);
@@ -131,6 +200,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     imageDataUrl: string | null;
   } | null>(persistedState?.robotDraft ?? null);
   const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
+  const [hasFuelSetup, setHasFuelSetup] = useState(persistedState?.hasFuelSetup ?? false);
+  const [shotFuel, setShotFuel] = useState<ShotFuel[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const fieldAreaRef = useRef<HTMLDivElement>(null);
@@ -161,11 +232,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       robotPanelOpen,
       robotDraft,
       draftRobotId,
+      hasFuelSetup,
     };
   }, [
     activeTool,
     draftRobotId,
     fieldScale,
+    hasFuelSetup,
     keybinds,
     maxSequence,
     penColor,
@@ -219,6 +292,58 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     return fieldImageBasic;
   }, [themeMode]);
 
+  const pxPerIn = useMemo(
+    () => Math.min((FIELD_WIDTH * fieldScale) / FIELD_WIDTH_IN, (FIELD_HEIGHT * fieldScale) / FIELD_HEIGHT_IN),
+    [fieldScale]
+  );
+  const fuelRadius = useMemo(() => {
+    const fuelRadiusPx = FUEL_RADIUS_IN * pxPerIn;
+    return fuelRadiusPx / (fieldScale || 1);
+  }, [fieldScale, pxPerIn]);
+  const goalZonesIn = useMemo(
+    () => ({
+      blue: {
+        x: GOAL_ZONES.blue.x * FIELD_WIDTH,
+        y: GOAL_ZONES.blue.y * FIELD_HEIGHT,
+        width: GOAL_ZONES.blue.width * FIELD_WIDTH,
+        height: GOAL_ZONES.blue.height * FIELD_HEIGHT,
+      },
+      red: {
+        x: GOAL_ZONES.red.x * FIELD_WIDTH,
+        y: GOAL_ZONES.red.y * FIELD_HEIGHT,
+        width: GOAL_ZONES.red.width * FIELD_WIDTH,
+        height: GOAL_ZONES.red.height * FIELD_HEIGHT,
+      },
+    }),
+    []
+  );
+  const chuteZonesIn = useMemo(
+    () => ({
+      blue: {
+        x: CHUTE_ZONES.blue.x * FIELD_WIDTH,
+        y: CHUTE_ZONES.blue.y * FIELD_HEIGHT,
+        width: CHUTE_ZONES.blue.width * FIELD_WIDTH,
+        height: CHUTE_ZONES.blue.height * FIELD_HEIGHT,
+      },
+      red: {
+        x: CHUTE_ZONES.red.x * FIELD_WIDTH,
+        y: CHUTE_ZONES.red.y * FIELD_HEIGHT,
+        width: CHUTE_ZONES.red.width * FIELD_WIDTH,
+        height: CHUTE_ZONES.red.height * FIELD_HEIGHT,
+      },
+    }),
+    []
+  );
+  const neutralZoneIn = useMemo(
+    () => ({
+      x: (FIELD_WIDTH_IN - NEUTRAL_ZONE_WIDTH_IN) / 2,
+      y: (FIELD_HEIGHT_IN - NEUTRAL_ZONE_HEIGHT_IN) / 2,
+      width: NEUTRAL_ZONE_WIDTH_IN,
+      height: NEUTRAL_ZONE_HEIGHT_IN,
+    }),
+    []
+  );
+
   useEffect(() => {
     document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
     return () => {
@@ -237,6 +362,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   useEffect(() => {
     robotsRef.current = state.robots;
   }, [state.robots]);
+
+  useEffect(() => {
+    if (!hasFuelSetup && state.fuel.length > 0) {
+      setHasFuelSetup(true);
+    }
+  }, [hasFuelSetup, state.fuel.length]);
 
   const updateFieldScale = useCallback(() => {
     const area = fieldAreaRef.current;
@@ -305,7 +436,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
     setRobotDraft({
       widthFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
-      heightFt: robot.heightFt ?? DEFAULT_ROBOT_FT,
+      heightFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
       name: robot.name ?? '',
       imageDataUrl: robot.imageDataUrl ?? null,
     });
@@ -384,12 +515,152 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
   const getRobotDimensions = useCallback((robot: FrcRobot) => {
     const widthFt = Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robot.widthFt ?? DEFAULT_ROBOT_FT));
-    const heightFt = Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robot.heightFt ?? DEFAULT_ROBOT_FT));
+    const sizeIn = widthFt * FIELD_UNITS_PER_FOOT;
     return {
-      width: widthFt * FIELD_UNITS_PER_FOOT * 0.5,
-      height: heightFt * FIELD_UNITS_PER_FOOT * 0.5,
+      width: sizeIn,
+      height: sizeIn,
     };
   }, []);
+
+  const randomizeGoal = useCallback((): Alliance => (Math.random() < 0.5 ? 'blue' : 'red'), []);
+
+  useEffect(() => {
+    if (state.goalMode === 'randomized' && !state.randomizedGoal) {
+      setGoalMode('randomized', randomizeGoal());
+    }
+  }, [randomizeGoal, setGoalMode, state.goalMode, state.randomizedGoal]);
+
+  const activeGoals = useMemo(() => {
+    if (state.goalMode === 'both') return { blue: true, red: true };
+    if (state.goalMode === 'blue') return { blue: true, red: false };
+    if (state.goalMode === 'red') return { blue: false, red: true };
+    if (state.goalMode === 'randomized') {
+      const goal = state.randomizedGoal ?? 'blue';
+      return { blue: goal === 'blue', red: goal === 'red' };
+    }
+    return { blue: true, red: true };
+  }, [state.goalMode, state.randomizedGoal]);
+
+  const resolveGoalTarget = useCallback(
+    (robot: FrcRobot) => {
+      if (state.goalMode === 'both') return robot.alliance;
+      if (state.goalMode === 'blue') return 'blue';
+      if (state.goalMode === 'red') return 'red';
+      return state.randomizedGoal ?? 'blue';
+    },
+    [state.goalMode, state.randomizedGoal]
+  );
+
+  const buildFuelGrid = useCallback(
+    (zone: { x: number; y: number; width: number; height: number }, count: number) => {
+      const spacing = FUEL_DIAMETER_IN;
+      const usableWidth = Math.max(0, zone.width - FUEL_RADIUS_IN * 2);
+      const usableHeight = Math.max(0, zone.height - FUEL_RADIUS_IN * 2);
+      const columns = Math.max(1, Math.floor(usableWidth / spacing) + 1);
+      const rows = Math.max(1, Math.floor(usableHeight / spacing) + 1);
+      const total = Math.min(count, columns * rows);
+      const offsetX = (usableWidth - (columns - 1) * spacing) / 2;
+      const offsetY = (usableHeight - (rows - 1) * spacing) / 2;
+      const startX = zone.x + FUEL_RADIUS_IN + offsetX;
+      const startY = zone.y + FUEL_RADIUS_IN + offsetY;
+
+      const positions: Position[] = [];
+      for (let i = 0; i < total; i += 1) {
+        const row = Math.floor(i / columns);
+        const col = i % columns;
+        positions.push({
+          x: startX + col * spacing,
+          y: startY + row * spacing,
+        });
+      }
+      return positions;
+    },
+    []
+  );
+
+  const createFuelLayout = useCallback(() => {
+    let fuelIndex = 0;
+    const stamp = Date.now();
+    const nextFuelId = () => `frc-fuel-${stamp}-${++fuelIndex}`;
+    const neutralPositions = buildFuelGrid(
+      neutralZoneIn,
+      Math.floor(
+        Math.max(1, Math.floor((NEUTRAL_ZONE_WIDTH_IN - FUEL_RADIUS_IN * 2) / FUEL_DIAMETER_IN) + 1) *
+          Math.max(1, Math.floor((NEUTRAL_ZONE_HEIGHT_IN - FUEL_RADIUS_IN * 2) / FUEL_DIAMETER_IN) + 1)
+      )
+    );
+    const blueChute = buildFuelGrid(chuteZonesIn.blue, FUEL_PER_CHUTE);
+    const redChute = buildFuelGrid(chuteZonesIn.red, FUEL_PER_CHUTE);
+
+    return [...blueChute, ...redChute, ...neutralPositions].map((position) => ({
+      id: nextFuelId(),
+      position,
+    }));
+  }, [buildFuelGrid, chuteZonesIn, neutralZoneIn]);
+
+  const goalCenters = useMemo(
+    () => ({
+      blue: {
+        x: goalZonesIn.blue.x + goalZonesIn.blue.width / 2,
+        y: goalZonesIn.blue.y + goalZonesIn.blue.height / 2,
+      },
+      red: {
+        x: goalZonesIn.red.x + goalZonesIn.red.width / 2,
+        y: goalZonesIn.red.y + goalZonesIn.red.height / 2,
+      },
+    }),
+    [goalZonesIn]
+  );
+
+  const defaultRobotSpawns = useMemo(
+    () => [
+      { alliance: 'blue' as Alliance, position: { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.2 } },
+      { alliance: 'blue' as Alliance, position: { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.5 } },
+      { alliance: 'blue' as Alliance, position: { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.8 } },
+      { alliance: 'red' as Alliance, position: { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.2 } },
+      { alliance: 'red' as Alliance, position: { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.5 } },
+      { alliance: 'red' as Alliance, position: { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.8 } },
+    ],
+    []
+  );
+
+  const handleGoalModeChange = useCallback(
+    (mode: GoalActivationMode) => {
+      if (mode === 'randomized') {
+        setGoalMode('randomized', randomizeGoal());
+      } else {
+        setGoalMode(mode, null);
+      }
+    },
+    [randomizeGoal, setGoalMode]
+  );
+
+  const handleShoot = useCallback(() => {
+    if (!selectedRobotId) return;
+    const robot = state.robots.find((item) => item.id === selectedRobotId);
+    if (!robot) return;
+
+    const availableFuel = robot.fuelCount ?? STARTING_FUEL;
+    if (availableFuel <= 0) return;
+    const shotCount = availableFuel >= 2 ? 2 : 1;
+    const targetGoal = resolveGoalTarget(robot);
+    const target = goalCenters[targetGoal];
+    const nextFuelCount = Math.max(0, availableFuel - shotCount);
+    updateRobotDetails(robot.id, { fuelCount: nextFuelCount });
+
+    setShotFuel((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < shotCount; i += 1) {
+        const offset = (i === 0 ? -1 : 1) * (FUEL_RADIUS_IN * 0.65);
+        next.push({
+          id: `shot-${robot.id}-${Date.now()}-${i}`,
+          start: { x: robot.position.x + offset, y: robot.position.y },
+          target,
+        });
+      }
+      return next;
+    });
+  }, [goalCenters, resolveGoalTarget, selectedRobotId, state.robots, updateRobotDetails]);
 
   const rotateSelectedRobot = useCallback(
     (delta: number) => {
@@ -587,6 +858,11 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           e.preventDefault();
           rotateSelectedRobot(15);
           break;
+        case keybinds.outtakeSingle:
+        case keybinds.outtakeAll:
+          e.preventDefault();
+          handleShoot();
+          break;
         case 'a':
           handleSequenceStepChange(-1);
           break;
@@ -600,7 +876,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSequenceStepChange, isInputLocked, keybinds, rotateSelectedRobot]);
+  }, [handleSequenceStepChange, handleShoot, isInputLocked, keybinds, rotateSelectedRobot]);
 
   const defaultNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -657,7 +933,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       setSelectedRobotId(robotId);
       setRobotDraft({
         widthFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
-        heightFt: robot.heightFt ?? DEFAULT_ROBOT_FT,
+        heightFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
         name: robot.name ?? '',
         imageDataUrl: robot.imageDataUrl ?? null,
       });
@@ -691,7 +967,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     }
     updateRobotDetails(selectedRobotId, {
       widthFt: Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robotDraft.widthFt)),
-      heightFt: Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robotDraft.heightFt)),
+      heightFt: Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, robotDraft.widthFt)),
       name,
       imageDataUrl: robotDraft.imageDataUrl,
     });
@@ -735,18 +1011,39 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     e.target.value = '';
   };
 
-  const handleSetupField = () => {
-    const blueTargets = [
-      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.2 },
-      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.5 },
-      { x: FIELD_WIDTH * 0.753, y: FIELD_HEIGHT * 0.8 },
-    ];
-    const redTargets = [
-      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.2 },
-      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.5 },
-      { x: FIELD_WIDTH * 0.265, y: FIELD_HEIGHT * 0.8 },
-    ];
+  const checkRobotCollision = useCallback(
+    (x: number, y: number) => {
+      for (const robot of state.robots) {
+        const sizeFt = robot.widthFt ?? DEFAULT_ROBOT_FT;
+        const sizeIn = sizeFt * FIELD_UNITS_PER_FOOT;
+        const halfSize = sizeIn / 2;
+        const withinX =
+          x >= robot.position.x - halfSize - FUEL_RADIUS_IN &&
+          x <= robot.position.x + halfSize + FUEL_RADIUS_IN;
+        const withinY =
+          y >= robot.position.y - halfSize - FUEL_RADIUS_IN &&
+          y <= robot.position.y + halfSize + FUEL_RADIUS_IN;
+        if (withinX && withinY && (robot.fuelCount ?? 0) < MAX_FUEL_CAPACITY) {
+          return robot.id;
+        }
+      }
+      return null;
+    },
+    [state.robots]
+  );
 
+  const collectFuelForRobot = useCallback(
+    (robotId: string, fuelId: string) => {
+      const robot = state.robots.find((item) => item.id === robotId);
+      if (!robot) return;
+      if ((robot.fuelCount ?? 0) >= MAX_FUEL_CAPACITY) return;
+      updateRobotDetails(robotId, { fuelCount: (robot.fuelCount ?? STARTING_FUEL) + 1 });
+      removeFuel(fuelId);
+    },
+    [removeFuel, state.robots, updateRobotDetails]
+  );
+
+  const setupRobots = useCallback(() => {
     const blueRobots = state.robots.filter((robot) => robot.alliance === 'blue');
     const redRobots = state.robots.filter((robot) => robot.alliance === 'red');
 
@@ -760,8 +1057,51 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       return existing.id;
     };
 
-    blueTargets.forEach((target, index) => ensureRobot('blue', index, target));
-    redTargets.forEach((target, index) => ensureRobot('red', index, target));
+    defaultRobotSpawns.forEach((spawn, index) => {
+      ensureRobot(spawn.alliance, index % 3, spawn.position);
+    });
+  }, [addRobot, defaultRobotSpawns, state.robots, updateRobotPosition]);
+
+  const handleSetupField = () => {
+    setupRobots();
+    setFuel(createFuelLayout());
+    setHasFuelSetup(true);
+    if (state.goalMode === 'randomized') {
+      setGoalMode('randomized', randomizeGoal());
+    }
+  };
+
+  const handleClearFuel = () => {
+    clearFuel();
+  };
+
+  const handleClearRobots = () => {
+    clearRobots();
+    setSelectedRobotId(null);
+    setRobotPanelOpen(false);
+    setRobotDraft(null);
+    setDraftRobotId(null);
+  };
+
+  const handleResetField = () => {
+    clearDrawings();
+    clearFuel();
+    setShotFuel([]);
+    seedRobots(defaultRobotSpawns.map((spawn) => ({
+      alliance: spawn.alliance,
+      position: spawn.position,
+      sizeFt: DEFAULT_ROBOT_FT,
+    })));
+    if (hasFuelSetup) {
+      setFuel(createFuelLayout());
+    }
+    if (state.goalMode === 'randomized') {
+      setGoalMode('randomized', randomizeGoal());
+    }
+    setSelectedRobotId(null);
+    setRobotPanelOpen(false);
+    setRobotDraft(null);
+    setDraftRobotId(null);
   };
 
   const redRobotCount = state.robots.filter((robot) => robot.alliance === 'red').length;
@@ -798,8 +1138,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             canAddRedRobot={canAddRedRobot}
             canAddBlueRobot={canAddBlueRobot}
             onClearDrawings={clearDrawings}
-            onClearRobots={clearRobots}
-            onResetField={resetField}
+            onClearFuel={handleClearFuel}
+            onClearRobots={handleClearRobots}
+            onResetField={handleResetField}
             onSetupField={handleSetupField}
             onExport={handleExport}
             onImport={handleImport}
@@ -850,6 +1191,51 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
               isLocked={isInputLocked}
               scale={fieldScale}
             />
+
+            <div
+              className={`absolute frc-goal-zone ${activeGoals.blue ? 'frc-goal-zone-active' : ''} frc-goal-zone-blue`}
+              style={{
+                left: goalZonesIn.blue.x,
+                top: goalZonesIn.blue.y,
+                width: goalZonesIn.blue.width,
+                height: goalZonesIn.blue.height,
+              }}
+            />
+            <div
+              className={`absolute frc-goal-zone ${activeGoals.red ? 'frc-goal-zone-active' : ''} frc-goal-zone-red`}
+              style={{
+                left: goalZonesIn.red.x,
+                top: goalZonesIn.red.y,
+                width: goalZonesIn.red.width,
+                height: goalZonesIn.red.height,
+              }}
+            />
+
+            {state.fuel.map((fuel) => (
+              <FrcFuelElement
+                key={fuel.id}
+                id={fuel.id}
+                position={fuel.position}
+                radius={fuelRadius}
+                onPositionChange={(x, y) => updateFuelPosition(fuel.id, { x, y })}
+                onCollectByRobot={(robotId) => collectFuelForRobot(robotId, fuel.id)}
+                checkRobotCollision={checkRobotCollision}
+                fieldBounds={{ width: FIELD_WIDTH, height: FIELD_HEIGHT }}
+                isLocked={isInputLocked}
+                scale={fieldScale}
+              />
+            ))}
+
+            {shotFuel.map((shot) => (
+              <ShotFuelElement
+                key={shot.id}
+                shot={shot}
+                radius={fuelRadius}
+                onComplete={(id) =>
+                  setShotFuel((prev) => prev.filter((item) => item.id !== id))
+                }
+              />
+            ))}
 
             {state.robots.map((robot) => {
               const dimensions = getRobotDimensions(robot);
@@ -944,28 +1330,6 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                             ? {
                                 ...prev,
                                 widthFt: Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, next)),
-                              }
-                            : prev
-                        );
-                      }}
-                      className="w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 text-sm text-foreground shadow-inner shadow-black/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-xs text-foreground">Height (feet)</label>
-                    <input
-                      type="number"
-                      min={ROBOT_MIN_FT}
-                      max={ROBOT_MAX_FT}
-                      step={0.5}
-                      value={robotDraft.heightFt}
-                      onChange={(e) => {
-                        const next = Number(e.target.value);
-                        if (Number.isNaN(next)) return;
-                        setRobotDraft((prev) =>
-                          prev
-                            ? {
-                                ...prev,
                                 heightFt: Math.min(ROBOT_MAX_FT, Math.max(ROBOT_MIN_FT, next)),
                               }
                             : prev
@@ -1019,6 +1383,46 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           ) : (
             <>
               <div className="flex flex-col gap-4">
+                <div className="panel">
+                  <div className="panel-header">Goal Activation</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleGoalModeChange('both')}
+                      className={`tool-button text-xs ${state.goalMode === 'both' ? 'active' : ''}`}
+                      title="Both goals active"
+                    >
+                      Both Active
+                    </button>
+                    <button
+                      onClick={() => handleGoalModeChange('blue')}
+                      className={`tool-button text-xs ${state.goalMode === 'blue' ? 'active' : ''}`}
+                      title="Blue goal active"
+                    >
+                      Blue Active
+                    </button>
+                    <button
+                      onClick={() => handleGoalModeChange('red')}
+                      className={`tool-button text-xs ${state.goalMode === 'red' ? 'active' : ''}`}
+                      title="Red goal active"
+                    >
+                      Red Active
+                    </button>
+                    <button
+                      onClick={() => handleGoalModeChange('randomized')}
+                      className={`tool-button text-xs ${state.goalMode === 'randomized' ? 'active' : ''}`}
+                      title="Randomized goal"
+                    >
+                      Randomized
+                    </button>
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    {state.goalMode === 'both' && 'Both goals are active.'}
+                    {state.goalMode === 'blue' && 'All robots shoot the blue goal.'}
+                    {state.goalMode === 'red' && 'All robots shoot the red goal.'}
+                    {state.goalMode === 'randomized' &&
+                      `Active goal: ${(state.randomizedGoal ?? 'blue').toUpperCase()}`}
+                  </div>
+                </div>
                 <div className="panel">
                   <div className="panel-header">Game Timer</div>
                   <div className="text-center text-2xl font-mono text-foreground">

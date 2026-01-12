@@ -10,6 +10,7 @@ interface FrcToolPanelProps {
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
   onClearDrawings: () => void;
+  onClearFuel: () => void;
   onClearRobots: () => void;
   onResetField: () => void;
   onSetupField: () => void;
@@ -28,6 +29,7 @@ export const FrcToolPanel = ({
   canAddRedRobot,
   canAddBlueRobot,
   onClearDrawings,
+  onClearFuel,
   onClearRobots,
   onResetField,
   onSetupField,
@@ -200,7 +202,7 @@ export const FrcToolPanel = ({
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             auto_fix_high
           </span>
-          <span className="text-xs">Setup Field</span>
+          <span className="text-xs">Setup Fuel</span>
         </button>
       </div>
 
@@ -213,6 +215,12 @@ export const FrcToolPanel = ({
             </span>
             <span className="text-xs">Drawings</span>
           </button>
+          <button onClick={onClearFuel} className="tool-button gap-1">
+            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+              local_fire_department
+            </span>
+            <span className="text-xs">Fuel</span>
+          </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
@@ -223,7 +231,7 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs">Reset All</span>
+            <span className="text-xs">Reset Field</span>
           </button>
         </div>
       </div>
