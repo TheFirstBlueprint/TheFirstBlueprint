@@ -1,9 +1,39 @@
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import fieldShow from '@/assets/field show.png';
 import SiteFooter from '@/components/site/SiteFooter';
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [frcGateOpen, setFrcGateOpen] = useState(false);
+  const [frcPasscode, setFrcPasscode] = useState('');
+  const [frcPasscodeError, setFrcPasscodeError] = useState(false);
+
+  const handleFrcGateOpen = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    setFrcPasscode('');
+    setFrcPasscodeError(false);
+    setFrcGateOpen(true);
+  };
+
+  const handleFrcGateClose = () => {
+    setFrcGateOpen(false);
+    setFrcPasscode('');
+    setFrcPasscodeError(false);
+  };
+
+  const handleFrcGateSubmit = () => {
+    if (frcPasscode === 'PBJ27272') {
+      setFrcGateOpen(false);
+      setFrcPasscode('');
+      setFrcPasscodeError(false);
+      navigate('/frc/planner');
+      return;
+    }
+    setFrcPasscodeError(true);
+  };
+
   return (
     <>
       <Helmet>
@@ -76,13 +106,14 @@ const Index = () => {
               <Link
                 to="/frc/planner"
                 className="command-card group min-h-[360px] p-6"
+                onClick={handleFrcGateOpen}
               >
                 <div className="card-media card-media--red" aria-hidden="true">
                 </div>
                 <div className="relative z-10 flex h-full flex-col justify-between gap-6">
                   <div>
                     <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                      FRC planning
+                      Work in progress
                     </p>
                     <h3 className="mt-2 text-3xl font-semibold text-foreground">
                       FRC Planning
@@ -174,6 +205,51 @@ const Index = () => {
         </main>
         <SiteFooter />
       </div>
+      {frcGateOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur"
+          role="dialog"
+          aria-modal="true"
+          aria-label="FRC access gate"
+        >
+          <div className="panel w-full max-w-md">
+            <div className="panel-header">Access Required</div>
+            <h3 className="text-xl font-semibold text-foreground">Enter passcode</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              FRC is still in development. Enter the passcode to continue.
+            </p>
+            <div className="mt-4 space-y-3">
+              <input
+                type="password"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                value={frcPasscode}
+                onChange={(event) => {
+                  setFrcPasscode(event.target.value);
+                  if (frcPasscodeError) setFrcPasscodeError(false);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    handleFrcGateSubmit();
+                  }
+                }}
+                placeholder="Passcode"
+                autoFocus
+              />
+              {frcPasscodeError && (
+                <div className="text-xs text-destructive">Incorrect passcode.</div>
+              )}
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button onClick={handleFrcGateClose} className="tool-button flex-1 text-sm">
+                Cancel
+              </button>
+              <button onClick={handleFrcGateSubmit} className="tool-button active flex-1 text-sm">
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
