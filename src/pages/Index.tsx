@@ -138,7 +138,7 @@ const Index = () => {
               <div className="mt-4 grid gap-3">
                 <a
                   className="tool-button active w-full text-sm"
-                  href="https://www.youtube.com"
+                  href="https://youtube.com/playlist?list=PLojGuoR_rIykwYhxv--06Ho8Gp25f6NE_&si=mipGd1CvgHWlPYs9"
                   rel="noreferrer"
                   target="_blank"
                 >
