@@ -111,6 +111,7 @@ You may not attempt to reverse‑engineer, exploit, overload, or misuse any part
 Content and Assets<br></br>
 Field images, diagrams, and reference materials may be sourced from publicly available resources under Creative Commons or similar reuse allowances.
 All original site design, layout, and tool implementations remain the property of Thefirstblueprint unless otherwise stated.
+FIRST®, FRC®, FTC®, and game names are trademarks of FIRST; this project is not affiliated with FIRST.
 <br></br><br></br>
 User Submissions<br></br>
 If you submit feedback, bug reports, or contact information, you grant permission for that information to be used solely for improving the website.
