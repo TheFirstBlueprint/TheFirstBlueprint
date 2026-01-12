@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+🧭 TheFirstBlueprint (Beta)
+TheFirstBlueprint is a visual strategy‑planning platform for competitive robotics teams, built to help teams plan matches, communicate strategy, and align with alliance partners more effectively.
 
-## Project info
+This project is currently in active development and is being shared early as a beta so it can grow with feedback from the robotics community.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+🚀 What Is TheFirstBlueprint?
+TheFirstBlueprint provides a field‑based planning workspace where teams can:
 
-## How can I edit this code?
+Place robots on a scaled competition field
 
-There are several ways of editing your application.
+Draw paths, routes, and annotations
 
-**Use Lovable**
+Organize roles and match flow visually
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Step through strategic ideas together
 
-Changes made via Lovable will be committed automatically to this repo.
+The focus is clarity and preparation, not full physics simulation. It’s designed to make strategy discussions faster, more visual, and easier to understand—especially when coordinating with alliance partners.
 
-**Use your preferred IDE**
+🤖 Current Support
+✅ FTC (2025–26 DECODE) — planning tools are functional and actively improving
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+🚧 FRC — support is a work in progress and under active development
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+New features and refinements are added continuously as the project evolves.
 
-Follow these steps:
+🛠️ Built By
+TheFirstBlueprint is built by the Build Lead and Code Lead of Team Sharkans 27272, inspired by real competition challenges around communicating strategy quickly and clearly.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+This tool was created to solve problems we experienced ourselves—and we’re excited to keep improving it with community input.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+📱 What’s Coming
+Expanded FRC planning functionality
 
-# Step 3: Install the necessary dependencies.
-npm i
+Mobile and iPad support
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+An instructional video for onboarding new users
 
-**Edit a file directly in GitHub**
+UI/UX refinements and quality‑of‑life improvements
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Additional planning and visualization tools
 
-**Use GitHub Codespaces**
+This repository and the live site will continue to evolve.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+💬 Feedback & Contributions
+Because this is a beta, feedback is extremely important.
+If you have:
 
-## What technologies are used for this project?
+feature ideas
 
-This project is built with:
+UI/UX suggestions
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+bug reports
 
-## How can I deploy this project?
+workflow improvements
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+please open an issue or share feedback through the site. Community input directly shapes future development.
 
-## Can I connect a custom domain to my Lovable project?
+⚠️ Beta Disclaimer
+Features may change or break as development continues
 
-Yes, you can!
+This tool is intended for planning and visualization, not official scoring or simulation
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+FTC and FRC planners are developed independently
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+📄 License & Usage
+See the repository for licensing, terms of use, and attribution details.
+All field images and assets used are sourced under appropriate public or creative‑commons usage where applicable.
