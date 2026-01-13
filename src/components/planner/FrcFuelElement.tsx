@@ -8,7 +8,7 @@ interface FrcFuelElementProps {
   onPositionChange: (x: number, y: number) => void;
   onCollectByRobot: (robotId: string) => void;
   checkRobotCollision: (x: number, y: number) => string | null;
-  fieldBounds: { width: number; height: number };
+  clampPosition: (x: number, y: number) => Position;
   isLocked: boolean;
   scale: number;
 }
@@ -20,7 +20,7 @@ export const FrcFuelElement = ({
   onPositionChange,
   onCollectByRobot,
   checkRobotCollision,
-  fieldBounds,
+  clampPosition,
   isLocked,
   scale,
 }: FrcFuelElementProps) => {
@@ -39,9 +39,8 @@ export const FrcFuelElement = ({
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const dx = (moveEvent.clientX - startX) / normalizedScale;
       const dy = (moveEvent.clientY - startY) / normalizedScale;
-      const newX = Math.max(radius, Math.min(fieldBounds.width - radius, startPosX + dx));
-      const newY = Math.max(radius, Math.min(fieldBounds.height - radius, startPosY + dy));
-      onPositionChange(newX, newY);
+      const next = clampPosition(startPosX + dx, startPosY + dy);
+      onPositionChange(next.x, next.y);
     };
 
     const handlePointerUp = (upEvent: PointerEvent) => {
@@ -50,9 +49,8 @@ export const FrcFuelElement = ({
 
       const dx = (upEvent.clientX - startX) / normalizedScale;
       const dy = (upEvent.clientY - startY) / normalizedScale;
-      const finalX = Math.max(radius, Math.min(fieldBounds.width - radius, startPosX + dx));
-      const finalY = Math.max(radius, Math.min(fieldBounds.height - radius, startPosY + dy));
-      const robotId = checkRobotCollision(finalX, finalY);
+      const finalPos = clampPosition(startPosX + dx, startPosY + dy);
+      const robotId = checkRobotCollision(finalPos.x, finalPos.y);
       if (robotId) {
         onCollectByRobot(robotId);
       }

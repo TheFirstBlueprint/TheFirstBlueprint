@@ -31,17 +31,30 @@ const STARTING_FUEL = 8;
 const MAX_FUEL_CAPACITY = 100;
 const FUEL_DIAMETER_IN = 5.91;
 const FUEL_RADIUS_IN = 2.955;
-const FUEL_PER_CHUTE = 24;
+const FUEL_PER_DEPOT = 24;
+const FUEL_PER_OUTPOST = 24;
+const FUEL_PER_NEUTRAL_BOX = 204;
 const NEUTRAL_ZONE_WIDTH_IN = 206;
 const NEUTRAL_ZONE_HEIGHT_IN = 72;
-const GOAL_ZONES = {
-  blue: { x: 0.05, y: 0.08, width: 0.18, height: 0.2 },
-  red: { x: 0.77, y: 0.08, width: 0.18, height: 0.2 },
+const NEUTRAL_ZONE_GAP_IN = 24;
+const DEPOT_ZONE_IN = { x: 53.5, y: 83.5, width: 36, height: 30 };
+const OUTPOST_ZONE_IN = {
+  x: FIELD_WIDTH_IN - DEPOT_ZONE_IN.x - DEPOT_ZONE_IN.width,
+  y: DEPOT_ZONE_IN.y,
+  width: DEPOT_ZONE_IN.width,
+  height: DEPOT_ZONE_IN.height,
 };
-const CHUTE_ZONES = {
-  blue: { x: 0.05, y: 0.72, width: 0.18, height: 0.22 },
-  red: { x: 0.77, y: 0.72, width: 0.18, height: 0.22 },
+const GOAL_ZONES_IN = {
+  blue: { x: 432.1, y: 143.1, width: 36.6, height: 35.0 },
+  red: { x: 193.5, y: 143.1, width: 36.6, height: 35.4 },
 };
+const AIRSHIP_LANES_IN = {
+  red: { x: 194.2, width: 34.6 },
+  blue: { x: 432.5, width: 35.4 },
+};
+const AIRSHIP_GATE_HEIGHT_IN = 20;
+const AIRSHIP_GATE_CENTERS_IN = [81.2, 242.8];
+const AIRSHIP_GATE_CLEARANCE_IN = 22;
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
@@ -69,6 +82,13 @@ type ShotFuel = {
   id: string;
   start: Position;
   target: Position;
+};
+
+type SolidRect = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
 };
 
 type PersistedFrcPlannerState = {
@@ -300,49 +320,29 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     const fuelRadiusPx = FUEL_RADIUS_IN * pxPerIn;
     return fuelRadiusPx / (fieldScale || 1);
   }, [fieldScale, pxPerIn]);
-  const goalZonesIn = useMemo(
-    () => ({
-      blue: {
-        x: GOAL_ZONES.blue.x * FIELD_WIDTH,
-        y: GOAL_ZONES.blue.y * FIELD_HEIGHT,
-        width: GOAL_ZONES.blue.width * FIELD_WIDTH,
-        height: GOAL_ZONES.blue.height * FIELD_HEIGHT,
-      },
-      red: {
-        x: GOAL_ZONES.red.x * FIELD_WIDTH,
-        y: GOAL_ZONES.red.y * FIELD_HEIGHT,
-        width: GOAL_ZONES.red.width * FIELD_WIDTH,
-        height: GOAL_ZONES.red.height * FIELD_HEIGHT,
-      },
-    }),
-    []
-  );
-  const chuteZonesIn = useMemo(
-    () => ({
-      blue: {
-        x: CHUTE_ZONES.blue.x * FIELD_WIDTH,
-        y: CHUTE_ZONES.blue.y * FIELD_HEIGHT,
-        width: CHUTE_ZONES.blue.width * FIELD_WIDTH,
-        height: CHUTE_ZONES.blue.height * FIELD_HEIGHT,
-      },
-      red: {
-        x: CHUTE_ZONES.red.x * FIELD_WIDTH,
-        y: CHUTE_ZONES.red.y * FIELD_HEIGHT,
-        width: CHUTE_ZONES.red.width * FIELD_WIDTH,
-        height: CHUTE_ZONES.red.height * FIELD_HEIGHT,
-      },
-    }),
-    []
-  );
-  const neutralZoneIn = useMemo(
-    () => ({
-      x: (FIELD_WIDTH_IN - NEUTRAL_ZONE_WIDTH_IN) / 2,
-      y: (FIELD_HEIGHT_IN - NEUTRAL_ZONE_HEIGHT_IN) / 2,
+  const goalZonesIn = useMemo(() => GOAL_ZONES_IN, []);
+  const fuelZonesIn = useMemo(() => {
+    const centerX = FIELD_WIDTH_IN / 2;
+    const centerY = FIELD_HEIGHT_IN / 2;
+    const upper = {
+      x: centerX - NEUTRAL_ZONE_WIDTH_IN / 2,
+      y: centerY - NEUTRAL_ZONE_GAP_IN / 2 - NEUTRAL_ZONE_HEIGHT_IN,
       width: NEUTRAL_ZONE_WIDTH_IN,
       height: NEUTRAL_ZONE_HEIGHT_IN,
-    }),
-    []
-  );
+    };
+    const lower = {
+      x: centerX - NEUTRAL_ZONE_WIDTH_IN / 2,
+      y: centerY + NEUTRAL_ZONE_GAP_IN / 2,
+      width: NEUTRAL_ZONE_WIDTH_IN,
+      height: NEUTRAL_ZONE_HEIGHT_IN,
+    };
+    return {
+      depot: DEPOT_ZONE_IN,
+      outpost: OUTPOST_ZONE_IN,
+      neutralUpper: upper,
+      neutralLower: lower,
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
@@ -522,6 +522,185 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
+  const clampToField = useCallback(
+    (pos: { x: number; y: number }, width: number, height: number) => {
+      const halfWidth = width / 2;
+      const halfHeight = height / 2;
+      return {
+        x: Math.max(halfWidth, Math.min(FIELD_WIDTH_IN - halfWidth, pos.x)),
+        y: Math.max(halfHeight, Math.min(FIELD_HEIGHT_IN - halfHeight, pos.y)),
+      };
+    },
+    []
+  );
+
+  const getRobotRect = useCallback((x: number, y: number, width: number, height: number) => {
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    return {
+      left: x - halfWidth,
+      right: x + halfWidth,
+      top: y - halfHeight,
+      bottom: y + halfHeight,
+    };
+  }, []);
+
+  const rectsOverlap = useCallback((a: SolidRect, b: SolidRect) => {
+    if (a.right <= b.left || a.left >= b.right) return false;
+    if (a.bottom <= b.top || a.top >= b.bottom) return false;
+    return true;
+  }, []);
+
+  const resolveSolidOverlap = useCallback(
+    (pos: { x: number; y: number }, width: number, height: number, solids: SolidRect[]) => {
+      let nextPos = pos;
+      solids.forEach((solid) => {
+        const rect = getRobotRect(nextPos.x, nextPos.y, width, height);
+        if (!rectsOverlap(rect, solid)) return;
+
+        const overlapX = Math.min(rect.right, solid.right) - Math.max(rect.left, solid.left);
+        const overlapY = Math.min(rect.bottom, solid.bottom) - Math.max(rect.top, solid.top);
+        if (overlapX <= 0 || overlapY <= 0) return;
+
+        if (overlapX < overlapY) {
+          const pushX = rect.right > solid.right ? overlapX : -overlapX;
+          nextPos = { ...nextPos, x: nextPos.x + pushX };
+        } else {
+          const pushY = rect.bottom > solid.bottom ? overlapY : -overlapY;
+          nextPos = { ...nextPos, y: nextPos.y + pushY };
+        }
+      });
+      return nextPos;
+    },
+    [getRobotRect, rectsOverlap]
+  );
+
+  const airshipSegments = useMemo(() => {
+    const gateHalf = AIRSHIP_GATE_HEIGHT_IN / 2;
+    const [upperGateCenter, lowerGateCenter] = AIRSHIP_GATE_CENTERS_IN;
+    const upperGateTop = Math.max(0, upperGateCenter - gateHalf);
+    const upperGateBottom = Math.min(FIELD_HEIGHT_IN, upperGateCenter + gateHalf);
+    const lowerGateTop = Math.max(0, lowerGateCenter - gateHalf);
+    const lowerGateBottom = Math.min(FIELD_HEIGHT_IN, lowerGateCenter + gateHalf);
+
+    const buildSegments = (lane: { x: number; width: number }) =>
+      [
+        { x: lane.x, y: 0, width: lane.width, height: Math.max(0, upperGateTop) },
+        {
+          x: lane.x,
+          y: upperGateBottom,
+          width: lane.width,
+          height: Math.max(0, lowerGateTop - upperGateBottom),
+        },
+        {
+          x: lane.x,
+          y: lowerGateBottom,
+          width: lane.width,
+          height: Math.max(0, FIELD_HEIGHT_IN - lowerGateBottom),
+        },
+      ].filter((segment) => segment.height > 0);
+
+    return [
+      ...buildSegments(AIRSHIP_LANES_IN.red),
+      ...buildSegments(AIRSHIP_LANES_IN.blue),
+    ];
+  }, []);
+
+  const airshipGateRects = useMemo(() => {
+    const gateHalf = AIRSHIP_GATE_HEIGHT_IN / 2;
+    const gateZones = AIRSHIP_GATE_CENTERS_IN.map((center) => ({
+      y: Math.max(0, center - gateHalf),
+      height: AIRSHIP_GATE_HEIGHT_IN,
+    }));
+    const buildGates = (lane: { x: number; width: number }) =>
+      gateZones.map((gate) => ({
+        left: lane.x,
+        right: lane.x + lane.width,
+        top: gate.y,
+        bottom: gate.y + gate.height,
+      }));
+    return [...buildGates(AIRSHIP_LANES_IN.red), ...buildGates(AIRSHIP_LANES_IN.blue)];
+  }, []);
+
+  const airshipOpenRects = useMemo(
+    () =>
+      airshipSegments.map((segment) => ({
+        left: segment.x,
+        right: segment.x + segment.width,
+        top: segment.y,
+        bottom: segment.y + segment.height,
+      })),
+    [airshipSegments]
+  );
+
+  const airshipClosedRects = useMemo(
+    () => [...airshipOpenRects, ...airshipGateRects],
+    [airshipGateRects, airshipOpenRects]
+  );
+
+  const airshipFuelRects = useMemo(
+    () =>
+      ([
+        {
+          left: AIRSHIP_LANES_IN.red.x,
+          right: AIRSHIP_LANES_IN.red.x + AIRSHIP_LANES_IN.red.width,
+          top: 0,
+          bottom: FIELD_HEIGHT_IN,
+        },
+        {
+          left: AIRSHIP_LANES_IN.blue.x,
+          right: AIRSHIP_LANES_IN.blue.x + AIRSHIP_LANES_IN.blue.width,
+          top: 0,
+          bottom: FIELD_HEIGHT_IN,
+        },
+      ] as SolidRect[]),
+    []
+  );
+
+  const resolvePositionWithSolids = useCallback(
+    (pos: { x: number; y: number }, width: number, height: number, solids: SolidRect[]) => {
+      let next = clampToField(pos, width, height);
+      if (solids.length > 0) {
+        next = resolveSolidOverlap(next, width, height, solids);
+        next = clampToField(next, width, height);
+      }
+      return next;
+    },
+    [clampToField, resolveSolidOverlap]
+  );
+
+  const getRobotSolids = useCallback(
+    (sizeIn: number) => (sizeIn < AIRSHIP_GATE_CLEARANCE_IN ? airshipOpenRects : airshipClosedRects),
+    [airshipClosedRects, airshipOpenRects]
+  );
+
+  const clampFuelPosition = useCallback(
+    (x: number, y: number) =>
+      resolvePositionWithSolids({ x, y }, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, airshipFuelRects),
+    [airshipFuelRects, resolvePositionWithSolids]
+  );
+
+  const handleRobotMove = useCallback(
+    (robotId: string, x: number, y: number) => {
+      if (isInputLocked) return;
+      const movingRobot = state.robots.find((item) => item.id === robotId);
+      if (!movingRobot) return;
+      const dimensions = getRobotDimensions(movingRobot);
+      const solids = getRobotSolids(dimensions.width);
+      const candidate = resolvePositionWithSolids({ x, y }, dimensions.width, dimensions.height, solids);
+      updateRobotPosition(robotId, candidate);
+    },
+    [getRobotDimensions, getRobotSolids, isInputLocked, resolvePositionWithSolids, state.robots, updateRobotPosition]
+  );
+
+  const handleFuelMove = useCallback(
+    (fuelId: string, x: number, y: number) => {
+      if (isInputLocked) return;
+      updateFuelPosition(fuelId, { x, y });
+    },
+    [isInputLocked, updateFuelPosition]
+  );
+
   const randomizeGoal = useCallback((): Alliance => (Math.random() < 0.5 ? 'blue' : 'red'), []);
 
   useEffect(() => {
@@ -582,21 +761,18 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     let fuelIndex = 0;
     const stamp = Date.now();
     const nextFuelId = () => `frc-fuel-${stamp}-${++fuelIndex}`;
-    const neutralPositions = buildFuelGrid(
-      neutralZoneIn,
-      Math.floor(
-        Math.max(1, Math.floor((NEUTRAL_ZONE_WIDTH_IN - FUEL_RADIUS_IN * 2) / FUEL_DIAMETER_IN) + 1) *
-          Math.max(1, Math.floor((NEUTRAL_ZONE_HEIGHT_IN - FUEL_RADIUS_IN * 2) / FUEL_DIAMETER_IN) + 1)
-      )
-    );
-    const blueChute = buildFuelGrid(chuteZonesIn.blue, FUEL_PER_CHUTE);
-    const redChute = buildFuelGrid(chuteZonesIn.red, FUEL_PER_CHUTE);
+    const depotPositions = buildFuelGrid(fuelZonesIn.depot, FUEL_PER_DEPOT);
+    const outpostPositions = buildFuelGrid(fuelZonesIn.outpost, FUEL_PER_OUTPOST);
+    const neutralUpperPositions = buildFuelGrid(fuelZonesIn.neutralUpper, FUEL_PER_NEUTRAL_BOX);
+    const neutralLowerPositions = buildFuelGrid(fuelZonesIn.neutralLower, FUEL_PER_NEUTRAL_BOX);
 
-    return [...blueChute, ...redChute, ...neutralPositions].map((position) => ({
+    return [...depotPositions, ...outpostPositions, ...neutralUpperPositions, ...neutralLowerPositions].map(
+      (position) => ({
       id: nextFuelId(),
       position,
-    }));
-  }, [buildFuelGrid, chuteZonesIn, neutralZoneIn]);
+    })
+    );
+  }, [buildFuelGrid, fuelZonesIn.depot, fuelZonesIn.neutralLower, fuelZonesIn.neutralUpper, fuelZonesIn.outpost]);
 
   const goalCenters = useMemo(
     () => ({
@@ -1217,10 +1393,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                 id={fuel.id}
                 position={fuel.position}
                 radius={fuelRadius}
-                onPositionChange={(x, y) => updateFuelPosition(fuel.id, { x, y })}
+                onPositionChange={(x, y) => handleFuelMove(fuel.id, x, y)}
                 onCollectByRobot={(robotId) => collectFuelForRobot(robotId, fuel.id)}
                 checkRobotCollision={checkRobotCollision}
-                fieldBounds={{ width: FIELD_WIDTH, height: FIELD_HEIGHT }}
+                clampPosition={clampFuelPosition}
                 isLocked={isInputLocked}
                 scale={fieldScale}
               />
@@ -1248,7 +1424,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                   displayName={displayName}
                   isSelected={selectedRobotId === robot.id}
                   onSelect={() => setSelectedRobotId(robot.id)}
-                  onPositionChange={(x, y) => updateRobotPosition(robot.id, { x, y })}
+                  onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
                   onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
                   onEdit={() => handleRobotPanelOpen(robot.id)}
                   onRemove={() => {
