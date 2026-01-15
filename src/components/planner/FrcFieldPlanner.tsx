@@ -33,28 +33,26 @@ const FUEL_DIAMETER_IN = 5.91;
 const FUEL_RADIUS_IN = 2.955;
 const FUEL_PER_DEPOT = 24;
 const FUEL_PER_OUTPOST = 24;
-const FUEL_PER_NEUTRAL_BOX = 204;
+const FUEL_PER_NEUTRAL_BOX = 180;
 const NEUTRAL_ZONE_WIDTH_IN = 206;
 const NEUTRAL_ZONE_HEIGHT_IN = 72;
-const NEUTRAL_ZONE_GAP_IN = 24;
-const DEPOT_ZONE_IN = { x: 53.5, y: 83.5, width: 36, height: 30 };
+const NEUTRAL_ZONE_GAP_IN = 2;
+const DEPOT_ZONE_IN = { x: 28.2, y: 77.0, width: 36, height: 30 };
 const OUTPOST_ZONE_IN = {
-  x: FIELD_WIDTH_IN - DEPOT_ZONE_IN.x - DEPOT_ZONE_IN.width,
-  y: DEPOT_ZONE_IN.y,
-  width: DEPOT_ZONE_IN.width,
-  height: DEPOT_ZONE_IN.height,
+  x: 597.6,
+  y: 216.6,
+  width: 36,
+  height: 30,
 };
-const GOAL_ZONES_IN = {
+const GOAL_ZONE_BASE_IN = {
   blue: { x: 432.1, y: 143.1, width: 36.6, height: 35.0 },
   red: { x: 193.5, y: 143.1, width: 36.6, height: 35.4 },
 };
-const AIRSHIP_LANES_IN = {
-  red: { x: 194.2, width: 34.6 },
-  blue: { x: 432.5, width: 35.4 },
+const GOAL_ZONE_X_OFFSET_IN = FIELD_WIDTH_IN * 0.01;
+const GOAL_ZONES_IN = {
+  blue: { ...GOAL_ZONE_BASE_IN.blue, x: GOAL_ZONE_BASE_IN.blue.x + GOAL_ZONE_X_OFFSET_IN },
+  red: { ...GOAL_ZONE_BASE_IN.red, x: GOAL_ZONE_BASE_IN.red.x - GOAL_ZONE_X_OFFSET_IN },
 };
-const AIRSHIP_GATE_HEIGHT_IN = 20;
-const AIRSHIP_GATE_CENTERS_IN = [81.2, 242.8];
-const AIRSHIP_GATE_CLEARANCE_IN = 22;
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
@@ -575,86 +573,22 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     [getRobotRect, rectsOverlap]
   );
 
-  const airshipSegments = useMemo(() => {
-    const gateHalf = AIRSHIP_GATE_HEIGHT_IN / 2;
-    const [upperGateCenter, lowerGateCenter] = AIRSHIP_GATE_CENTERS_IN;
-    const upperGateTop = Math.max(0, upperGateCenter - gateHalf);
-    const upperGateBottom = Math.min(FIELD_HEIGHT_IN, upperGateCenter + gateHalf);
-    const lowerGateTop = Math.max(0, lowerGateCenter - gateHalf);
-    const lowerGateBottom = Math.min(FIELD_HEIGHT_IN, lowerGateCenter + gateHalf);
-
-    const buildSegments = (lane: { x: number; width: number }) =>
-      [
-        { x: lane.x, y: 0, width: lane.width, height: Math.max(0, upperGateTop) },
-        {
-          x: lane.x,
-          y: upperGateBottom,
-          width: lane.width,
-          height: Math.max(0, lowerGateTop - upperGateBottom),
-        },
-        {
-          x: lane.x,
-          y: lowerGateBottom,
-          width: lane.width,
-          height: Math.max(0, FIELD_HEIGHT_IN - lowerGateBottom),
-        },
-      ].filter((segment) => segment.height > 0);
-
-    return [
-      ...buildSegments(AIRSHIP_LANES_IN.red),
-      ...buildSegments(AIRSHIP_LANES_IN.blue),
-    ];
-  }, []);
-
-  const airshipGateRects = useMemo(() => {
-    const gateHalf = AIRSHIP_GATE_HEIGHT_IN / 2;
-    const gateZones = AIRSHIP_GATE_CENTERS_IN.map((center) => ({
-      y: Math.max(0, center - gateHalf),
-      height: AIRSHIP_GATE_HEIGHT_IN,
-    }));
-    const buildGates = (lane: { x: number; width: number }) =>
-      gateZones.map((gate) => ({
-        left: lane.x,
-        right: lane.x + lane.width,
-        top: gate.y,
-        bottom: gate.y + gate.height,
-      }));
-    return [...buildGates(AIRSHIP_LANES_IN.red), ...buildGates(AIRSHIP_LANES_IN.blue)];
-  }, []);
-
-  const airshipOpenRects = useMemo(
-    () =>
-      airshipSegments.map((segment) => ({
-        left: segment.x,
-        right: segment.x + segment.width,
-        top: segment.y,
-        bottom: segment.y + segment.height,
-      })),
-    [airshipSegments]
-  );
-
-  const airshipClosedRects = useMemo(
-    () => [...airshipOpenRects, ...airshipGateRects],
-    [airshipGateRects, airshipOpenRects]
-  );
-
-  const airshipFuelRects = useMemo(
-    () =>
-      ([
-        {
-          left: AIRSHIP_LANES_IN.red.x,
-          right: AIRSHIP_LANES_IN.red.x + AIRSHIP_LANES_IN.red.width,
-          top: 0,
-          bottom: FIELD_HEIGHT_IN,
-        },
-        {
-          left: AIRSHIP_LANES_IN.blue.x,
-          right: AIRSHIP_LANES_IN.blue.x + AIRSHIP_LANES_IN.blue.width,
-          top: 0,
-          bottom: FIELD_HEIGHT_IN,
-        },
-      ] as SolidRect[]),
-    []
+  const goalSolidRects = useMemo(
+    () => [
+      {
+        left: goalZonesIn.blue.x,
+        right: goalZonesIn.blue.x + goalZonesIn.blue.width,
+        top: goalZonesIn.blue.y,
+        bottom: goalZonesIn.blue.y + goalZonesIn.blue.height,
+      },
+      {
+        left: goalZonesIn.red.x,
+        right: goalZonesIn.red.x + goalZonesIn.red.width,
+        top: goalZonesIn.red.y,
+        bottom: goalZonesIn.red.y + goalZonesIn.red.height,
+      },
+    ],
+    [goalZonesIn]
   );
 
   const resolvePositionWithSolids = useCallback(
@@ -669,15 +603,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     [clampToField, resolveSolidOverlap]
   );
 
-  const getRobotSolids = useCallback(
-    (sizeIn: number) => (sizeIn < AIRSHIP_GATE_CLEARANCE_IN ? airshipOpenRects : airshipClosedRects),
-    [airshipClosedRects, airshipOpenRects]
-  );
-
   const clampFuelPosition = useCallback(
-    (x: number, y: number) =>
-      resolvePositionWithSolids({ x, y }, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, airshipFuelRects),
-    [airshipFuelRects, resolvePositionWithSolids]
+    (x: number, y: number) => resolvePositionWithSolids({ x, y }, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, []),
+    [resolvePositionWithSolids]
   );
 
   const handleRobotMove = useCallback(
@@ -686,11 +614,15 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       const movingRobot = state.robots.find((item) => item.id === robotId);
       if (!movingRobot) return;
       const dimensions = getRobotDimensions(movingRobot);
-      const solids = getRobotSolids(dimensions.width);
-      const candidate = resolvePositionWithSolids({ x, y }, dimensions.width, dimensions.height, solids);
+      const candidate = resolvePositionWithSolids(
+        { x, y },
+        dimensions.width,
+        dimensions.height,
+        goalSolidRects
+      );
       updateRobotPosition(robotId, candidate);
     },
-    [getRobotDimensions, getRobotSolids, isInputLocked, resolvePositionWithSolids, state.robots, updateRobotPosition]
+    [getRobotDimensions, goalSolidRects, isInputLocked, resolvePositionWithSolids, state.robots, updateRobotPosition]
   );
 
   const handleFuelMove = useCallback(
@@ -731,25 +663,57 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   );
 
   const buildFuelGrid = useCallback(
-    (zone: { x: number; y: number; width: number; height: number }, count: number) => {
-      const spacing = FUEL_DIAMETER_IN;
+    (
+      zone: { x: number; y: number; width: number; height: number },
+      count: number,
+      options: { rotate?: boolean; spacingMultiplier?: number; minCols?: number; maxCols?: number } = {}
+    ) => {
+      const rotate = options.rotate ?? false;
+      const spacingMultiplier = options.spacingMultiplier ?? 1.04;
+      const minCols = options.minCols ?? 1;
+      const maxCols = options.maxCols ?? Number.POSITIVE_INFINITY;
+      const desiredSpacing = FUEL_DIAMETER_IN * spacingMultiplier;
+      const minSpacing = FUEL_DIAMETER_IN;
       const usableWidth = Math.max(0, zone.width - FUEL_RADIUS_IN * 2);
       const usableHeight = Math.max(0, zone.height - FUEL_RADIUS_IN * 2);
-      const columns = Math.max(1, Math.floor(usableWidth / spacing) + 1);
-      const rows = Math.max(1, Math.floor(usableHeight / spacing) + 1);
-      const total = Math.min(count, columns * rows);
-      const offsetX = (usableWidth - (columns - 1) * spacing) / 2;
-      const offsetY = (usableHeight - (rows - 1) * spacing) / 2;
-      const startX = zone.x + FUEL_RADIUS_IN + offsetX;
-      const startY = zone.y + FUEL_RADIUS_IN + offsetY;
+
+      const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+      const buildGrid = (spacing: number) => {
+        const widthForCols = rotate ? usableHeight : usableWidth;
+        const heightForRows = rotate ? usableWidth : usableHeight;
+        const maxColumnsByWidth = Math.max(1, Math.floor(widthForCols / spacing) + 1);
+        const maxRowsByHeight = Math.max(1, Math.floor(heightForRows / spacing) + 1);
+        const boundedMaxCols = Math.max(1, Math.min(maxColumnsByWidth, maxCols));
+        const boundedMinCols = Math.max(1, Math.min(minCols, boundedMaxCols));
+        let columns = clamp(Math.ceil(Math.sqrt(count)), boundedMinCols, boundedMaxCols);
+        let rows = Math.ceil(count / columns);
+        if (rows > maxRowsByHeight) {
+          const neededCols = Math.ceil(count / maxRowsByHeight);
+          columns = clamp(neededCols, boundedMinCols, boundedMaxCols);
+          rows = Math.ceil(count / columns);
+        }
+        const total = Math.min(count, columns * rows);
+        const offsetX = (usableWidth - (rotate ? rows - 1 : columns - 1) * spacing) / 2;
+        const offsetY = (usableHeight - (rotate ? columns - 1 : rows - 1) * spacing) / 2;
+        return { columns, rows, total, spacing, offsetX, offsetY, maxRowsByHeight };
+      };
+
+      let grid = buildGrid(desiredSpacing);
+      if (grid.rows > grid.maxRowsByHeight && desiredSpacing > minSpacing) {
+        grid = buildGrid(minSpacing);
+      }
+
+      const startX = zone.x + FUEL_RADIUS_IN + grid.offsetX;
+      const startY = zone.y + FUEL_RADIUS_IN + grid.offsetY;
 
       const positions: Position[] = [];
-      for (let i = 0; i < total; i += 1) {
-        const row = Math.floor(i / columns);
-        const col = i % columns;
+      for (let i = 0; i < grid.total; i += 1) {
+        const row = Math.floor(i / grid.columns);
+        const col = i % grid.columns;
         positions.push({
-          x: startX + col * spacing,
-          y: startY + row * spacing,
+          x: startX + (rotate ? row : col) * grid.spacing,
+          y: startY + (rotate ? col : row) * grid.spacing,
         });
       }
       return positions;
@@ -761,10 +725,18 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     let fuelIndex = 0;
     const stamp = Date.now();
     const nextFuelId = () => `frc-fuel-${stamp}-${++fuelIndex}`;
-    const depotPositions = buildFuelGrid(fuelZonesIn.depot, FUEL_PER_DEPOT);
-    const outpostPositions = buildFuelGrid(fuelZonesIn.outpost, FUEL_PER_OUTPOST);
-    const neutralUpperPositions = buildFuelGrid(fuelZonesIn.neutralUpper, FUEL_PER_NEUTRAL_BOX);
-    const neutralLowerPositions = buildFuelGrid(fuelZonesIn.neutralLower, FUEL_PER_NEUTRAL_BOX);
+    const depotPositions = buildFuelGrid(fuelZonesIn.depot, FUEL_PER_DEPOT, { rotate: true });
+    const outpostPositions = buildFuelGrid(fuelZonesIn.outpost, FUEL_PER_OUTPOST, { rotate: true });
+    const neutralUpperPositions = buildFuelGrid(fuelZonesIn.neutralUpper, FUEL_PER_NEUTRAL_BOX, {
+      spacingMultiplier: 1.05,
+      minCols: 14,
+      maxCols: 22,
+    });
+    const neutralLowerPositions = buildFuelGrid(fuelZonesIn.neutralLower, FUEL_PER_NEUTRAL_BOX, {
+      spacingMultiplier: 1.05,
+      minCols: 14,
+      maxCols: 22,
+    });
 
     return [...depotPositions, ...outpostPositions, ...neutralUpperPositions, ...neutralLowerPositions].map(
       (position) => ({
@@ -1341,16 +1313,17 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_WIDTH * fieldScale, height: FIELD_HEIGHT * fieldScale }}
         >
           <div
-            className="relative field-surface bg-black"
+            className="relative field-surface"
             style={{
               width: FIELD_WIDTH,
               height: FIELD_HEIGHT,
               transform: `scale(${fieldScale})`,
               transformOrigin: 'top left',
+              backgroundColor: 'transparent',
               backgroundImage: `url(${fieldImage})`,
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              backgroundSize: 'contain',
+              backgroundSize: 'cover',
             }}
             onClick={handleFieldClick}
             ref={fieldRef}
