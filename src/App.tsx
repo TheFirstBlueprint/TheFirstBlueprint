@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -67,6 +68,7 @@ const App = () => {
               <Route path="/frc/license" element={<FrcLicense />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Analytics />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
