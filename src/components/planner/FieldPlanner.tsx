@@ -2647,13 +2647,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           <div className="panel w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Instructions
+                Info
               </h2>
               <button
                 onClick={handleCloseInstructions}
                 className="tool-button !p-1"
-                title="Close instructions"
-                aria-label="Close instructions"
+                title="Close info"
+                aria-label="Close info"
               >
                 <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
                   close

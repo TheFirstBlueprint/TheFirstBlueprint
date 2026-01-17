@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { ArrowLeft, Info, Settings } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Home', to: '/' },
@@ -48,20 +48,20 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
             ))}
           </nav>
           <Link
+            to="/frc/instructions"
+            className="tool-button text-xs font-mono"
+            title="Instructions"
+            aria-label="Open instructions"
+          >
+            Instructions
+          </Link>
+          <Link
             to="/frc/settings"
             className="tool-button w-10 h-10"
             title="Settings"
             aria-label="Open settings"
           >
             <Settings className="w-4 h-4" />
-          </Link>
-          <Link
-            to="/frc/instructions"
-            className="tool-button w-10 h-10"
-            title="Instructions"
-            aria-label="Open instructions"
-          >
-            <Info className="w-4 h-4" />
           </Link>
         </div>
       </div>

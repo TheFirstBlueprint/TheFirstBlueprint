@@ -6,17 +6,17 @@ const FtcInstructions = () => {
   return (
     <>
       <Helmet>
-        <title>TheFirstBlueprint | FTC Instructions</title>
+        <title>TheFirstBlueprint | FTC Info</title>
         <meta
           name="description"
-          content="FTC planner instructions and controls."
+          content="FTC planner info and controls."
         />
       </Helmet>
       <div className="min-h-screen bg-background field-container flex flex-col">
         <SiteHeader />
         <main className="mx-auto w-full max-w-4xl px-6 py-10 flex-1">
           <section className="panel">
-            <div className="panel-header">FTC Planner Instructions</div>
+            <div className="panel-header">FTC Planner Info</div>
             <p className="text-sm text-muted-foreground">
               Welcome to TheFirstBlueprint FTC planner. Here are the core controls and workflow tips.
             </p>
