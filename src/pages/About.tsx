@@ -54,7 +54,7 @@ const About = () => {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <a
                 className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-primary/60"
-                // href="https://www.youtube.com/@ftcdecode"
+                href="https://www.youtube.com/@TheFirstBlueprint"
                 rel="noreferrer"
                 target="_blank"
               >
@@ -70,7 +70,7 @@ const About = () => {
                   <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
                     YouTube
                   </p>
-                  <p className="text-sm text-foreground">Coming soon!</p>
+                  <p className="text-sm text-foreground">@TheFirstBlueprint</p>
                 </div>
               </a>
               <a
