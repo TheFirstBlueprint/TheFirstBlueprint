@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
 import { Tool, Alliance, Position } from '@/types/planner';
-import { FrcFieldState, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
+import { FrcFieldState, FrcFuel, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
 import fieldImageBasic from '@/assets/basic_rebuilt_field.png';
 import fieldImageDark from '@/assets/black_rebuilt_field.png';
 import fieldImageLight from '@/assets/white_rebuilt_field.png';
@@ -74,6 +74,10 @@ type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
   rotations: Record<string, number>;
+  fuelState: {
+    fuel: FrcFuel[];
+    robotFuelCounts: Record<string, number>;
+  };
 };
 
 type ShotFuel = {
@@ -184,6 +188,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     clearFuel,
     clearRobots,
     setGoalMode,
+    restoreFuelState,
     exportState,
     importState,
   } = useFrcFieldState(persistedState?.fieldState);
@@ -840,15 +845,22 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         positions[robot.id] = { ...robot.position };
         rotations[robot.id] = robot.rotation;
       });
+      const fuelState = {
+        fuel: state.fuel.map((item) => ({ ...item })),
+        robotFuelCounts: robots.reduce<Record<string, number>>((acc, robot) => {
+          acc[robot.id] = robot.fuelCount ?? STARTING_FUEL;
+          return acc;
+        }, {}),
+      };
       setSequenceSteps((prev) => ({
         ...prev,
-        [index]: { positions, rotations },
+        [index]: { positions, rotations, fuelState },
       }));
       if (!silent) {
         toast.success(`Saved step ${index}.`);
       }
     },
-    []
+    [state.fuel]
   );
 
   useEffect(() => {
@@ -877,11 +889,14 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           updateRobotRotation(robot.id, rotation);
         }
       });
+      if (step.fuelState) {
+        restoreFuelState(step.fuelState);
+      }
       window.setTimeout(() => {
         isApplyingSequenceRef.current = false;
       }, 0);
     },
-    [sequenceSteps, updateRobotPosition, updateRobotRotation]
+    [restoreFuelState, sequenceSteps, updateRobotPosition, updateRobotRotation]
   );
 
   const handleSelectSequenceStep = useCallback(
@@ -941,6 +956,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      if (step.fuelState) {
+        restoreFuelState(step.fuelState);
+      }
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -973,7 +991,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       isApplyingSequenceRef.current = false;
     }
     setSequencePlaying(false);
-  }, [maxSequence, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [maxSequence, restoreFuelState, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
 
   useEffect(() => {
     if (sequenceSteps[selectedSequenceStep ?? -1]) {

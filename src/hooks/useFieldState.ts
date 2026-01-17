@@ -154,6 +154,16 @@ export const useFieldState = (initialState?: FieldState) => {
     () => (initialState ? normalizeFieldState(initialState) : createInitialState())
   );
 
+  type SequenceBallSnapshot = {
+    balls: Ball[];
+    robotsHeldBalls: Record<string, Ball[]>;
+    classifiers: {
+      red: { balls: Ball[]; extensionBalls: Ball[] };
+      blue: { balls: Ball[]; extensionBalls: Ball[] };
+    };
+    overflowCounts: { red: number; blue: number };
+  };
+
   // Robot operations
   const addRobot = useCallback((alliance: Alliance, position?: Position) => {
     const allianceCount = state.robots.filter((robot) => robot.alliance === alliance).length;
@@ -716,6 +726,31 @@ export const useFieldState = (initialState?: FieldState) => {
     idCounter = 0;
   }, []);
 
+  const restoreBallState = useCallback((snapshot: SequenceBallSnapshot) => {
+    setState((prev) => ({
+      ...prev,
+      balls: snapshot.balls.map((ball) => ({ ...ball })),
+      classifiers: {
+        ...prev.classifiers,
+        red: {
+          ...prev.classifiers.red,
+          balls: snapshot.classifiers.red.balls.map((ball) => ({ ...ball })),
+          extensionBalls: snapshot.classifiers.red.extensionBalls.map((ball) => ({ ...ball })),
+        },
+        blue: {
+          ...prev.classifiers.blue,
+          balls: snapshot.classifiers.blue.balls.map((ball) => ({ ...ball })),
+          extensionBalls: snapshot.classifiers.blue.extensionBalls.map((ball) => ({ ...ball })),
+        },
+      },
+      overflowCounts: { ...snapshot.overflowCounts },
+      robots: prev.robots.map((robot) => ({
+        ...robot,
+        heldBalls: (snapshot.robotsHeldBalls[robot.id] ?? []).map((ball) => ({ ...ball })),
+      })),
+    }));
+  }, []);
+
   // Export/Import
   const exportState = useCallback(() => {
     return JSON.stringify(state, null, 2);
@@ -764,6 +799,7 @@ export const useFieldState = (initialState?: FieldState) => {
     clearBalls,
     clearRobots,
     resetField,
+    restoreBallState,
     // Export/Import
     exportState,
     importState,

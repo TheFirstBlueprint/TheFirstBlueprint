@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
-import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState } from '@/types/planner';
+import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState, Ball } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
 import fieldImageDark from '@/assets/decode_field_B.png';
 import fieldImageLight from '@/assets/decode_field_L.png';
@@ -81,6 +81,16 @@ type Keybinds = typeof DEFAULT_KEYBINDS;
 type SequenceStep = {
   positions: Record<string, { x: number; y: number }>;
   rotations: Record<string, number>;
+  ballState: {
+    balls: Ball[];
+    robotsHeldBalls: Record<string, Ball[]>;
+    classifiers: {
+      red: { balls: Ball[]; extensionBalls: Ball[] };
+      blue: { balls: Ball[]; extensionBalls: Ball[] };
+    };
+    overflowCounts: { red: number; blue: number };
+  };
+  rawScores: { red: number; blue: number };
 };
 
 type PersistedFieldPlannerState = {
@@ -155,6 +165,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     clearBalls,
     clearRobots,
     resetField,
+    restoreBallState,
     exportState,
     importState,
     addHumanPlayerBall,
@@ -602,15 +613,33 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         positions[robot.id] = { ...robot.position };
         rotations[robot.id] = robot.rotation;
       });
+      const ballState = {
+        balls: state.balls.map((ball) => ({ ...ball })),
+        robotsHeldBalls: robots.reduce<Record<string, Ball[]>>((acc, robot) => {
+          acc[robot.id] = robot.heldBalls.map((ball) => ({ ...ball }));
+          return acc;
+        }, {}),
+        classifiers: {
+          red: {
+            balls: state.classifiers.red.balls.map((ball) => ({ ...ball })),
+            extensionBalls: state.classifiers.red.extensionBalls.map((ball) => ({ ...ball })),
+          },
+          blue: {
+            balls: state.classifiers.blue.balls.map((ball) => ({ ...ball })),
+            extensionBalls: state.classifiers.blue.extensionBalls.map((ball) => ({ ...ball })),
+          },
+        },
+        overflowCounts: { ...state.overflowCounts },
+      };
       setSequenceSteps((prev) => ({
         ...prev,
-        [index]: { positions, rotations },
+        [index]: { positions, rotations, ballState, rawScores: { ...rawScores } },
       }));
       if (!silent) {
         toast.success(`Saved step ${index}.`);
       }
     },
-    []
+    [rawScores, state.balls, state.classifiers.blue.balls, state.classifiers.blue.extensionBalls, state.classifiers.red.balls, state.classifiers.red.extensionBalls, state.overflowCounts]
   );
 
   useEffect(() => {
@@ -877,11 +906,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           updateRobotRotation(robot.id, rotation);
         }
       });
+      if (step.ballState) {
+        restoreBallState(step.ballState);
+      }
+      if (step.rawScores) {
+        setRawScores(step.rawScores);
+      }
       window.setTimeout(() => {
         isApplyingSequenceRef.current = false;
       }, 0);
     },
-    [sequenceSteps, updateRobotPosition, updateRobotRotation]
+    [restoreBallState, sequenceSteps, updateRobotPosition, updateRobotRotation]
   );
 
   const handleSelectSequenceStep = useCallback(
@@ -940,6 +975,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      if (step.ballState) {
+        restoreBallState(step.ballState);
+      }
+      if (step.rawScores) {
+        setRawScores(step.rawScores);
+      }
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -973,7 +1014,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
     setSequencePlaying(false);
-  }, [maxSequence, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [maxSequence, restoreBallState, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
 
   // Keyboard shortcuts
   useEffect(() => {

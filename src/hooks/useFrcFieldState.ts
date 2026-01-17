@@ -39,6 +39,11 @@ export const useFrcFieldState = (initialState?: FrcFieldState) => {
     () => (initialState ? normalizeFrcFieldState(initialState) : createInitialState())
   );
 
+  type SequenceFuelSnapshot = {
+    fuel: FrcFuel[];
+    robotFuelCounts: Record<string, number>;
+  };
+
   const addRobot = useCallback((alliance: Alliance, position: Position, size?: { width: number; height: number }) => {
     const allianceCount = state.robots.filter((robot) => robot.alliance === alliance).length;
     if (state.robots.length >= 6 || allianceCount >= 3) {
@@ -248,6 +253,17 @@ export const useFrcFieldState = (initialState?: FrcFieldState) => {
     idCounter = 0;
   }, []);
 
+  const restoreFuelState = useCallback((snapshot: SequenceFuelSnapshot) => {
+    setState((prev) => ({
+      ...prev,
+      fuel: snapshot.fuel.map((item) => ({ ...item })),
+      robots: prev.robots.map((robot) => ({
+        ...robot,
+        fuelCount: snapshot.robotFuelCounts[robot.id] ?? robot.fuelCount,
+      })),
+    }));
+  }, []);
+
   const exportState = useCallback(() => JSON.stringify(state, null, 2), [state]);
 
   const importState = useCallback((json: string) => {
@@ -278,6 +294,7 @@ export const useFrcFieldState = (initialState?: FrcFieldState) => {
     clearRobots,
     setGoalMode,
     resetField,
+    restoreFuelState,
     exportState,
     importState,
   };
