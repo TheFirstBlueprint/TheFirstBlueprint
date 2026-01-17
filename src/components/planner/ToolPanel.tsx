@@ -217,13 +217,13 @@ export const ToolPanel = ({
         <div className="panel-header">Field Setup</div>
         <div className="relative inline-flex">
           {showSetupCoachmark && (
-            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-56">
+            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-48">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs text-foreground">Click here to set up the field.</p>
+                <p className="text-[11px] text-foreground">Click here to set up the field.</p>
                 <button
                   type="button"
                   onClick={onDismissSetupCoachmark}
-                  className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                  className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
                   aria-label="Dismiss setup tip"
                 >
                   X
@@ -232,7 +232,7 @@ export const ToolPanel = ({
               <button
                 type="button"
                 onClick={onDismissSetupCoachmark}
-                className="mt-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                className="mt-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
               >
                 Got it
               </button>
