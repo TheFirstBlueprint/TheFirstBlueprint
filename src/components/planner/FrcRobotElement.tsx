@@ -146,7 +146,7 @@ export const FrcRobotElement = ({
       {isSelected && (
         <div
           className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex gap-1"
-          style={{ transform: `translateX(-50%) rotate(-${robot.rotation}deg)` }}
+          style={{ transform: 'translateX(-50%)', transformOrigin: 'center center' }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <button
