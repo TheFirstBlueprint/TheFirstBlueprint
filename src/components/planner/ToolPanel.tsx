@@ -24,6 +24,8 @@ interface ToolPanelProps {
   onSetupRobots: () => void;
   onExport: () => void;
   onImport: () => void;
+  showSetupCoachmark?: boolean;
+  onDismissSetupCoachmark?: () => void;
 }
 
 const PEN_COLORS = ['#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
@@ -51,7 +53,14 @@ export const ToolPanel = ({
   onSetupRobots,
   onExport,
   onImport,
+  showSetupCoachmark = false,
+  onDismissSetupCoachmark,
 }: ToolPanelProps) => {
+  const handleSetupFieldClick = () => {
+    onSetupField();
+    onDismissSetupCoachmark?.();
+  };
+
   const isDrawTool =
     activeTool === 'pen' ||
     activeTool === 'dotted' ||
@@ -206,12 +215,37 @@ export const ToolPanel = ({
       {/* Field Setup */}
       <div className="panel">
         <div className="panel-header">Field Setup</div>
-        <button onClick={onSetupField} className="tool-button gap-1">
-          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-            auto_fix_high
-          </span>
-          <span className="text-xs">Setup Field</span>
-        </button>
+        <div className="relative inline-flex">
+          {showSetupCoachmark && (
+            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-56">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs text-foreground">Click here to set up the field.</p>
+                <button
+                  type="button"
+                  onClick={onDismissSetupCoachmark}
+                  className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss setup tip"
+                >
+                  X
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={onDismissSetupCoachmark}
+                className="mt-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                Got it
+              </button>
+              <span className="planner-coachmark-arrow absolute -bottom-2 left-6" aria-hidden="true" />
+            </div>
+          )}
+          <button onClick={handleSetupFieldClick} className="tool-button gap-1" data-planner-setup="true">
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              auto_fix_high
+            </span>
+            <span className="text-xs">Setup Field</span>
+          </button>
+        </div>
       </div>
 
       {/* Add Elements */}

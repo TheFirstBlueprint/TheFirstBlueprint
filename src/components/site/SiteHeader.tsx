@@ -49,7 +49,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
           </nav>
           <Link
             to="/ftc/instructions"
-            className="tool-button text-xs font-mono"
+            className="tool-button text-xs font-mono ftc-instructions-link"
             title="Instructions"
             aria-label="Open instructions"
           >

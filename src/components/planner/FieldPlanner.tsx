@@ -218,6 +218,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     imageDataUrl: string | null;
   } | null>(persistedState?.robotDraft ?? null);
   const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
+  const [setupCoachmarkDismissed, setSetupCoachmarkDismissed] = useState(false);
+  const [instructionsNudgeActive, setInstructionsNudgeActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
@@ -338,8 +340,56 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     if (themeMode === 'sharkans') return fieldImageBasic;
     return fieldImageBasic;
   }, [themeMode]);
+  const isFieldUninitialized = useMemo(() => {
+    return (
+      state.robots.length === 0 &&
+      state.balls.length === 0 &&
+      state.drawings.length === 0 &&
+      state.classifiers.red.balls.length === 0 &&
+      state.classifiers.blue.balls.length === 0 &&
+      state.classifiers.red.extensionBalls.length === 0 &&
+      state.classifiers.blue.extensionBalls.length === 0 &&
+      state.overflowCounts.red === 0 &&
+      state.overflowCounts.blue === 0
+    );
+  }, [state]);
+  const shouldShowSetupCoachmark = isFieldUninitialized && !setupCoachmarkDismissed;
 
   const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
+
+  useEffect(() => {
+    if (!isFieldUninitialized && !setupCoachmarkDismissed) {
+      setSetupCoachmarkDismissed(true);
+    }
+  }, [isFieldUninitialized, setupCoachmarkDismissed]);
+
+  useEffect(() => {
+    if (!shouldShowSetupCoachmark) {
+      setInstructionsNudgeActive(false);
+      return;
+    }
+    setInstructionsNudgeActive(true);
+    const timeout = window.setTimeout(() => setInstructionsNudgeActive(false), 3600);
+    const handlePointerDown = () => setInstructionsNudgeActive(false);
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [shouldShowSetupCoachmark]);
+
+  useEffect(() => {
+    if (instructionsNudgeActive) {
+      document.documentElement.setAttribute('data-ftc-instructions-nudge', 'true');
+      return () => {
+        document.documentElement.removeAttribute('data-ftc-instructions-nudge');
+      };
+    }
+    document.documentElement.removeAttribute('data-ftc-instructions-nudge');
+    return () => {
+      document.documentElement.removeAttribute('data-ftc-instructions-nudge');
+    };
+  }, [instructionsNudgeActive]);
 
   useEffect(() => {
     persistedFtcPlannerState = {
@@ -1285,6 +1335,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setMotif(next);
   };
 
+  const dismissSetupCoachmark = useCallback(() => {
+    setSetupCoachmarkDismissed(true);
+    setInstructionsNudgeActive(false);
+  }, []);
+
   const handleSetupField = () => {
     clearBalls();
     setupFieldArtifacts();
@@ -1825,6 +1880,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
+            showSetupCoachmark={shouldShowSetupCoachmark}
+            onDismissSetupCoachmark={dismissSetupCoachmark}
           />
           <input
             ref={fileInputRef}
