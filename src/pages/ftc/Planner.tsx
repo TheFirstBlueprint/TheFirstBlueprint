@@ -31,7 +31,7 @@ const FtcPlanner = () => {
       </Helmet>
       <div
         className="h-screen bg-transparent flex flex-col overflow-hidden"
-        style={{ '--planner-footer-height': '48px' } as CSSProperties}
+        style={{ '--planner-footer-height': isMobile ? '0px' : '48px' } as CSSProperties}
       >
         {!isMobile && <SiteHeader />}
         <div className="flex-1 min-h-0">

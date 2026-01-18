@@ -172,6 +172,16 @@ export const ToolPanel = ({
               ink_eraser
             </span>
           </button>
+          <button
+            onClick={handleSetupFieldClick}
+            className="tool-button mobile-only-flex"
+            title="Setup field"
+            data-planner-setup="true"
+          >
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              auto_fix_high
+            </span>
+          </button>
         </div>
 
         {isDrawTool && (
@@ -194,55 +204,6 @@ export const ToolPanel = ({
         )}
       </div>
 
-      <div className="panel mobile-only-block">
-        <div className="panel-header">Field Setup</div>
-        <div className="relative inline-flex">
-          {showSetupCoachmark && (
-            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-48">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-[11px] text-foreground">Click here to set up the field.</p>
-                <button
-                  type="button"
-                  onClick={onDismissSetupCoachmark}
-                  className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                  aria-label="Dismiss setup tip"
-                >
-                  X
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={onDismissSetupCoachmark}
-                className="mt-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              >
-                Got it
-              </button>
-              <span className="planner-coachmark-arrow absolute -bottom-2 left-6" aria-hidden="true" />
-            </div>
-          )}
-          <button onClick={handleSetupFieldClick} className="tool-button gap-1" data-planner-setup="true">
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              auto_fix_high
-            </span>
-            <span className="text-xs">Setup Field</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="panel mobile-only-block">
-        <div className="panel-header">Page Color</div>
-        <select
-          value={themeMode}
-          onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
-          className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs text-foreground shadow-inner shadow-black/20"
-        >
-          <option value="base">Base</option>
-          <option value="dark">Dark Tactical</option>
-          <option value="light">Light</option>
-          <option value="sharkans">Sharkans</option>
-        </select>
-      </div>
-
       {/* Motif */}
       <div className="panel">
         <div className="panel-header">Motif</div>
@@ -257,10 +218,20 @@ export const ToolPanel = ({
               <span className="text-xs font-mono">{option}</span>
             </button>
           ))}
+          <button
+            onClick={onMotifRandomize}
+            className="tool-button mobile-only-flex"
+            title="Randomize motif"
+            aria-label="Randomize motif"
+          >
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              shuffle
+            </span>
+          </button>
         </div>
         <button
           onClick={onMotifRandomize}
-          className="tool-button mt-2 w-full"
+          className="tool-button mt-2 w-full mobile-hide"
           title="Randomize motif"
         >
           Randomize
@@ -435,6 +406,20 @@ export const ToolPanel = ({
             <span className="text-xs mobile-hide">Reset All</span>
           </button>
         </div>
+      </div>
+
+      <div className="panel mobile-only-block">
+        <div className="panel-header">Page Color</div>
+        <select
+          value={themeMode}
+          onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
+          className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs text-foreground shadow-inner shadow-black/20"
+        >
+          <option value="base">Base</option>
+          <option value="dark">Dark Tactical</option>
+          <option value="light">Light</option>
+          <option value="sharkans">Sharkans</option>
+        </select>
       </div>
 
       {/* Export/Import */}
