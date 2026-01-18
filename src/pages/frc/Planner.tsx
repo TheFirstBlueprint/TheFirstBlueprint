@@ -6,7 +6,7 @@ import SiteFooter from '@/components/site/SiteFooter';
 
 const FrcPlanner = () => {
   const [isMobile, setIsMobile] = useState(
-    () => window.matchMedia?.('(max-width: 767px)')?.matches ?? false
+    () => window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches ?? false
   );
   const [showHeader, setShowHeader] = useState(true);
   const hideTimerRef = useRef<number | null>(null);
@@ -22,7 +22,7 @@ const FrcPlanner = () => {
   }, [isMobile]);
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)');
+    const media = window.matchMedia('(hover: none) and (pointer: coarse)');
     const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
       const matches = event.matches;
       setIsMobile(matches);

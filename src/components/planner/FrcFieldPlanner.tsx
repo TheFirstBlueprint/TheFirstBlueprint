@@ -1598,7 +1598,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       `Active goal: ${(state.randomizedGoal ?? 'blue').toUpperCase()}`}
                   </div>
                 </div>
-                <div className="panel hidden md:block">
+                <div className="panel mobile-hide">
                   <div className="panel-header">Game Timer</div>
                   <div className="text-center text-2xl font-mono text-foreground">
                     {formatTime(timeLeft)}
@@ -1691,12 +1691,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     title="Play sequence"
                     disabled={sequencePlaying}
                   >
-                    <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
-                      play_arrow
-                    </span>
-                    <span className="landscape-hide-text">
-                      {sequencePlaying ? 'Playing...' : 'Play Sequence'}
-                    </span>
+                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
                   </button>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
@@ -1752,10 +1747,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       className="tool-button w-full"
                       title="Clear all sequence steps"
                     >
-                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
                         delete
                       </span>
-                      <span className="landscape-hide-text">Everything</span>
+                      <span className="mobile-hide">Everything</span>
                     </button>
                     <button
                       onClick={handleSequenceDeleteSelected}
@@ -1763,10 +1758,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       title="Delete selected step"
                       disabled={!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]}
                     >
-                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
                         delete_forever
                       </span>
-                      <span className="landscape-hide-text">
+                      <span className="mobile-hide">
                         {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
                       </span>
                     </button>

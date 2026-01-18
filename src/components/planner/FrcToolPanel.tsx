@@ -76,7 +76,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('dotted')}
-            className={cn('tool-button hidden md:flex', activeTool === 'dotted' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'dotted' && 'active')}
             title="Dotted line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -85,7 +85,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arrow')}
-            className={cn('tool-button hidden md:flex', activeTool === 'arrow' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'arrow' && 'active')}
             title="Arrow line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -94,7 +94,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('box')}
-            className={cn('tool-button hidden md:flex', activeTool === 'box' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'box' && 'active')}
             title="Box"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -103,7 +103,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('rectangle')}
-            className={cn('tool-button hidden md:flex', activeTool === 'rectangle' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'rectangle' && 'active')}
             title="Rectangle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -112,7 +112,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('circle')}
-            className={cn('tool-button hidden md:flex', activeTool === 'circle' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'circle' && 'active')}
             title="Circle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -121,7 +121,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arc')}
-            className={cn('tool-button hidden md:flex', activeTool === 'arc' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'arc' && 'active')}
             title="Arc"
           >
             <svg
@@ -168,7 +168,7 @@ export const FrcToolPanel = ({
         )}
       </div>
 
-      <div className="panel md:hidden">
+      <div className="panel mobile-only-block">
         <div className="panel-header">Page Color</div>
         <select
           value={themeMode}
@@ -222,7 +222,7 @@ export const FrcToolPanel = ({
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             auto_fix_high
           </span>
-          <span className="text-xs landscape-hide-text">Setup Fuel</span>
+          <span className="text-xs">Setup Fuel</span>
         </button>
       </div>
 
@@ -233,25 +233,25 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs landscape-hide-text">Drawings</span>
+            <span className="text-xs">Drawings</span>
           </button>
           <button onClick={onClearFuel} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               local_fire_department
             </span>
-            <span className="text-xs landscape-hide-text">Fuel</span>
+            <span className="text-xs">Fuel</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs landscape-hide-text">Robots</span>
+            <span className="text-xs">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive col-span-2">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs landscape-hide-text">Reset Field</span>
+            <span className="text-xs">Reset Field</span>
           </button>
         </div>
       </div>
@@ -263,13 +263,13 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               download
             </span>
-            <span className="text-xs landscape-hide-text">Export</span>
+            <span className="text-xs mobile-hide">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               upload
             </span>
-            <span className="text-xs landscape-hide-text">Import</span>
+            <span className="text-xs mobile-hide">Import</span>
           </button>
         </div>
       </div>
