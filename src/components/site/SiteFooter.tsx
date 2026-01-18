@@ -1,7 +1,7 @@
 const SiteFooter = () => {
   return (
     <footer
-      className="mt-auto py-4 text-center text-xs text-muted-foreground opacity-60"
+      className="mt-auto py-4 bg-transparent text-center text-xs text-muted-foreground opacity-60"
       style={{
         fontSize: 'calc(0.65rem * var(--planner-zoom, 1))',
         width: 'calc(var(--planner-field-width, 100%) + 24px)',

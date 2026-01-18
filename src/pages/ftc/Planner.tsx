@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { FieldPlanner } from '@/components/planner/FieldPlanner';
 import { PlannerViewport } from '@/components/planner/PlannerViewport';
@@ -29,7 +29,10 @@ const FtcPlanner = () => {
           content="Interactive FTC field planner for building strategies and robot paths."
         />
       </Helmet>
-      <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <div
+        className="h-screen bg-transparent flex flex-col overflow-hidden"
+        style={{ '--planner-footer-height': '48px' } as CSSProperties}
+      >
         {!isMobile && <SiteHeader />}
         <div className="flex-1 min-h-0">
           <PlannerViewport className="h-full">

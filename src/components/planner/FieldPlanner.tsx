@@ -1901,7 +1901,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
 
   return (
-    <div className={`h-[100dvh] bg-background flex planner-shell ${className ?? ''}`}>
+    <div className={`h-full bg-background flex planner-shell ${className ?? ''}`}>
       {/* Left Panel */}
       <div className="panel-left w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
