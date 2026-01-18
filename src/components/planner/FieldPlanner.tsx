@@ -220,6 +220,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
   const [setupCoachmarkDismissed, setSetupCoachmarkDismissed] = useState(false);
   const [instructionsNudgeActive, setInstructionsNudgeActive] = useState(false);
+  const [setupNudgeActive, setSetupNudgeActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches ?? false
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
@@ -362,6 +366,44 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       setSetupCoachmarkDismissed(true);
     }
   }, [isFieldUninitialized, setupCoachmarkDismissed]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(event.matches);
+    };
+    handleChange(media);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !shouldShowSetupCoachmark) {
+      setSetupNudgeActive(false);
+      return;
+    }
+    setSetupNudgeActive(true);
+    const timeout = window.setTimeout(() => setSetupNudgeActive(false), 3600);
+    const handlePointerDown = () => setSetupNudgeActive(false);
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [isMobile, shouldShowSetupCoachmark]);
+
+  useEffect(() => {
+    if (setupNudgeActive) {
+      document.documentElement.setAttribute('data-planner-setup-nudge', 'true');
+      return () => {
+        document.documentElement.removeAttribute('data-planner-setup-nudge');
+      };
+    }
+    document.documentElement.removeAttribute('data-planner-setup-nudge');
+    return () => {
+      document.documentElement.removeAttribute('data-planner-setup-nudge');
+    };
+  }, [setupNudgeActive]);
 
   useEffect(() => {
     if (!shouldShowSetupCoachmark) {
@@ -1888,7 +1930,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
-            showSetupCoachmark={shouldShowSetupCoachmark}
+            showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
             onDismissSetupCoachmark={dismissSetupCoachmark}
           />
           <input
