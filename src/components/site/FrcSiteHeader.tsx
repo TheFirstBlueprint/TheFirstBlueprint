@@ -41,11 +41,27 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
                 to={item.to}
                 className={({ isActive }) =>
                   `tool-button text-xs font-mono ${
-                    item.to === '/frc/patch-notes' ? 'hidden md:inline-flex' : ''
+                    item.to === '/frc/patch-notes' ? 'mobile-hide' : ''
                   } ${isActive ? 'active' : ''}`
                 }
               >
-                {item.label}
+                {item.to === '/' && (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+                      home
+                    </span>
+                    <span className="mobile-hide">{item.label}</span>
+                  </>
+                )}
+                {item.to === '/frc/planner' && (
+                  <>
+                    <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+                      map
+                    </span>
+                    <span className="mobile-hide">{item.label}</span>
+                  </>
+                )}
+                {item.to !== '/' && item.to !== '/frc/planner' && item.label}
               </NavLink>
             ))}
           </nav>
@@ -55,11 +71,14 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
             title="Instructions"
             aria-label="Open instructions"
           >
-            Instructions
+            <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+              info
+            </span>
+            <span className="mobile-hide">Instructions</span>
           </Link>
           <Link
             to="/frc/settings"
-            className="tool-button w-10 h-10 hidden md:flex"
+            className="tool-button w-10 h-10 mobile-hide"
             title="Settings"
             aria-label="Open settings"
           >

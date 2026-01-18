@@ -674,13 +674,7 @@
   }
 }
 
-@layer components {
-  .landscape-only-icon {
-    display: none;
-  }
-}
-
-@media (max-width: 900px) and (orientation: landscape) {
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
   .panel-left,
   .panel-right {
     width: 11rem;
@@ -715,12 +709,30 @@
   .planner-shell .field-container {
     padding: 0.5rem 0.75rem 0.75rem;
   }
+}
 
-  .landscape-only-icon {
-    display: inline-flex;
+@layer components {
+  .mobile-only-flex,
+  .mobile-only-inline,
+  .mobile-only-block {
+    display: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .mobile-hide {
+    display: none !important;
   }
 
-  .landscape-hide-text {
-    display: none;
+  .mobile-only-flex {
+    display: inline-flex !important;
+  }
+
+  .mobile-only-inline {
+    display: inline !important;
+  }
+
+  .mobile-only-block {
+    display: block !important;
   }
 }

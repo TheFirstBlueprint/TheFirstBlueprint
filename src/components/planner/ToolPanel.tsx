@@ -102,7 +102,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('dotted')}
-            className={cn('tool-button hidden md:flex', activeTool === 'dotted' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'dotted' && 'active')}
             title="Dotted line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -111,7 +111,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arrow')}
-            className={cn('tool-button hidden md:flex', activeTool === 'arrow' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'arrow' && 'active')}
             title="Arrow line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -120,7 +120,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('box')}
-            className={cn('tool-button hidden md:flex', activeTool === 'box' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'box' && 'active')}
             title="Box"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -129,7 +129,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('rectangle')}
-            className={cn('tool-button hidden md:flex', activeTool === 'rectangle' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'rectangle' && 'active')}
             title="Rectangle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -138,7 +138,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('circle')}
-            className={cn('tool-button hidden md:flex', activeTool === 'circle' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'circle' && 'active')}
             title="Circle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -147,7 +147,7 @@ export const ToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arc')}
-            className={cn('tool-button hidden md:flex', activeTool === 'arc' && 'active')}
+            className={cn('tool-button mobile-hide', activeTool === 'arc' && 'active')}
             title="Arc"
           >
             <svg
@@ -194,7 +194,7 @@ export const ToolPanel = ({
         )}
       </div>
 
-      <div className="panel md:hidden">
+      <div className="panel mobile-only-block">
         <div className="panel-header">Page Color</div>
         <select
           value={themeMode}
@@ -228,10 +228,7 @@ export const ToolPanel = ({
           className="tool-button mt-2 w-full"
           title="Randomize motif"
         >
-          <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
-            shuffle
-          </span>
-          <span className="landscape-hide-text">Randomize</span>
+          Randomize
         </button>
       </div>
 
@@ -266,13 +263,13 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               auto_fix_high
             </span>
-            <span className="text-xs landscape-hide-text">Setup Field</span>
+            <span className="text-xs">Setup Field</span>
           </button>
         </div>
       </div>
 
       {/* Add Elements */}
-      <div className="panel hidden md:block">
+      <div className="panel mobile-hide">
         <div className="panel-header">Add Elements</div>
 
         <div className="mb-3">
@@ -382,25 +379,25 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs landscape-hide-text">Drawings</span>
+            <span className="text-xs">Drawings</span>
           </button>
           <button onClick={onClearBalls} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               fiber_manual_record
             </span>
-            <span className="text-xs landscape-hide-text">Balls</span>
+            <span className="text-xs">Balls</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs landscape-hide-text">Robots</span>
+            <span className="text-xs">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs landscape-hide-text">Reset All</span>
+            <span className="text-xs">Reset All</span>
           </button>
         </div>
       </div>
@@ -413,13 +410,13 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               download
             </span>
-            <span className="text-xs landscape-hide-text">Export</span>
+            <span className="text-xs mobile-hide">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               upload
             </span>
-            <span className="text-xs landscape-hide-text">Import</span>
+            <span className="text-xs mobile-hide">Import</span>
           </button>
         </div>
       </div>

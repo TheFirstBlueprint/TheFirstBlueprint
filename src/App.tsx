@@ -31,7 +31,7 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [isMobile, setIsMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false
+    () => window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches ?? false
   );
 
   useEffect(() => {
@@ -46,7 +46,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
+    const media = window.matchMedia("(hover: none) and (pointer: coarse)");
     const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
       setIsMobile(event.matches);
     };
