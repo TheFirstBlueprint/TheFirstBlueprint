@@ -60,6 +60,12 @@ const FtcInstructions = () => {
                 When finished, click "export" to save a JSON file. Use "import" to load a saved
                 configuration later.
               </p>
+               <p>
+               If you need more clarification watch our video on youtube for more help:
+              </p>
+              <p>
+               https://www.youtube.com/playlist?list=PLojGuoR_rIykwYhxv--06Ho8Gp25f6NE_
+              </p>
               <p className="text-foreground">Happy strategizing!</p>
             </div>
           </section>
