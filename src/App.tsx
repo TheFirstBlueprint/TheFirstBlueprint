@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -30,6 +30,10 @@ const THEME_STORAGE_KEY = "planner-theme-mode";
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false
+  );
+
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     const normalizedTheme =
@@ -39,6 +43,16 @@ const App = () => {
           ? storedTheme
           : "dark";
     document.documentElement.setAttribute("data-theme", normalizedTheme);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(event.matches);
+    };
+    handleChange(media);
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
   }, []);
 
   return (
@@ -52,17 +66,17 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/ftc/planner" element={<FtcPlanner />} />
               <Route path="/ftc/instructions" element={<FtcInstructions />} />
-              <Route path="/ftc/settings" element={<FtcSettings />} />
+              {!isMobile && <Route path="/ftc/settings" element={<FtcSettings />} />}
               <Route path="/ftc/about" element={<FtcAbout />} />
-              <Route path="/ftc/patch-notes" element={<FtcPatchNotes />} />
+              {!isMobile && <Route path="/ftc/patch-notes" element={<FtcPatchNotes />} />}
               <Route path="/ftc/terms" element={<FtcTerms />} />
               <Route path="/ftc/privacy" element={<FtcPrivacy />} />
               <Route path="/ftc/license" element={<FtcLicense />} />
               <Route path="/frc/planner" element={<FrcPlanner />} />
               <Route path="/frc/instructions" element={<FrcInstructions />} />
-              <Route path="/frc/settings" element={<FrcSettings />} />
+              {!isMobile && <Route path="/frc/settings" element={<FrcSettings />} />}
               <Route path="/frc/about" element={<FrcAbout />} />
-              <Route path="/frc/patch-notes" element={<FrcPatchNotes />} />
+              {!isMobile && <Route path="/frc/patch-notes" element={<FrcPatchNotes />} />}
               <Route path="/frc/terms" element={<FrcTerms />} />
               <Route path="/frc/privacy" element={<FrcPrivacy />} />
               <Route path="/frc/license" element={<FrcLicense />} />

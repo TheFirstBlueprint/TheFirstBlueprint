@@ -40,7 +40,9 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `tool-button text-xs font-mono ${isActive ? 'active' : ''}`
+                  `tool-button text-xs font-mono ${
+                    item.to === '/frc/patch-notes' ? 'hidden md:inline-flex' : ''
+                  } ${isActive ? 'active' : ''}`
                 }
               >
                 {item.label}
@@ -57,7 +59,7 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
           </Link>
           <Link
             to="/frc/settings"
-            className="tool-button w-10 h-10"
+            className="tool-button w-10 h-10 hidden md:flex"
             title="Settings"
             aria-label="Open settings"
           >

@@ -40,7 +40,9 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `tool-button text-xs font-mono ${isActive ? 'active' : ''}`
+                  `tool-button text-xs font-mono ${
+                    item.to === '/ftc/patch-notes' ? 'hidden md:inline-flex' : ''
+                  } ${isActive ? 'active' : ''}`
                 }
               >
                 {item.label}
@@ -57,7 +59,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
           </Link>
           <Link
             to="/ftc/settings"
-            className="tool-button w-10 h-10"
+            className="tool-button w-10 h-10 hidden md:flex"
             title="Settings"
             aria-label="Open settings"
           >

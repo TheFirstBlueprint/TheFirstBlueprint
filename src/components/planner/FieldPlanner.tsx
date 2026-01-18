@@ -473,6 +473,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
 
+  const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
+    setThemeMode(nextMode);
+    setDraftThemeMode(nextMode);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextMode);
+  }, []);
+
   useEffect(() => {
     document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
     return () => {
@@ -1862,6 +1868,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
+            themeMode={themeMode}
+            onThemeModeChange={handleThemeModeChange}
             motif={motif}
             motifs={motifs}
             onMotifChange={setMotif}
@@ -2478,10 +2486,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   className="tool-button mt-3 w-full"
                   title="Reset scores"
                 >
-                  Reset
+                  <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                    restart_alt
+                  </span>
+                  <span className="landscape-hide-text">Reset</span>
                 </button>
               </div>
-              <div className="panel">
+              <div className="panel hidden md:block">
                 <div className="panel-header">Game Timer</div>
                 <div className="text-center text-2xl font-mono text-foreground">
                   {formatTime(timeLeft)}
@@ -2574,7 +2585,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   title="Play sequence"
                   disabled={sequencePlaying}
                 >
-                  {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                  <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                    play_arrow
+                  </span>
+                  <span className="landscape-hide-text">
+                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                  </span>
                 </button>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
@@ -2630,7 +2646,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     className="tool-button w-full"
                     title="Clear all sequence steps"
                   >
-                    Everything
+                    <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      delete
+                    </span>
+                    <span className="landscape-hide-text">Everything</span>
                   </button>
                   <button
                     onClick={handleSequenceDeleteSelected}
@@ -2638,7 +2657,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     title="Delete selected step"
                     disabled={!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]}
                   >
-                    {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                    <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      delete_forever
+                    </span>
+                    <span className="landscape-hide-text">
+                      {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                    </span>
                   </button>
                 </div>
               </div>

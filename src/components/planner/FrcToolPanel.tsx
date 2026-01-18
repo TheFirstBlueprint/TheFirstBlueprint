@@ -1,11 +1,15 @@
 import { Tool, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
 
+type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
+
 interface FrcToolPanelProps {
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
   penColor: string;
   onPenColorChange: (color: string) => void;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
   onAddRobot: (alliance: Alliance) => string | null;
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
@@ -25,6 +29,8 @@ export const FrcToolPanel = ({
   onToolChange,
   penColor,
   onPenColorChange,
+  themeMode,
+  onThemeModeChange,
   onAddRobot,
   canAddRedRobot,
   canAddBlueRobot,
@@ -70,7 +76,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('dotted')}
-            className={cn('tool-button', activeTool === 'dotted' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'dotted' && 'active')}
             title="Dotted line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -79,7 +85,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arrow')}
-            className={cn('tool-button', activeTool === 'arrow' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'arrow' && 'active')}
             title="Arrow line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -88,7 +94,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('box')}
-            className={cn('tool-button', activeTool === 'box' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'box' && 'active')}
             title="Box"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -97,7 +103,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('rectangle')}
-            className={cn('tool-button', activeTool === 'rectangle' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'rectangle' && 'active')}
             title="Rectangle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -106,7 +112,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('circle')}
-            className={cn('tool-button', activeTool === 'circle' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'circle' && 'active')}
             title="Circle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -115,7 +121,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arc')}
-            className={cn('tool-button', activeTool === 'arc' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'arc' && 'active')}
             title="Arc"
           >
             <svg
@@ -162,6 +168,20 @@ export const FrcToolPanel = ({
         )}
       </div>
 
+      <div className="panel md:hidden">
+        <div className="panel-header">Page Color</div>
+        <select
+          value={themeMode}
+          onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
+          className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs text-foreground shadow-inner shadow-black/20"
+        >
+          <option value="base">Base</option>
+          <option value="dark">Dark Tactical</option>
+          <option value="light">Light</option>
+          <option value="sharkans">Sharkans</option>
+        </select>
+      </div>
+
       <div className="panel">
         <div className="panel-header">Robots</div>
         <div className="flex gap-2">
@@ -202,7 +222,7 @@ export const FrcToolPanel = ({
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             auto_fix_high
           </span>
-          <span className="text-xs">Setup Fuel</span>
+          <span className="text-xs landscape-hide-text">Setup Fuel</span>
         </button>
       </div>
 
@@ -213,25 +233,25 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs">Drawings</span>
+            <span className="text-xs landscape-hide-text">Drawings</span>
           </button>
           <button onClick={onClearFuel} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               local_fire_department
             </span>
-            <span className="text-xs">Fuel</span>
+            <span className="text-xs landscape-hide-text">Fuel</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs">Robots</span>
+            <span className="text-xs landscape-hide-text">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive col-span-2">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs">Reset Field</span>
+            <span className="text-xs landscape-hide-text">Reset Field</span>
           </button>
         </div>
       </div>
@@ -243,13 +263,13 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               download
             </span>
-            <span className="text-xs">Export</span>
+            <span className="text-xs landscape-hide-text">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               upload
             </span>
-            <span className="text-xs">Import</span>
+            <span className="text-xs landscape-hide-text">Import</span>
           </button>
         </div>
       </div>

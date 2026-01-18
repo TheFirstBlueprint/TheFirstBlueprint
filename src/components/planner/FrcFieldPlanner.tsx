@@ -308,6 +308,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     return () => observer.disconnect();
   }, []);
 
+  const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
+    setThemeMode(nextMode);
+    document.documentElement.setAttribute('data-theme', nextMode);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextMode);
+  }, []);
+
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
     if (themeMode === 'dark') return fieldImageDark;
@@ -1298,6 +1304,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
+            themeMode={themeMode}
+            onThemeModeChange={handleThemeModeChange}
             onAddRobot={(alliance) =>
               addRobot(alliance, { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 }, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT })
             }
@@ -1590,7 +1598,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       `Active goal: ${(state.randomizedGoal ?? 'blue').toUpperCase()}`}
                   </div>
                 </div>
-                <div className="panel">
+                <div className="panel hidden md:block">
                   <div className="panel-header">Game Timer</div>
                   <div className="text-center text-2xl font-mono text-foreground">
                     {formatTime(timeLeft)}
@@ -1683,7 +1691,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     title="Play sequence"
                     disabled={sequencePlaying}
                   >
-                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                    <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      play_arrow
+                    </span>
+                    <span className="landscape-hide-text">
+                      {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                    </span>
                   </button>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
@@ -1739,7 +1752,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       className="tool-button w-full"
                       title="Clear all sequence steps"
                     >
-                      Everything
+                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                        delete
+                      </span>
+                      <span className="landscape-hide-text">Everything</span>
                     </button>
                     <button
                       onClick={handleSequenceDeleteSelected}
@@ -1747,7 +1763,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       title="Delete selected step"
                       disabled={!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]}
                     >
-                      {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                        delete_forever
+                      </span>
+                      <span className="landscape-hide-text">
+                        {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                      </span>
                     </button>
                   </div>
                 </div>
