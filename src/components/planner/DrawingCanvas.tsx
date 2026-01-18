@@ -190,15 +190,15 @@ export const DrawingCanvas = ({
     redrawCanvas();
   }, [redrawCanvas]);
 
-  const getCanvasPoint = (e: React.MouseEvent): Position => {
+  const getCanvasPointFromClient = (clientX: number, clientY: number): Position => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
     const normalizedScale = scale || 1;
     return {
-      x: (e.clientX - rect.left) / normalizedScale,
-      y: (e.clientY - rect.top) / normalizedScale,
+      x: (clientX - rect.left) / normalizedScale,
+      y: (clientY - rect.top) / normalizedScale,
     };
   };
 
@@ -206,7 +206,7 @@ export const DrawingCanvas = ({
     if (isLocked) return;
     if (!isDrawTool && activeTool !== 'eraser') return;
 
-    const point = getCanvasPoint(e);
+    const point = getCanvasPointFromClient(e.clientX, e.clientY);
 
     if (isDrawTool) {
       setIsDrawing(true);
@@ -261,7 +261,7 @@ export const DrawingCanvas = ({
     if (isLocked) return;
     if (!isDrawing || !isDrawTool) return;
 
-    const point = getCanvasPoint(e);
+    const point = getCanvasPointFromClient(e.clientX, e.clientY);
     setCurrentPath((prev) => {
       if (isShapeTool) {
         return [prev[0], point];
@@ -290,6 +290,55 @@ export const DrawingCanvas = ({
     setCurrentPath([]);
   };
 
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (isLocked) return;
+    if (!isDrawTool) return;
+
+    e.preventDefault();
+    (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
+    const point = getCanvasPointFromClient(e.clientX, e.clientY);
+    setIsDrawing(true);
+    setCurrentPath(isShapeTool ? [point, point] : [point]);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (isLocked) return;
+    if (!isDrawing || !isDrawTool) return;
+
+    e.preventDefault();
+    const point = getCanvasPointFromClient(e.clientX, e.clientY);
+    setCurrentPath((prev) => {
+      if (isShapeTool) {
+        return [prev[0], point];
+      }
+      return [...prev, point];
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (isLocked) return;
+    if (!isDrawing || !isDrawTool) return;
+
+    e.preventDefault();
+    if (currentPath.length > 1) {
+      const newPath: DrawingPath = {
+        id: `path-${++pathIdCounter}-${Date.now()}`,
+        points: currentPath,
+        color: penColor,
+        width: penWidth,
+        style: isShapeTool ? 'solid' : getDrawingStyle(activeTool),
+        shape: isShapeTool ? (activeTool as DrawingShape) : 'path',
+      };
+      onAddDrawing(newPath);
+    }
+
+    setIsDrawing(false);
+    setCurrentPath([]);
+  };
+
   return (
     <canvas
       ref={canvasRef}
@@ -299,12 +348,17 @@ export const DrawingCanvas = ({
       style={{
         zIndex: 5,
         pointerEvents: activeTool === 'select' || isLocked ? 'none' : 'auto',
+        touchAction: isDrawTool ? 'none' : 'auto',
         cursor: isDrawTool ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     />
   );
 };
