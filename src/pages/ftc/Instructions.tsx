@@ -63,9 +63,11 @@ const FtcInstructions = () => {
                <p>
                If you need more clarification watch our video on youtube for more help:
               </p>
-              <p>
+              <u>
+              <a href="https://www.youtube.com/playlist?list=PLojGuoR_rIykwYhxv--06Ho8Gp25f6NE_">
                https://www.youtube.com/playlist?list=PLojGuoR_rIykwYhxv--06Ho8Gp25f6NE_
-              </p>
+              </a>
+              </u>
               <p className="text-foreground">Happy strategizing!</p>
             </div>
           </section>
