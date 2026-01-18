@@ -47,17 +47,17 @@ const Index = () => {
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 blueprint-grid" />
         <div aria-hidden="true" className="corner-brackets" />
 
-        <main className="relative mx-auto w-full max-w-6xl px-6 py-12 flex-1">
-          <header className="mb-10">
+        <main className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 flex-1">
+          <header className="mb-8 sm:mb-10">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.36em] text-muted-foreground">
+                <p className="font-mono text-xs uppercase tracking-[0.2em] sm:tracking-[0.36em] text-muted-foreground">
                   Robotics command center
                 </p>
-                <h1 className="mt-3 font-title text-4xl tracking-[0.18em] text-foreground">
+                <h1 className="mt-3 font-title text-3xl sm:text-4xl tracking-[0.12em] sm:tracking-[0.18em] text-foreground">
                   TheFirstBlueprint
                 </h1>
-                <h2 className="mt-3 text-2xl font-semibold text-foreground">
+                <h2 className="mt-3 text-xl sm:text-2xl font-semibold text-foreground">
                   Visual strategy planning for competitive robotics alliances.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
@@ -72,7 +72,7 @@ const Index = () => {
             <div className="relative z-10 grid gap-6 lg:grid-cols-2">
               <Link
                 to="/ftc/planner"
-                className="command-card group min-h-[360px] p-6"
+                className="command-card group min-h-[300px] sm:min-h-[360px] p-5 sm:p-6"
               >
                 <div className="card-media card-media--blue" aria-hidden="true">
                   <img
@@ -87,11 +87,11 @@ const Index = () => {
                     <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
                       FTC planning
                     </p>
-                    <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-foreground">
                       FTC Planning
                     </h3>
                   </div>
-                  <div className="command-card__panel p-4">
+                  <div className="command-card__panel p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">
                       Plan field scenarios, motifs, sequences, and alliance coordination.
                     </p>
@@ -105,7 +105,7 @@ const Index = () => {
 
               <Link
                 to="/frc/planner"
-                className="command-card group min-h-[360px] p-6"
+                className="command-card group min-h-[300px] sm:min-h-[360px] p-5 sm:p-6"
                 onClick={handleFrcGateOpen}
               >
                 <div className="card-media card-media--red" aria-hidden="true">
@@ -115,11 +115,11 @@ const Index = () => {
                     <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
                       Work in progress
                     </p>
-                    <h3 className="mt-2 text-3xl font-semibold text-foreground">
+                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-foreground">
                       FRC Planning
                     </h3>
                   </div>
-                  <div className="command-card__panel p-4">
+                  <div className="command-card__panel p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">
                       Plan match strategy, robot roles, and autonomous paths visually.
                     </p>
@@ -133,7 +133,7 @@ const Index = () => {
             </div>
           </section>
 
-          <section className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.8fr_0.9fr]">
+          <section className="mt-10 sm:mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.8fr_0.9fr]">
             <div className="panel">
               <div className="panel-header">Contact</div>
               <h3 className="text-xl font-semibold text-foreground">Feedback</h3>

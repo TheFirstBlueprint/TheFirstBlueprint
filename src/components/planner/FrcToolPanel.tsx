@@ -1,11 +1,15 @@
 import { Tool, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
 
+type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
+
 interface FrcToolPanelProps {
   activeTool: Tool;
   onToolChange: (tool: Tool) => void;
   penColor: string;
   onPenColorChange: (color: string) => void;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
   onAddRobot: (alliance: Alliance) => string | null;
   canAddRedRobot: boolean;
   canAddBlueRobot: boolean;
@@ -25,6 +29,8 @@ export const FrcToolPanel = ({
   onToolChange,
   penColor,
   onPenColorChange,
+  themeMode,
+  onThemeModeChange,
   onAddRobot,
   canAddRedRobot,
   canAddBlueRobot,
@@ -70,7 +76,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('dotted')}
-            className={cn('tool-button', activeTool === 'dotted' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'dotted' && 'active')}
             title="Dotted line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -79,7 +85,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arrow')}
-            className={cn('tool-button', activeTool === 'arrow' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'arrow' && 'active')}
             title="Arrow line"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -88,7 +94,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('box')}
-            className={cn('tool-button', activeTool === 'box' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'box' && 'active')}
             title="Box"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -97,7 +103,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('rectangle')}
-            className={cn('tool-button', activeTool === 'rectangle' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'rectangle' && 'active')}
             title="Rectangle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -106,7 +112,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('circle')}
-            className={cn('tool-button', activeTool === 'circle' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'circle' && 'active')}
             title="Circle"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
@@ -115,7 +121,7 @@ export const FrcToolPanel = ({
           </button>
           <button
             onClick={() => onToolChange('arc')}
-            className={cn('tool-button', activeTool === 'arc' && 'active')}
+            className={cn('tool-button hidden md:flex', activeTool === 'arc' && 'active')}
             title="Arc"
           >
             <svg
@@ -160,6 +166,20 @@ export const FrcToolPanel = ({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="panel md:hidden">
+        <div className="panel-header">Page Color</div>
+        <select
+          value={themeMode}
+          onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
+          className="w-full rounded-md border border-border/60 bg-background/70 px-3 py-2 text-xs text-foreground shadow-inner shadow-black/20"
+        >
+          <option value="base">Base</option>
+          <option value="dark">Dark Tactical</option>
+          <option value="light">Light</option>
+          <option value="sharkans">Sharkans</option>
+        </select>
       </div>
 
       <div className="panel">

@@ -308,6 +308,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     return () => observer.disconnect();
   }, []);
 
+  const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
+    setThemeMode(nextMode);
+    document.documentElement.setAttribute('data-theme', nextMode);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextMode);
+  }, []);
+
   const fieldImage = useMemo(() => {
     if (themeMode === 'light') return fieldImageLight;
     if (themeMode === 'dark') return fieldImageDark;
@@ -1298,6 +1304,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
+            themeMode={themeMode}
+            onThemeModeChange={handleThemeModeChange}
             onAddRobot={(alliance) =>
               addRobot(alliance, { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 }, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT })
             }
@@ -1590,7 +1598,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       `Active goal: ${(state.randomizedGoal ?? 'blue').toUpperCase()}`}
                   </div>
                 </div>
-                <div className="panel">
+                <div className="panel hidden md:block">
                   <div className="panel-header">Game Timer</div>
                   <div className="text-center text-2xl font-mono text-foreground">
                     {formatTime(timeLeft)}

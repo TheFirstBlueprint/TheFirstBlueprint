@@ -473,6 +473,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     document.documentElement.setAttribute('data-theme', themeMode);
   }, [themeMode]);
 
+  const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
+    setThemeMode(nextMode);
+    setDraftThemeMode(nextMode);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextMode);
+  }, []);
+
   useEffect(() => {
     document.documentElement.style.setProperty('--planner-zoom', String(fieldScale || 1));
     return () => {
@@ -1862,6 +1868,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
+            themeMode={themeMode}
+            onThemeModeChange={handleThemeModeChange}
             motif={motif}
             motifs={motifs}
             onMotifChange={setMotif}
@@ -2481,7 +2489,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   Reset
                 </button>
               </div>
-              <div className="panel">
+              <div className="panel hidden md:block">
                 <div className="panel-header">Game Timer</div>
                 <div className="text-center text-2xl font-mono text-foreground">
                   {formatTime(timeLeft)}
