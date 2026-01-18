@@ -1691,7 +1691,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     title="Play sequence"
                     disabled={sequencePlaying}
                   >
-                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                    <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                      play_arrow
+                    </span>
+                    <span className="landscape-hide-text">
+                      {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                    </span>
                   </button>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
@@ -1747,7 +1752,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       className="tool-button w-full"
                       title="Clear all sequence steps"
                     >
-                      Everything
+                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                        delete
+                      </span>
+                      <span className="landscape-hide-text">Everything</span>
                     </button>
                     <button
                       onClick={handleSequenceDeleteSelected}
@@ -1755,7 +1763,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       title="Delete selected step"
                       disabled={!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]}
                     >
-                      {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                      <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+                        delete_forever
+                      </span>
+                      <span className="landscape-hide-text">
+                        {selectedSequenceStep ? `Sequence Step ${selectedSequenceStep}` : 'Sequence Step'}
+                      </span>
                     </button>
                   </div>
                 </div>

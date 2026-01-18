@@ -222,7 +222,7 @@ export const FrcToolPanel = ({
           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
             auto_fix_high
           </span>
-          <span className="text-xs">Setup Fuel</span>
+          <span className="text-xs landscape-hide-text">Setup Fuel</span>
         </button>
       </div>
 
@@ -233,25 +233,25 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs">Drawings</span>
+            <span className="text-xs landscape-hide-text">Drawings</span>
           </button>
           <button onClick={onClearFuel} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               local_fire_department
             </span>
-            <span className="text-xs">Fuel</span>
+            <span className="text-xs landscape-hide-text">Fuel</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs">Robots</span>
+            <span className="text-xs landscape-hide-text">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive col-span-2">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs">Reset Field</span>
+            <span className="text-xs landscape-hide-text">Reset Field</span>
           </button>
         </div>
       </div>
@@ -263,13 +263,13 @@ export const FrcToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               download
             </span>
-            <span className="text-xs">Export</span>
+            <span className="text-xs landscape-hide-text">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               upload
             </span>
-            <span className="text-xs">Import</span>
+            <span className="text-xs landscape-hide-text">Import</span>
           </button>
         </div>
       </div>

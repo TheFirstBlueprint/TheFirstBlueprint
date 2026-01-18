@@ -228,7 +228,10 @@ export const ToolPanel = ({
           className="tool-button mt-2 w-full"
           title="Randomize motif"
         >
-          Randomize
+          <span className="material-symbols-outlined text-[18px] landscape-only-icon" aria-hidden="true">
+            shuffle
+          </span>
+          <span className="landscape-hide-text">Randomize</span>
         </button>
       </div>
 
@@ -263,7 +266,7 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               auto_fix_high
             </span>
-            <span className="text-xs">Setup Field</span>
+            <span className="text-xs landscape-hide-text">Setup Field</span>
           </button>
         </div>
       </div>
@@ -379,25 +382,25 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs">Drawings</span>
+            <span className="text-xs landscape-hide-text">Drawings</span>
           </button>
           <button onClick={onClearBalls} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               fiber_manual_record
             </span>
-            <span className="text-xs">Balls</span>
+            <span className="text-xs landscape-hide-text">Balls</span>
           </button>
           <button onClick={onClearRobots} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs">Robots</span>
+            <span className="text-xs landscape-hide-text">Robots</span>
           </button>
           <button onClick={onResetField} className="tool-button gap-1 text-destructive">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs">Reset All</span>
+            <span className="text-xs landscape-hide-text">Reset All</span>
           </button>
         </div>
       </div>
@@ -410,13 +413,13 @@ export const ToolPanel = ({
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               download
             </span>
-            <span className="text-xs">Export</span>
+            <span className="text-xs landscape-hide-text">Export</span>
           </button>
           <button onClick={onImport} className="tool-button flex-1 gap-1">
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               upload
             </span>
-            <span className="text-xs">Import</span>
+            <span className="text-xs landscape-hide-text">Import</span>
           </button>
         </div>
       </div>
