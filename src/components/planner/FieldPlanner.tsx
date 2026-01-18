@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState, Ball } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
@@ -2312,13 +2312,45 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       {/* Right Panel */}
       <div className="panel-right w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
         <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
-          <div className="mb-6">
+          <div className="mb-6 mobile-hide">
             <h1 className="font-title text-xl uppercase tracking-[0.2em] text-primary mb-1">
               FTC DECODE
             </h1>
             <p className="font-display text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
               Strategy Planner 2025-26
             </p>
+          </div>
+          <div className="mb-6 mobile-only-flex items-center justify-center gap-2">
+            <Link
+              to="/"
+              className="tool-button !p-1"
+              title="Home"
+              aria-label="Home"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                home
+              </span>
+            </Link>
+            <Link
+              to="/ftc/about"
+              className="tool-button !p-1"
+              title="About"
+              aria-label="About"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                badge
+              </span>
+            </Link>
+            <Link
+              to="/ftc/instructions"
+              className="tool-button !p-1"
+              title="Instructions"
+              aria-label="Instructions"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                info
+              </span>
+            </Link>
           </div>
 
         {robotPanelOpen && selectedRobot && robotDraft ? (
@@ -2582,7 +2614,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                   title="Play sequence"
                   disabled={sequencePlaying}
                 >
-                  {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                  <span className="mobile-hide">{sequencePlaying ? 'Playing...' : 'Play Sequence'}</span>
+                  <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+                    play_arrow
+                  </span>
                 </button>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button

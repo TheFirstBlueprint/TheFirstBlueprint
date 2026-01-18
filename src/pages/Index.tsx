@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import fieldShow from '@/assets/field show.png';
@@ -9,7 +9,6 @@ const Index = () => {
   const [frcGateOpen, setFrcGateOpen] = useState(false);
   const [frcPasscode, setFrcPasscode] = useState('');
   const [frcPasscodeError, setFrcPasscodeError] = useState(false);
-  const [isMobilePortrait, setIsMobilePortrait] = useState(false);
 
   const handleFrcGateOpen = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
@@ -34,16 +33,6 @@ const Index = () => {
     }
     setFrcPasscodeError(true);
   };
-
-  useEffect(() => {
-    const media = window.matchMedia('(hover: none) and (pointer: coarse) and (orientation: portrait)');
-    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
-      setIsMobilePortrait(event.matches);
-    };
-    handleChange(media);
-    media.addEventListener('change', handleChange);
-    return () => media.removeEventListener('change', handleChange);
-  }, []);
 
   return (
     <>
@@ -259,17 +248,6 @@ const Index = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      {isMobilePortrait && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-6 text-center"
-          role="dialog"
-          aria-modal="true"
-        >
-          <p className="text-lg font-semibold text-white">
-            Please rotate your phone to landscape mode.
-          </p>
         </div>
       )}
     </>

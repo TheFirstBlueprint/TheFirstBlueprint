@@ -195,6 +195,41 @@ export const ToolPanel = ({
       </div>
 
       <div className="panel mobile-only-block">
+        <div className="panel-header">Field Setup</div>
+        <div className="relative inline-flex">
+          {showSetupCoachmark && (
+            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-48">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-[11px] text-foreground">Click here to set up the field.</p>
+                <button
+                  type="button"
+                  onClick={onDismissSetupCoachmark}
+                  className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss setup tip"
+                >
+                  X
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={onDismissSetupCoachmark}
+                className="mt-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                Got it
+              </button>
+              <span className="planner-coachmark-arrow absolute -bottom-2 left-6" aria-hidden="true" />
+            </div>
+          )}
+          <button onClick={handleSetupFieldClick} className="tool-button gap-1" data-planner-setup="true">
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              auto_fix_high
+            </span>
+            <span className="text-xs">Setup Field</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="panel mobile-only-block">
         <div className="panel-header">Page Color</div>
         <select
           value={themeMode}
@@ -233,7 +268,7 @@ export const ToolPanel = ({
       </div>
 
       {/* Field Setup */}
-      <div className="panel">
+      <div className="panel mobile-hide">
         <div className="panel-header">Field Setup</div>
         <div className="relative inline-flex">
           {showSetupCoachmark && (
@@ -375,29 +410,29 @@ export const ToolPanel = ({
       <div className="panel">
         <div className="panel-header">Clear</div>
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={onClearDrawings} className="tool-button gap-1">
+          <button onClick={onClearDrawings} className="tool-button gap-1" title="Clear drawings" aria-label="Clear drawings">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
             </span>
-            <span className="text-xs">Drawings</span>
+            <span className="text-xs mobile-hide">Drawings</span>
           </button>
-          <button onClick={onClearBalls} className="tool-button gap-1">
+          <button onClick={onClearBalls} className="tool-button gap-1" title="Clear balls" aria-label="Clear balls">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               fiber_manual_record
             </span>
-            <span className="text-xs">Balls</span>
+            <span className="text-xs mobile-hide">Balls</span>
           </button>
-          <button onClick={onClearRobots} className="tool-button gap-1">
+          <button onClick={onClearRobots} className="tool-button gap-1" title="Clear robots" aria-label="Clear robots">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               crop_square
             </span>
-            <span className="text-xs">Robots</span>
+            <span className="text-xs mobile-hide">Robots</span>
           </button>
-          <button onClick={onResetField} className="tool-button gap-1 text-destructive">
+          <button onClick={onResetField} className="tool-button gap-1 text-destructive" title="Reset all" aria-label="Reset all">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               restart_alt
             </span>
-            <span className="text-xs">Reset All</span>
+            <span className="text-xs mobile-hide">Reset All</span>
           </button>
         </div>
       </div>
