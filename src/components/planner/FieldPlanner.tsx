@@ -1463,10 +1463,19 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       y: (triangleTopY + triangleBottomY) / 2,
     };
 
-    const blueTopId = ensureRobot('blue', 0, { x: goalInset + tileOffset, y: goalInset + tileOffset });
-    const redTopId = ensureRobot('red', 0, { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset });
-    const blueBottomId = ensureRobot('blue', 1, leftMid);
-    const redBottomId = ensureRobot('red', 1, rightMid);
+      const blueTopPosition = { x: goalInset + tileOffset, y: goalInset + tileOffset };
+      const redTopPosition = { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset };
+      const blueTopId = ensureRobot('blue', 0, blueTopPosition);
+      const redTopId = ensureRobot('red', 0, redTopPosition);
+      const blueBottomId = ensureRobot('blue', 1, leftMid);
+      const redBottomId = ensureRobot('red', 1, rightMid);
+
+      if (blueTopId) {
+        updateRobotRotation(blueTopId, getGoalRotation({ alliance: 'blue', position: blueTopPosition }));
+      }
+      if (redTopId) {
+        updateRobotRotation(redTopId, getGoalRotation({ alliance: 'red', position: redTopPosition }));
+      }
 
     const loadout = ['purple', 'purple', 'green'] as const;
     if (blueTopId) loadRobotBalls(blueTopId, [...loadout]);
