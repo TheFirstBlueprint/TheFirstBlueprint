@@ -683,8 +683,8 @@
 @media (hover: none) and (pointer: coarse) {
   .panel-left,
   .panel-right {
-    width: 9rem;
-    max-width: 9rem;
+    width: var(--planner-mobile-panel-width, 9rem);
+    max-width: var(--planner-mobile-panel-width, 9rem);
   }
 
   .panel-left > div,
@@ -721,16 +721,21 @@
     height: 7px;
   }
 
-  .planner-shell .field-container {
-    padding: 0.35rem;
+  .panel-left .panel-header {
+    display: none;
   }
+
+  .planner-shell .field-container {
+    padding: 0;
+  }
+
 }
 
 @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
   .panel-left,
   .panel-right {
-    width: 8.25rem;
-    max-width: 8.25rem;
+    width: var(--planner-mobile-panel-width, 8.25rem);
+    max-width: var(--planner-mobile-panel-width, 8.25rem);
   }
 
   .panel-left > div,
@@ -795,6 +800,11 @@
   .mobile-only-block {
     display: block !important;
   }
+
+  .mobile-robot-action-button {
+    font-size: 0.75rem;
+    line-height: 1;
+  }
 }
 
 
@@ -820,8 +830,8 @@
 
 .planner-viewport-rotated .panel-left,
 .planner-viewport-rotated .panel-right {
-  width: 8.25rem;
-  max-width: 8.25rem;
+  width: var(--planner-mobile-panel-width, 8.25rem);
+  max-width: var(--planner-mobile-panel-width, 8.25rem);
 }
 
 .planner-viewport-rotated .panel-left > div,
@@ -858,5 +868,5 @@
 }
 
 .planner-viewport-rotated .planner-shell .field-container {
-  padding: 0.25rem;
+  padding: 0;
 }

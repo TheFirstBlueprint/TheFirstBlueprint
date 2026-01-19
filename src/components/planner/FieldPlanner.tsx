@@ -11,6 +11,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const FIELD_SIZE = 600; 
 const FIELD_INCHES = 144;
@@ -224,6 +225,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches ?? false
   );
+  const [viewport, setViewport] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
@@ -375,6 +380,19 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     handleChange(media);
     media.addEventListener('change', handleChange);
     return () => media.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
   }, []);
 
   useEffect(() => {
@@ -544,6 +562,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }, [state.robots]);
 
   const updateFieldScale = useCallback(() => {
+    if (isMobile) {
+      const targetSize = Math.min(viewport.width, viewport.height);
+      if (targetSize <= 0) return;
+      const nextScale = Math.max(0.1, targetSize / FIELD_SIZE);
+      setFieldScale((prev) => (Math.abs(prev - nextScale) > 0.01 ? nextScale : prev));
+      return;
+    }
     const area = fieldAreaRef.current;
     if (!area) return;
     const styles = window.getComputedStyle(area);
@@ -555,7 +580,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const targetSize = Math.min(availableWidth, availableHeight) * FIELD_SCREEN_RATIO;
     const nextScale = Math.max(0.1, (targetSize / FIELD_SIZE) * FIELD_SCALE_MULTIPLIER);
     setFieldScale((prev) => (Math.abs(prev - nextScale) > 0.01 ? nextScale : prev));
-  }, []);
+  }, [isMobile, viewport.height, viewport.width]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      document.documentElement.style.removeProperty('--planner-mobile-panel-width');
+      return;
+    }
+    const targetSize = Math.min(viewport.width, viewport.height);
+    const remainingWidth = Math.max(0, viewport.width - targetSize);
+    const panelWidth = remainingWidth / 2;
+    document.documentElement.style.setProperty('--planner-mobile-panel-width', `${panelWidth}px`);
+  }, [isMobile, viewport.height, viewport.width]);
 
   const updatePlannerMetrics = useCallback(() => {
     const frame = fieldFrameRef.current;
@@ -563,6 +599,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const rect = frame.getBoundingClientRect();
     document.documentElement.style.setProperty('--planner-field-width', `${rect.width}px`);
     document.documentElement.style.setProperty('--planner-field-left', `${rect.left}px`);
+    document.documentElement.style.setProperty('--planner-field-top', `${rect.top}px`);
+    document.documentElement.style.setProperty('--planner-field-height', `${rect.height}px`);
   }, []);
 
   useEffect(() => {
@@ -601,6 +639,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       observer.disconnect();
       document.documentElement.style.removeProperty('--planner-field-width');
       document.documentElement.style.removeProperty('--planner-field-left');
+      document.documentElement.style.removeProperty('--planner-field-top');
+      document.documentElement.style.removeProperty('--planner-field-height');
     };
   }, [updateFieldScale, updatePlannerMetrics]);
 
@@ -1423,10 +1463,19 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       y: (triangleTopY + triangleBottomY) / 2,
     };
 
-    const blueTopId = ensureRobot('blue', 0, { x: goalInset + tileOffset, y: goalInset + tileOffset });
-    const redTopId = ensureRobot('red', 0, { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset });
-    const blueBottomId = ensureRobot('blue', 1, leftMid);
-    const redBottomId = ensureRobot('red', 1, rightMid);
+      const blueTopPosition = { x: goalInset + tileOffset, y: goalInset + tileOffset };
+      const redTopPosition = { x: FIELD_SIZE - goalInset - tileOffset, y: goalInset + tileOffset };
+      const blueTopId = ensureRobot('blue', 0, blueTopPosition);
+      const redTopId = ensureRobot('red', 0, redTopPosition);
+      const blueBottomId = ensureRobot('blue', 1, leftMid);
+      const redBottomId = ensureRobot('red', 1, rightMid);
+
+      if (blueTopId) {
+        updateRobotRotation(blueTopId, getGoalRotation({ alliance: 'blue', position: blueTopPosition }));
+      }
+      if (redTopId) {
+        updateRobotRotation(redTopId, getGoalRotation({ alliance: 'red', position: redTopPosition }));
+      }
 
     const loadout = ['purple', 'purple', 'green'] as const;
     if (blueTopId) loadRobotBalls(blueTopId, [...loadout]);
@@ -1904,10 +1953,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     <div className={`h-full bg-background flex planner-shell ${className ?? ''}`}>
       {/* Left Panel */}
       <div className="panel-left w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
-        <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
-          <ToolPanel
-            activeTool={activeTool}
-            onToolChange={setActiveTool}
+          <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
+            <ToolPanel
+              activeTool={activeTool}
+              onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
             themeMode={themeMode}
@@ -1930,13 +1979,109 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
-            showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
-            onDismissSetupCoachmark={dismissSetupCoachmark}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
+              showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
+              onDismissSetupCoachmark={dismissSetupCoachmark}
+            />
+            {isMobile && selectedRobot && (
+              <div className="panel mobile-only-block">
+                <div className="grid grid-cols-6 gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        handleRobotShoot(selectedRobot.id, 'all');
+                      }
+                    }}
+                    className="tool-button !p-1"
+                    title="Shoot all balls (K)"
+                  >
+                    K
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        cycleRobotBalls(selectedRobot.id);
+                      }
+                    }}
+                    className="tool-button !p-1"
+                    title="Cycle balls (L)"
+                    disabled={selectedRobot.heldBalls.length <= 1}
+                  >
+                    L
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        rotateSelectedRobot(-45);
+                      }
+                    }}
+                    className="tool-button !p-1"
+                    title="Rotate left"
+                  >
+                    <span className="material-symbols-outlined text-[16px] scale-x-[-1]" aria-hidden="true">
+                      rotate_right
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        rotateSelectedRobot(45);
+                      }
+                    }}
+                    className="tool-button !p-1"
+                    title="Rotate right"
+                  >
+                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                      rotate_right
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        setRobotModes((prev) => ({
+                          ...prev,
+                          [selectedRobot.id]: {
+                            intake: !prev[selectedRobot.id]?.intake,
+                            outtake: prev[selectedRobot.id]?.outtake ?? false,
+                          },
+                        }));
+                      }
+                    }}
+                    className={cn('tool-button !p-1', robotModes[selectedRobot.id]?.intake && 'active')}
+                    title="Toggle intake (I)"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isInputLocked) {
+                        handleRobotShoot(selectedRobot.id, 'single');
+                      }
+                    }}
+                    className="tool-button !p-1 text-ball-green"
+                    title="Shoot one ball (O)"
+                    disabled={selectedRobot.heldBalls.length === 0}
+                  >
+                    O
+                  </button>
+                </div>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -1946,7 +2091,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       {/* Field Area */}
       <div
         ref={fieldAreaRef}
-        className="flex-1 flex items-start justify-center p-8 pt-6 field-container"
+        className={`flex-1 flex items-start justify-center field-container ${isMobile ? 'p-0' : 'p-8 pt-6'}`}
       >
         <div
           ref={fieldFrameRef}
@@ -2316,6 +2461,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 dimensions={dimensions}
                 displayName={displayName}
                 isSelected={selectedRobotId === robot.id}
+                isMobile={isMobile}
                 onSelect={() => {
                   setSelectedRobotId(robot.id);
                 }}

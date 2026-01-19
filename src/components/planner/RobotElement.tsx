@@ -7,6 +7,7 @@ interface RobotElementProps {
   dimensions: { width: number; height: number };
   displayName: string;
   isSelected: boolean;
+  isMobile: boolean;
   onSelect: () => void;
   onPositionChange: (x: number, y: number) => void;
   onRotate: (delta: number) => void;
@@ -28,6 +29,7 @@ export const RobotElement = ({
   dimensions,
   displayName,
   isSelected,
+  isMobile,
   onSelect,
   onPositionChange,
   onRotate,
@@ -46,6 +48,10 @@ export const RobotElement = ({
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
   const hasImage = Boolean(robot.imageDataUrl);
+  const safeMargin = 10;
+  const mobileActionSize = isMobile ? 28 : 0;
+  const mobileUnderBotOffset = dimensions.height / 2 + safeMargin + 22;
+  const mobileUnderBotSpacing = 20;
   useEffect(() => {
     positionRef.current = robot.position;
   }, [robot.position.x, robot.position.y]);
@@ -184,80 +190,119 @@ export const RobotElement = ({
 
       {/* Controls (shown when selected) */}
       {isSelected && (
-        <div
-          className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex gap-1"
-          style={{ transform: 'translateX(-50%)', transformOrigin: 'center center' }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-45); }}
-            className="tool-button !p-1"
-            title="Rotate left"
-          >
-            <span className="material-symbols-outlined text-[16px] scale-x-[-1]" aria-hidden="true">
-              rotate_right
-            </span>
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(45); }}
-            className="tool-button !p-1"
-            title="Rotate right"
-          >
-            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-              rotate_right
-            </span>
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(); }}
-            className="tool-button !p-1"
-            title="Edit robot"
-          >
-            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-              edit
-            </span>
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleIntake(); }}
-            className={cn('tool-button !p-1', intakeActive && 'active')}
-            title="Toggle intake (I)"
-          >
-            I
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}
-            className="tool-button !p-1"
-            title="Shoot all balls (K)"
-          >
-            K
-          </button>
-          {robot.heldBalls.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); if (!isLocked) onCycleBalls(); }}
-              className="tool-button !p-1"
-              title="Cycle balls (L)"
+        <>
+          {isMobile ? (
+            <>
+              {[-mobileUnderBotSpacing / 2, mobileUnderBotSpacing / 2].map((offset, index) => (
+                <button
+                  key={`mobile-${index}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isLocked) return;
+                    if (index === 0) {
+                      onEdit();
+                    } else {
+                      onRemove();
+                    }
+                  }}
+                  className={cn(
+                    'tool-button !p-1 absolute mobile-robot-action-button',
+                    index === 1 && 'text-destructive'
+                  )}
+                  title={index === 0 ? 'Edit robot' : 'Remove robot'}
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    width: mobileActionSize,
+                    height: mobileActionSize,
+                    transform: `translate(-50%, -50%) translate(${offset}px, ${mobileUnderBotOffset}px)`,
+                    transformOrigin: 'center center',
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                    {index === 0 ? 'edit' : 'delete'}
+                  </span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <div
+              className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex gap-1"
+              style={{ transform: 'translateX(-50%)', transformOrigin: 'center center' }}
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              L
-            </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-45); }}
+                className="tool-button !p-1"
+                title="Rotate left"
+              >
+                <span className="material-symbols-outlined text-[16px] scale-x-[-1]" aria-hidden="true">
+                  rotate_right
+                </span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(45); }}
+                className="tool-button !p-1"
+                title="Rotate right"
+              >
+                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                  rotate_right
+                </span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(); }}
+                className="tool-button !p-1"
+                title="Edit robot"
+              >
+                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                  edit
+                </span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onToggleIntake(); }}
+                className={cn('tool-button !p-1', intakeActive && 'active')}
+                title="Toggle intake (I)"
+              >
+                I
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectAll(); }}
+                className="tool-button !p-1"
+                title="Shoot all balls (K)"
+              >
+                K
+              </button>
+              {robot.heldBalls.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (!isLocked) onCycleBalls(); }}
+                  className="tool-button !p-1"
+                  title="Cycle balls (L)"
+                >
+                  L
+                </button>
+              )}
+              {robot.heldBalls.length > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
+                  className="tool-button !p-1 text-ball-green"
+                  title="Shoot one ball (O)"
+                >
+                  O
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(); }}
+                className="tool-button !p-1 text-destructive"
+                title="Remove robot"
+              >
+                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                  delete
+                </span>
+              </button>
+            </div>
           )}
-          {robot.heldBalls.length > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); if (!isLocked) onEjectSingle(); }}
-              className="tool-button !p-1 text-ball-green"
-              title="Shoot one ball (O)"
-            >
-              O
-            </button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(); }}
-            className="tool-button !p-1 text-destructive"
-            title="Remove robot"
-          >
-            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-              delete
-            </span>
-          </button>
-        </div>
+        </>
       )}
     </div>
   );
