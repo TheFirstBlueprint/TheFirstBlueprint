@@ -3,8 +3,8 @@ import { FrcSiteHeader } from '@/components/site/FrcSiteHeader';
 import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
-  { name: 'FTC Build Lead', role: 'Developer' },
-  { name: 'FTC Code Lead', role: 'Developerfefefe' },
+  { name: '27272', role: 'Build Lead' },
+  { name: '27272', role: 'Code Lead' },
 ];
 
 const FrcAbout = () => {
@@ -33,7 +33,7 @@ const FrcAbout = () => {
             <div className="grid gap-4 md:grid-cols-2">
               {CONTRIBUTORS.map((contributor) => (
                 <div
-                  key={contributor.name}
+                  key={`${contributor.name}-${contributor.role}`}
                   className="rounded-lg border border-border bg-card p-4"
                 >
                   <h3 className="text-base font-semibold text-foreground">{contributor.name}</h3>
