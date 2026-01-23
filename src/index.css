@@ -226,6 +226,10 @@
     color: hsl(var(--selection-foreground));
   }
 
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
   .font-mono {
     font-family: var(--font-mono);
   }
