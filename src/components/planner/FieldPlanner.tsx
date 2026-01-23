@@ -252,6 +252,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const redClassifierExtensionRef = useRef<HTMLDivElement>(null);
   const blueClassifierExtensionRef = useRef<HTMLDivElement>(null);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+  const isDrawTool =
+    activeTool === 'pen' ||
+    activeTool === 'dotted' ||
+    activeTool === 'arrow' ||
+    activeTool === 'box' ||
+    activeTool === 'rectangle' ||
+    activeTool === 'circle' ||
+    activeTool === 'arc';
   const pixelsPerInch = FIELD_SIZE / FIELD_INCHES;
   const classifierBallSize = CLASSIFIER_STACK.slotSize * 0.86;
   const classifierStackWidth = CLASSIFIER_STACK.slotSize + CLASSIFIER_STACK.padding * 2;
@@ -2157,6 +2165,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               isLocked={isInputLocked}
               scale={fieldScale}
               isGhost={classifierBallIds.has(ball.id)}
+              disablePointerEvents={isDrawTool}
             />
           ))}
 
@@ -2490,6 +2499,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 }
                 isLocked={isInputLocked}
                 scale={fieldScale}
+                disablePointerEvents={isDrawTool}
               />
             );
           })}

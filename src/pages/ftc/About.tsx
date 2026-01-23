@@ -39,8 +39,8 @@ const FtcAbout = () => {
                   key={`${contributor.name}-${contributor.role}`}
                   className="rounded-lg border border-border bg-card p-4"
                 >
-                  <h3 className="text-base font-semibold text-foreground">{contributor.name}</h3>
-                  <p className="text-xs text-muted-foreground">{contributor.role}</p>
+                  <h3 className="text-lg font-semibold text-foreground">{contributor.name}</h3>
+                  <p className="text-sm text-muted-foreground">{contributor.role}</p>
                 </div>
               ))}
             </div>

@@ -22,6 +22,7 @@ interface RobotElementProps {
   onRemoveHeldBall: (ballId: string) => void;
   isLocked: boolean;
   scale: number;
+  disablePointerEvents?: boolean;
 }
 
 export const RobotElement = ({
@@ -44,6 +45,7 @@ export const RobotElement = ({
   onRemoveHeldBall,
   isLocked,
   scale,
+  disablePointerEvents,
 }: RobotElementProps) => {
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
@@ -108,6 +110,7 @@ export const RobotElement = ({
         height: dimensions.height,
         transform: `rotate(${robot.rotation}deg)`,
         zIndex: isSelected ? 50 : 20,
+        pointerEvents: disablePointerEvents ? 'none' : 'auto',
       }}
       onPointerDown={handlePointerDown}
       onClick={handleClick}

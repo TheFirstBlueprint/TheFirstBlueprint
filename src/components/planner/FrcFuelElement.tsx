@@ -11,6 +11,7 @@ interface FrcFuelElementProps {
   clampPosition: (x: number, y: number) => Position;
   isLocked: boolean;
   scale: number;
+  disablePointerEvents?: boolean;
 }
 
 export const FrcFuelElement = ({
@@ -23,6 +24,7 @@ export const FrcFuelElement = ({
   clampPosition,
   isLocked,
   scale,
+  disablePointerEvents,
 }: FrcFuelElementProps) => {
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -74,6 +76,7 @@ export const FrcFuelElement = ({
         background: 'radial-gradient(circle at 30% 30%, #ffe4a3 0%, #f59e0b 55%, #b45309 100%)',
         boxShadow: '0 0 6px rgba(0,0,0,0.25)',
         zIndex: 14,
+        pointerEvents: disablePointerEvents ? 'none' : 'auto',
       }}
       onPointerDown={handlePointerDown}
       data-fuel-id={id}
