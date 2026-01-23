@@ -962,9 +962,6 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
-      if (step.fuelState) {
-        restoreFuelState(step.fuelState);
-      }
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -994,6 +991,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         };
         window.requestAnimationFrame(tick);
       });
+      if (step.fuelState) {
+        restoreFuelState(step.fuelState);
+      }
       isApplyingSequenceRef.current = false;
     }
     setSequencePlaying(false);

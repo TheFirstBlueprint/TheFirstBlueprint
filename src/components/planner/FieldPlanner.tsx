@@ -1113,12 +1113,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
-      if (step.ballState) {
-        restoreBallState(step.ballState);
-      }
-      if (step.rawScores) {
-        setRawScores(step.rawScores);
-      }
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -1148,6 +1142,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         };
         window.requestAnimationFrame(tick);
       });
+      if (step.ballState) {
+        restoreBallState(step.ballState);
+      }
+      if (step.rawScores) {
+        setRawScores(step.rawScores);
+      }
       isApplyingSequenceRef.current = false;
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
