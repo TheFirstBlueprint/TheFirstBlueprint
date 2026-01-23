@@ -68,6 +68,9 @@ const DEFAULT_KEYBINDS = {
 };
 const MIN_SEQUENCE = 10;
 const MAX_SEQUENCE = 50;
+const MAX_BOUNDARY_STEP = 4;
+const PERIMETER_BG_THRESHOLD = 10;
+const PERIMETER_INSET = 10;
 
 type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
 type Keybinds = typeof DEFAULT_KEYBINDS;
@@ -84,6 +87,11 @@ type ShotFuel = {
   id: string;
   start: Position;
   target: Position;
+};
+
+type Point = {
+  x: number;
+  y: number;
 };
 
 type SolidRect = {
@@ -128,6 +136,162 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'darkTactical') return 'dark';
   if (value === 'basic') return 'base';
   return 'dark';
+};
+
+const simplifyPolyline = (points: Point[], epsilon: number): Point[] => {
+  if (points.length < 3) return points;
+  const distanceToSegment = (point: Point, a: Point, b: Point) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    if (dx === 0 && dy === 0) {
+      return Math.hypot(point.x - a.x, point.y - a.y);
+    }
+    const t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy);
+    const clamped = Math.max(0, Math.min(1, t));
+    const proj = { x: a.x + clamped * dx, y: a.y + clamped * dy };
+    return Math.hypot(point.x - proj.x, point.y - proj.y);
+  };
+
+  const simplifySegment = (pts: Point[], start: number, end: number, epsilonValue: number, keep: boolean[]) => {
+    let maxDistance = 0;
+    let index = -1;
+    const a = pts[start];
+    const b = pts[end];
+    for (let i = start + 1; i < end; i += 1) {
+      const dist = distanceToSegment(pts[i], a, b);
+      if (dist > maxDistance) {
+        maxDistance = dist;
+        index = i;
+      }
+    }
+    if (maxDistance > epsilonValue && index !== -1) {
+      keep[index] = true;
+      simplifySegment(pts, start, index, epsilonValue, keep);
+      simplifySegment(pts, index, end, epsilonValue, keep);
+    }
+  };
+
+  const keep = new Array(points.length).fill(false);
+  keep[0] = true;
+  keep[points.length - 1] = true;
+  simplifySegment(points, 0, points.length - 1, epsilon, keep);
+  return points.filter((_, idx) => keep[idx]);
+};
+
+const insetPolygon = (points: Point[], inset: number): Point[] => {
+  if (points.length === 0) return points;
+  const centroid = points.reduce(
+    (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+    { x: 0, y: 0 }
+  );
+  centroid.x /= points.length;
+  centroid.y /= points.length;
+  return points.map((point) => {
+    const dx = centroid.x - point.x;
+    const dy = centroid.y - point.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist === 0) return point;
+    const scale = inset / dist;
+    return { x: point.x + dx * scale, y: point.y + dy * scale };
+  });
+};
+
+const buildPerimeterFromImage = (image: HTMLImageElement): Point[] => {
+  const canvas = document.createElement('canvas');
+  canvas.width = FIELD_WIDTH;
+  canvas.height = FIELD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return [];
+
+  const scale = Math.max(FIELD_WIDTH / image.width, FIELD_HEIGHT / image.height);
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  const dx = (FIELD_WIDTH - drawWidth) / 2;
+  const dy = (FIELD_HEIGHT - drawHeight) / 2;
+  ctx.clearRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
+  ctx.drawImage(image, dx, dy, drawWidth, drawHeight);
+
+  const { data } = ctx.getImageData(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
+  const bg = [data[0], data[1], data[2]];
+  const inside = new Array(FIELD_WIDTH * FIELD_HEIGHT).fill(false);
+  for (let y = 0; y < FIELD_HEIGHT; y += 1) {
+    for (let x = 0; x < FIELD_WIDTH; x += 1) {
+      const idx = (y * FIELD_WIDTH + x) * 4;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      const isBackground =
+        Math.abs(r - bg[0]) <= PERIMETER_BG_THRESHOLD &&
+        Math.abs(g - bg[1]) <= PERIMETER_BG_THRESHOLD &&
+        Math.abs(b - bg[2]) <= PERIMETER_BG_THRESHOLD;
+      inside[y * FIELD_WIDTH + x] = !isBackground;
+    }
+  }
+
+  const isInside = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= FIELD_WIDTH || y >= FIELD_HEIGHT) return false;
+    return inside[y * FIELD_WIDTH + x];
+  };
+
+  let start: Point | null = null;
+  for (let y = 0; y < FIELD_HEIGHT && !start; y += 1) {
+    for (let x = 0; x < FIELD_WIDTH; x += 1) {
+      if (!isInside(x, y)) continue;
+      if (!isInside(x - 1, y) || !isInside(x + 1, y) || !isInside(x, y - 1) || !isInside(x, y + 1)) {
+        start = { x, y };
+        break;
+      }
+    }
+  }
+  if (!start) return [];
+
+  const neighbors = [
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: 1 },
+    { x: -1, y: 1 },
+    { x: -1, y: 0 },
+    { x: -1, y: -1 },
+    { x: 0, y: -1 },
+    { x: 1, y: -1 },
+  ];
+
+  const contour: Point[] = [];
+  let current = start;
+  let backtrack = { x: start.x - 1, y: start.y };
+  const startBacktrack = { ...backtrack };
+  const maxIterations = FIELD_WIDTH * FIELD_HEIGHT * 4;
+
+  for (let iter = 0; iter < maxIterations; iter += 1) {
+    contour.push({ ...current });
+    const dx = backtrack.x - current.x;
+    const dy = backtrack.y - current.y;
+    let startIndex = neighbors.findIndex((n) => n.x === dx && n.y === dy);
+    if (startIndex === -1) startIndex = 4;
+
+    let next: Point | null = null;
+    let nextBacktrack: Point | null = null;
+    for (let i = 0; i < 8; i += 1) {
+      const idx = (startIndex + 1 + i) % 8;
+      const candidate = { x: current.x + neighbors[idx].x, y: current.y + neighbors[idx].y };
+      if (isInside(candidate.x, candidate.y)) {
+        next = candidate;
+        const backIdx = (idx + 7) % 8;
+        nextBacktrack = { x: current.x + neighbors[backIdx].x, y: current.y + neighbors[backIdx].y };
+        break;
+      }
+    }
+    if (!next || !nextBacktrack) break;
+    current = next;
+    backtrack = nextBacktrack;
+    if (current.x === start.x && current.y === start.y && backtrack.x === startBacktrack.x && backtrack.y === startBacktrack.y) {
+      break;
+    }
+  }
+
+  if (contour.length < 3) return [];
+  const simplified = simplifyPolyline(contour, 1.25);
+  return insetPolygon(simplified, PERIMETER_INSET);
 };
 
 const ShotFuelElement = ({
@@ -232,7 +396,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<FrcRobot[]>([]);
   const isApplyingSequenceRef = useRef(false);
+  const fieldPerimeterRef = useRef<Point[] | null>(null);
+  const lastBoundaryWarningRef = useRef(0);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+  const isDev = import.meta.env?.DEV ?? false;
 
   useEffect(() => {
     persistedFrcPlannerState = {
@@ -306,6 +473,20 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     const observer = new MutationObserver(syncTheme);
     observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    const image = new Image();
+    image.src = fieldImageBasic;
+    image.onload = () => {
+      if (canceled) return;
+      const perimeter = buildPerimeterFromImage(image);
+      fieldPerimeterRef.current = perimeter;
+    };
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
@@ -554,6 +735,112 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
+  const fallbackPerimeter = useMemo<Point[]>(() => (
+    insetPolygon([
+      { x: 0, y: 0 },
+      { x: FIELD_WIDTH, y: 0 },
+      { x: FIELD_WIDTH, y: FIELD_HEIGHT },
+      { x: 0, y: FIELD_HEIGHT },
+    ], PERIMETER_INSET)
+  ), []);
+
+  const getPerimeter = useCallback(() => fieldPerimeterRef.current ?? fallbackPerimeter, [fallbackPerimeter]);
+
+  const isPointOnSegment = useCallback((point: Point, a: Point, b: Point, tolerance = 0.5) => {
+    const cross = (point.y - a.y) * (b.x - a.x) - (point.x - a.x) * (b.y - a.y);
+    if (Math.abs(cross) > tolerance) return false;
+    const dot = (point.x - a.x) * (b.x - a.x) + (point.y - a.y) * (b.y - a.y);
+    if (dot < 0) return false;
+    const lenSq = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+    if (dot > lenSq) return false;
+    return true;
+  }, []);
+
+  const isPointInsidePolygon = useCallback((point: Point, polygon: Point[]) => {
+    if (polygon.length < 3) return false;
+    for (let i = 0; i < polygon.length; i += 1) {
+      const a = polygon[i];
+      const b = polygon[(i + 1) % polygon.length];
+      if (isPointOnSegment(point, a, b)) return true;
+    }
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+      const xi = polygon[i].x;
+      const yi = polygon[i].y;
+      const xj = polygon[j].x;
+      const yj = polygon[j].y;
+      const intersects = yi > point.y !== yj > point.y &&
+        point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+      if (intersects) inside = !inside;
+    }
+    return inside;
+  }, [isPointOnSegment]);
+
+  const segmentsIntersect = useCallback((p1: Point, p2: Point, q1: Point, q2: Point) => {
+    const orientation = (a: Point, b: Point, c: Point) => {
+      const value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+      if (Math.abs(value) < 1e-6) return 0;
+      return value > 0 ? 1 : 2;
+    };
+    const onSegment = (a: Point, b: Point, c: Point) =>
+      Math.min(a.x, c.x) <= b.x && b.x <= Math.max(a.x, c.x) &&
+      Math.min(a.y, c.y) <= b.y && b.y <= Math.max(a.y, c.y);
+
+    const o1 = orientation(p1, p2, q1);
+    const o2 = orientation(p1, p2, q2);
+    const o3 = orientation(q1, q2, p1);
+    const o4 = orientation(q1, q2, p2);
+
+    if (o1 !== o2 && o3 !== o4) return true;
+    if (o1 === 0 && onSegment(p1, q1, p2)) return true;
+    if (o2 === 0 && onSegment(p1, q2, p2)) return true;
+    if (o3 === 0 && onSegment(q1, p1, q2)) return true;
+    if (o4 === 0 && onSegment(q1, p2, q2)) return true;
+    return false;
+  }, []);
+
+  const doesSegmentIntersectPolygon = useCallback((a: Point, b: Point, polygon: Point[]) => {
+    for (let i = 0; i < polygon.length; i += 1) {
+      const p1 = polygon[i];
+      const p2 = polygon[(i + 1) % polygon.length];
+      if (segmentsIntersect(a, b, p1, p2)) return true;
+    }
+    return false;
+  }, [segmentsIntersect]);
+
+  const getRobotCorners = useCallback((position: { x: number; y: number }, rotation: number, dimensions: { width: number; height: number }) => {
+    const halfW = dimensions.width / 2;
+    const halfH = dimensions.height / 2;
+    const radians = (rotation * Math.PI) / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const offsets = [
+      { x: -halfW, y: -halfH },
+      { x: halfW, y: -halfH },
+      { x: halfW, y: halfH },
+      { x: -halfW, y: halfH },
+    ];
+    return offsets.map((offset) => ({
+      x: position.x + offset.x * cos - offset.y * sin,
+      y: position.y + offset.x * sin + offset.y * cos,
+    }));
+  }, []);
+
+  const isRobotFootprintInside = useCallback(
+    (position: { x: number; y: number }, rotation: number, dimensions: { width: number; height: number }) => {
+      const perimeter = getPerimeter();
+      const corners = getRobotCorners(position, rotation, dimensions);
+      if (!corners.every((corner) => isPointInsidePolygon(corner, perimeter))) return false;
+      for (let i = 0; i < corners.length; i += 1) {
+        const a = corners[i];
+        const b = corners[(i + 1) % corners.length];
+        if (doesSegmentIntersectPolygon(a, b, perimeter)) return false;
+      }
+      return true;
+    },
+    [doesSegmentIntersectPolygon, getPerimeter, getRobotCorners, isPointInsidePolygon]
+  );
+
   const rectsOverlap = useCallback((a: SolidRect, b: SolidRect) => {
     if (a.right <= b.left || a.left >= b.right) return false;
     if (a.bottom <= b.top || a.top >= b.bottom) return false;
@@ -614,6 +901,82 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     [clampToField, resolveSolidOverlap]
   );
 
+  const clampRobotPositionToBoundary = useCallback(
+    (position: { x: number; y: number }, rotation: number, dimensions: { width: number; height: number }) => {
+      if (isRobotFootprintInside(position, rotation, dimensions)) return position;
+      const center = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
+      const dx = center.x - position.x;
+      const dy = center.y - position.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance === 0) return position;
+      const steps = Math.max(1, Math.ceil(distance / MAX_BOUNDARY_STEP));
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        const candidate = { x: position.x + dx * t, y: position.y + dy * t };
+        if (isRobotFootprintInside(candidate, rotation, dimensions)) {
+          return candidate;
+        }
+      }
+      return position;
+    },
+    [isRobotFootprintInside]
+  );
+
+  const applyConstrainedRobotPosition = useCallback(
+    (robotId: string, target: { x: number; y: number }, rotationOverride?: number) => {
+      const robot = state.robots.find((item) => item.id === robotId);
+      if (!robot) return;
+      const dimensions = getRobotDimensions(robot);
+      const rotation = rotationOverride ?? robot.rotation;
+      const start = robot.position;
+      const dx = target.x - start.x;
+      const dy = target.y - start.y;
+      const distance = Math.hypot(dx, dy);
+      const steps = Math.max(1, Math.ceil(distance / MAX_BOUNDARY_STEP));
+      let last = start;
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        const candidate = { x: start.x + dx * t, y: start.y + dy * t };
+        if (isRobotFootprintInside(candidate, rotation, dimensions)) {
+          last = candidate;
+        } else {
+          break;
+        }
+      }
+      updateRobotPosition(robotId, last);
+      if (isDev && (last.x !== target.x || last.y !== target.y)) {
+        const now = Date.now();
+        if (now - lastBoundaryWarningRef.current > 300) {
+          console.warn('[FRC boundary] clamped robot position', { robotId, target, clamped: last });
+          lastBoundaryWarningRef.current = now;
+        }
+      }
+    },
+    [getRobotDimensions, isRobotFootprintInside, state.robots, updateRobotPosition]
+  );
+
+  useEffect(() => {
+    const shouldLog = isDev;
+    const now = Date.now();
+    state.robots.forEach((robot) => {
+      const dimensions = getRobotDimensions(robot);
+      if (!isRobotFootprintInside(robot.position, robot.rotation, dimensions)) {
+        const clamped = clampRobotPositionToBoundary(robot.position, robot.rotation, dimensions);
+        if (clamped.x !== robot.position.x || clamped.y !== robot.position.y) {
+          updateRobotPosition(robot.id, clamped);
+        }
+        if (shouldLog && now - lastBoundaryWarningRef.current > 300) {
+          console.warn('[FRC boundary] robot outside perimeter', {
+            robotId: robot.id,
+            position: robot.position,
+            rotation: robot.rotation,
+          });
+          lastBoundaryWarningRef.current = now;
+        }
+      }
+    });
+  }, [clampRobotPositionToBoundary, getRobotDimensions, isRobotFootprintInside, isDev, state.robots, updateRobotPosition]);
+
   const clampFuelPosition = useCallback(
     (x: number, y: number) => resolvePositionWithSolids({ x, y }, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, []),
     [resolvePositionWithSolids]
@@ -631,9 +994,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         dimensions.height,
         goalSolidRects
       );
-      updateRobotPosition(robotId, candidate);
+      applyConstrainedRobotPosition(robotId, candidate, movingRobot.rotation);
     },
-    [getRobotDimensions, goalSolidRects, isInputLocked, resolvePositionWithSolids, state.robots, updateRobotPosition]
+    [applyConstrainedRobotPosition, getRobotDimensions, goalSolidRects, isInputLocked, resolvePositionWithSolids, state.robots]
   );
 
   const handleFuelMove = useCallback(
@@ -889,7 +1252,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         const position = step.positions[robot.id];
         const rotation = step.rotations[robot.id];
         if (position) {
-          updateRobotPosition(robot.id, position);
+          applyConstrainedRobotPosition(robot.id, position, rotation ?? robot.rotation);
         }
         if (rotation !== undefined) {
           updateRobotRotation(robot.id, rotation);
@@ -902,7 +1265,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         isApplyingSequenceRef.current = false;
       }, 0);
     },
-    [restoreFuelState, sequenceSteps, updateRobotPosition, updateRobotRotation]
+    [applyConstrainedRobotPosition, restoreFuelState, sequenceSteps, updateRobotRotation]
   );
 
   const handleSelectSequenceStep = useCallback(
@@ -962,9 +1325,6 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
-      if (step.fuelState) {
-        restoreFuelState(step.fuelState);
-      }
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -980,11 +1340,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             const target = step.positions[robot.id] ?? robot.position;
             const startRot = robot.rotation;
             const targetRot = step.rotations[robot.id] ?? startRot;
-            updateRobotPosition(robot.id, {
+            const nextPosition = {
               x: robot.position.x + (target.x - robot.position.x) * t,
               y: robot.position.y + (target.y - robot.position.y) * t,
-            });
-            updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
+            };
+            const nextRotation = startRot + (targetRot - startRot) * t;
+            applyConstrainedRobotPosition(robot.id, nextPosition, nextRotation);
+            updateRobotRotation(robot.id, nextRotation);
           });
           if (t < 1) {
             window.requestAnimationFrame(tick);
@@ -994,10 +1356,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         };
         window.requestAnimationFrame(tick);
       });
+      if (step.fuelState) {
+        restoreFuelState(step.fuelState);
+      }
       isApplyingSequenceRef.current = false;
     }
     setSequencePlaying(false);
-  }, [maxSequence, restoreFuelState, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [applyConstrainedRobotPosition, maxSequence, restoreFuelState, sequencePlaying, sequenceSteps, updateRobotRotation]);
 
   useEffect(() => {
     if (sequenceSteps[selectedSequenceStep ?? -1]) {
@@ -1223,16 +1588,18 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       const robots = alliance === 'blue' ? blueRobots : redRobots;
       const existing = robots[index];
       if (!existing) {
-        return addRobot(alliance, position, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT });
+        const sizeIn = DEFAULT_ROBOT_FT * FIELD_UNITS_PER_FOOT;
+        const constrained = clampRobotPositionToBoundary(position, 0, { width: sizeIn, height: sizeIn });
+        return addRobot(alliance, constrained, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT });
       }
-      updateRobotPosition(existing.id, position);
+      applyConstrainedRobotPosition(existing.id, position, existing.rotation);
       return existing.id;
     };
 
     defaultRobotSpawns.forEach((spawn, index) => {
       ensureRobot(spawn.alliance, index % 3, spawn.position);
     });
-  }, [addRobot, defaultRobotSpawns, state.robots, updateRobotPosition]);
+  }, [addRobot, applyConstrainedRobotPosition, clampRobotPositionToBoundary, defaultRobotSpawns, state.robots]);
 
   const handleSetupField = () => {
     setupRobots();
@@ -1259,9 +1626,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     clearDrawings();
     clearFuel();
     setShotFuel([]);
+    const sizeIn = DEFAULT_ROBOT_FT * FIELD_UNITS_PER_FOOT;
     seedRobots(defaultRobotSpawns.map((spawn) => ({
       alliance: spawn.alliance,
-      position: spawn.position,
+      position: clampRobotPositionToBoundary(spawn.position, 0, { width: sizeIn, height: sizeIn }),
       sizeFt: DEFAULT_ROBOT_FT,
     })));
     if (hasFuelSetup) {
@@ -1306,9 +1674,15 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             onPenColorChange={setPenColor}
             themeMode={themeMode}
             onThemeModeChange={handleThemeModeChange}
-            onAddRobot={(alliance) =>
-              addRobot(alliance, { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 }, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT })
-            }
+            onAddRobot={(alliance) => {
+              const sizeIn = DEFAULT_ROBOT_FT * FIELD_UNITS_PER_FOOT;
+              const start = clampRobotPositionToBoundary(
+                { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 },
+                0,
+                { width: sizeIn, height: sizeIn }
+              );
+              addRobot(alliance, start, { width: DEFAULT_ROBOT_FT, height: DEFAULT_ROBOT_FT });
+            }}
             canAddRedRobot={canAddRedRobot}
             canAddBlueRobot={canAddBlueRobot}
             onClearDrawings={clearDrawings}
@@ -1431,7 +1805,6 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     setSelectedRobotId(null);
                     handleRobotPanelClose();
                   }}
-                  fieldBounds={{ width: FIELD_WIDTH, height: FIELD_HEIGHT }}
                   isLocked={isInputLocked}
                   scale={fieldScale}
                 />
