@@ -3,8 +3,8 @@ import { FrcSiteHeader } from '@/components/site/FrcSiteHeader';
 import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
-  { name: '27272', role: 'Build Lead' },
-  { name: '27272', role: 'Code Lead' },
+  { name: 'Prabhnoor S', role: 'Build Lead' },
+  { name: 'Jacob J', role: 'Code Lead' },
 ];
 
 const FrcAbout = () => {
