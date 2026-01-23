@@ -289,10 +289,63 @@
       radial-gradient(1200px 700px at 20% 10%, hsl(var(--primary) / 0.12), transparent 55%),
       radial-gradient(900px 600px at 80% 0%, hsl(var(--alliance-red) / 0.08), transparent 60%),
       hsl(var(--background));
-    height: calc(100dvh - var(--planner-footer-height, 0px));
+    min-height: calc(100vh - var(--planner-footer-height, 0px));
+    height: calc(var(--app-height, 100dvh) - var(--planner-footer-height, 0px));
     overflow: hidden;
   }
 
+  .planner-page-mobile {
+    min-height: 100vh;
+    height: 100dvh;
+    height: var(--app-height, 100dvh);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .planner-install-hint {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+    box-shadow: 0 12px 24px hsl(var(--background) / 0.35);
+    font-size: 0.75rem;
+    z-index: 60;
+  }
+
+  .planner-install-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .planner-install-action,
+  .planner-install-dismiss {
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--secondary) / 0.85);
+    color: hsl(var(--foreground));
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .planner-install-dismiss {
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    line-height: 1;
+  }
   .field-container {
     position: relative;
     background:
@@ -870,3 +923,6 @@
 .planner-viewport-rotated .planner-shell .field-container {
   padding: 0;
 }
+
+
+
