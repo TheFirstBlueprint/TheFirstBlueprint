@@ -20,10 +20,16 @@ const GOAL_HEIGHT = 156;
 const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 120;
-const MAGNET_RADIUS = 10;
+const MAGNET_RADIUS = 6;
 const CLASSIFIED_POINTS = 3;
 const OVERFLOW_POINTS = 1;
 const MOTIF_POINTS = 2;
+const PARK_ZONE_SIZE_IN = 24;
+const PARK_FULL_ENTER_RATIO = 0.98;
+const PARK_FULL_EXIT_RATIO = 0.93;
+const PARK_SEMI_ENTER_RATIO = 0.3;
+const PARK_SEMI_EXIT_RATIO = 0.2;
+const PARK_FULL_TOLERANCE_PX = 2;
 const MAGNET_TARGETS = {
   blue: [{ x: 0.7275, y: 0.761 }],
   red: [{ x: 0.27, y: 0.761 }],
@@ -93,6 +99,7 @@ type SequenceStep = {
   };
   rawScores: { red: number; blue: number };
 };
+type ParkState = 'not' | 'semi' | 'full';
 
 type PersistedFieldPlannerState = {
   version: 1;
@@ -251,6 +258,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const redClassifierExtensionRef = useRef<HTMLDivElement>(null);
   const blueClassifierExtensionRef = useRef<HTMLDivElement>(null);
+  const parkStateRef = useRef<Record<string, ParkState>>({});
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const isDrawTool =
     activeTool === 'pen' ||
@@ -289,6 +297,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     }),
     []
   );
+  const parkZoneSize = PARK_ZONE_SIZE_IN * pixelsPerInch;
+  const parkZones = useMemo(() => {
+    const buildZone = (target: { x: number; y: number } | null) => {
+      if (!target) return null;
+      const half = parkZoneSize / 2;
+      return {
+        left: target.x - half,
+        right: target.x + half,
+        top: target.y - half,
+        bottom: target.y + half,
+      };
+    };
+    return {
+      red: buildZone(magnetTargetsPx.red),
+      blue: buildZone(magnetTargetsPx.blue),
+    };
+  }, [magnetTargetsPx.blue, magnetTargetsPx.red, parkZoneSize]);
   const classifierBallIds = useMemo(() => {
     const ids = new Set<string>();
     state.classifiers.blue.balls.forEach((ball) => ids.add(ball.id));
@@ -891,43 +916,99 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
-  const isDoubleParked = useCallback(
-    (alliance: 'red' | 'blue') => {
-      const target = magnetTargetsPx[alliance];
-      if (!target) return false;
-      const robots = state.robots.filter((robot) => robot.alliance === alliance);
-      if (robots.length < 2) return false;
-      for (let i = 0; i < robots.length - 1; i++) {
-        const a = robots[i];
-        const aDx = a.position.x - target.x;
-        const aDy = a.position.y - target.y;
-        const aMagnetized = Math.sqrt(aDx * aDx + aDy * aDy) <= MAGNET_RADIUS;
-        if (!aMagnetized) continue;
-        const aDim = getRobotDimensions(a);
-        const aRect = getRobotRect(a.position.x, a.position.y, aDim.width, aDim.height);
-        for (let j = i + 1; j < robots.length; j++) {
-          const b = robots[j];
-          const bDx = b.position.x - target.x;
-          const bDy = b.position.y - target.y;
-          const bMagnetized = Math.sqrt(bDx * bDx + bDy * bDy) <= MAGNET_RADIUS;
-          if (!bMagnetized) continue;
-          const bDim = getRobotDimensions(b);
-          const bRect = getRobotRect(b.position.x, b.position.y, bDim.width, bDim.height);
-          const overlaps =
-            aRect.left < bRect.right &&
-            aRect.right > bRect.left &&
-            aRect.top < bRect.bottom &&
-            aRect.bottom > bRect.top;
-          if (overlaps) return true;
-        }
-      }
-      return false;
+  const getRectOverlapArea = useCallback(
+    (
+      a: { left: number; right: number; top: number; bottom: number },
+      b: { left: number; right: number; top: number; bottom: number }
+    ) => {
+      const overlapWidth = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const overlapHeight = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      return overlapWidth * overlapHeight;
     },
-    [getRobotDimensions, getRobotRect, magnetTargetsPx, state.robots]
+    []
   );
 
-  const isRedDoubleParked = isDoubleParked('red');
-  const isBlueDoubleParked = isDoubleParked('blue');
+  const parkStates = useMemo(() => {
+    const nextStates: Record<string, ParkState> = {};
+    state.robots.forEach((robot) => {
+      const zone = parkZones[robot.alliance];
+      if (!zone) {
+        nextStates[robot.id] = 'not';
+        return;
+      }
+      const dimensions = getRobotDimensions(robot);
+      const rect = getRobotRect(robot.position.x, robot.position.y, dimensions.width, dimensions.height);
+      const robotArea = dimensions.width * dimensions.height;
+      const overlapArea = getRectOverlapArea(rect, zone);
+      const overlapRatio = robotArea > 0 ? overlapArea / robotArea : 0;
+      const centerInZone =
+        robot.position.x >= zone.left &&
+        robot.position.x <= zone.right &&
+        robot.position.y >= zone.top &&
+        robot.position.y <= zone.bottom;
+      const insideZone =
+        rect.left >= zone.left + PARK_FULL_TOLERANCE_PX &&
+        rect.right <= zone.right - PARK_FULL_TOLERANCE_PX &&
+        rect.top >= zone.top + PARK_FULL_TOLERANCE_PX &&
+        rect.bottom <= zone.bottom - PARK_FULL_TOLERANCE_PX;
+      const fullEnter = insideZone && overlapRatio >= PARK_FULL_ENTER_RATIO;
+      const fullExit = insideZone && overlapRatio >= PARK_FULL_EXIT_RATIO;
+      const semiEnter = overlapRatio >= PARK_SEMI_ENTER_RATIO || centerInZone;
+      const semiExit = overlapRatio >= PARK_SEMI_EXIT_RATIO || centerInZone;
+      const previous = parkStateRef.current[robot.id] ?? 'not';
+      let next: ParkState = 'not';
+
+      if (previous === 'full') {
+        if (fullExit) {
+          next = 'full';
+        } else if (semiExit) {
+          next = 'semi';
+        }
+      } else if (previous === 'semi') {
+        if (fullEnter) {
+          next = 'full';
+        } else if (semiExit) {
+          next = 'semi';
+        }
+      } else if (fullEnter) {
+        next = 'full';
+      } else if (semiEnter) {
+        next = 'semi';
+      }
+
+      nextStates[robot.id] = next;
+    });
+    return nextStates;
+  }, [getRectOverlapArea, getRobotDimensions, getRobotRect, parkZones, state.robots]);
+
+  useEffect(() => {
+    parkStateRef.current = parkStates;
+  }, [parkStates]);
+
+  const parkCounts = useMemo(() => {
+    const counts = { red: { full: 0, semi: 0 }, blue: { full: 0, semi: 0 } };
+    state.robots.forEach((robot) => {
+      const stateValue = parkStates[robot.id];
+      if (stateValue === 'full') {
+        counts[robot.alliance].full += 1;
+      } else if (stateValue === 'semi') {
+        counts[robot.alliance].semi += 1;
+      }
+    });
+    return counts;
+  }, [parkStates, state.robots]);
+
+  const parkScores = useMemo(() => {
+    const toScore = (count: { full: number; semi: number }) =>
+      count.full >= 2 ? 30 : count.full * 10 + count.semi * 5;
+    return {
+      red: toScore(parkCounts.red),
+      blue: toScore(parkCounts.blue),
+    };
+  }, [parkCounts]);
+
+  const isRedDoubleParked = parkCounts.red.full >= 2;
+  const isBlueDoubleParked = parkCounts.blue.full >= 2;
 
   const isRobotTouchingLever = useCallback(
     (robot: typeof state.robots[number], lever: { x: number; y: number }) => {
@@ -1029,9 +1110,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }), [motifCounts]);
 
   const overallScores = useMemo(() => ({
-    red: rawScores.red + motifScores.red,
-    blue: rawScores.blue + motifScores.blue,
-  }), [motifScores, rawScores]);
+    red: rawScores.red + motifScores.red + parkScores.red,
+    blue: rawScores.blue + motifScores.blue + parkScores.blue,
+  }), [motifScores, parkScores, rawScores]);
 
   const handleScoreReset = useCallback(() => {
     setRawScores({ red: 0, blue: 0 });
@@ -2706,6 +2787,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         <div className="flex items-center justify-between">
                           <span>Motif Score</span>
                           <span className="font-mono text-foreground">{motifScores[alliance]}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Park</span>
+                          <span className="font-mono text-foreground">{parkScores[alliance]}</span>
                         </div>
                       </div>
                     </div>
