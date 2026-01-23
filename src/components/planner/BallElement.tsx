@@ -14,6 +14,7 @@ interface BallElementProps {
   isLocked: boolean;
   scale: number;
   isGhost?: boolean;
+  disablePointerEvents?: boolean;
 }
 
 const BALL_SIZE = 20;
@@ -30,6 +31,7 @@ export const BallElement = ({
   isLocked,
   scale,
   isGhost,
+  disablePointerEvents,
 }: BallElementProps) => {
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -100,6 +102,7 @@ export const BallElement = ({
         width: BALL_SIZE,
         height: BALL_SIZE,
         zIndex: 15,
+        pointerEvents: disablePointerEvents ? 'none' : 'auto',
       }}
       onPointerDown={handlePointerDown}
     />

@@ -399,6 +399,14 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const fieldPerimeterRef = useRef<Point[] | null>(null);
   const lastBoundaryWarningRef = useRef(0);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+  const isDrawTool =
+    activeTool === 'pen' ||
+    activeTool === 'dotted' ||
+    activeTool === 'arrow' ||
+    activeTool === 'box' ||
+    activeTool === 'rectangle' ||
+    activeTool === 'circle' ||
+    activeTool === 'arc';
   const isDev = import.meta.env?.DEV ?? false;
 
   useEffect(() => {
@@ -1772,6 +1780,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                 clampPosition={clampFuelPosition}
                 isLocked={isInputLocked}
                 scale={fieldScale}
+                disablePointerEvents={isDrawTool}
               />
             ))}
 
@@ -1807,6 +1816,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                   }}
                   isLocked={isInputLocked}
                   scale={fieldScale}
+                  disablePointerEvents={isDrawTool}
                 />
               );
             })}

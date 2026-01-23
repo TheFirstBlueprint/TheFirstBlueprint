@@ -14,6 +14,7 @@ interface FrcRobotElementProps {
   onRemove: () => void;
   isLocked: boolean;
   scale: number;
+  disablePointerEvents?: boolean;
 }
 
 export const FrcRobotElement = ({
@@ -28,6 +29,7 @@ export const FrcRobotElement = ({
   onRemove,
   isLocked,
   scale,
+  disablePointerEvents,
 }: FrcRobotElementProps) => {
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
@@ -89,6 +91,7 @@ export const FrcRobotElement = ({
         height: dimensions.height,
         transform: `rotate(${robot.rotation}deg)`,
         zIndex: isSelected ? 50 : 20,
+        pointerEvents: disablePointerEvents ? 'none' : 'auto',
       }}
       onPointerDown={handlePointerDown}
       onClick={handleClick}

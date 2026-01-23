@@ -202,112 +202,74 @@ export const DrawingCanvas = ({
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isLocked) return;
-    if (!isDrawTool && activeTool !== 'eraser') return;
-
-    const point = getCanvasPointFromClient(e.clientX, e.clientY);
-
-    if (isDrawTool) {
-      setIsDrawing(true);
-      setCurrentPath(isShapeTool ? [point, point] : [point]);
-    } else if (activeTool === 'eraser') {
-      // Find and remove path near click
-      const clickRadius = 10;
-      for (const drawing of drawings) {
-        if (drawing.shape && drawing.shape !== 'path') {
-          const start = drawing.points[0];
-          const end = drawing.points[1];
-          const rawWidth = Math.abs(end.x - start.x);
-          const rawHeight = Math.abs(end.y - start.y);
-          const size = Math.max(rawWidth, rawHeight);
-          const drawWidth = drawing.shape === 'rectangle' ? rawWidth : size;
-          const drawHeight = drawing.shape === 'rectangle' ? rawHeight : size;
-          const dx = end.x - start.x;
-          const dy = end.y - start.y;
-          const chordLength = Math.hypot(dx, dy);
-          const minX =
-            drawing.shape === 'arc'
-              ? (start.x + end.x) / 2 - chordLength / Math.SQRT2 - clickRadius
-              : Math.min(start.x, end.x) - clickRadius;
-          const minY =
-            drawing.shape === 'arc'
-              ? (start.y + end.y) / 2 - chordLength / Math.SQRT2 - clickRadius
-              : Math.min(start.y, end.y) - clickRadius;
-          if (
-            point.x >= minX &&
-            point.x <= minX + drawWidth + clickRadius * 2 &&
-            point.y >= minY &&
-            point.y <= minY + drawHeight + clickRadius * 2
-          ) {
+  const eraseAtPoint = (point: Position) => {
+    const clickRadius = 10;
+    for (const drawing of drawings) {
+      if (drawing.shape && drawing.shape !== 'path') {
+        const start = drawing.points[0];
+        const end = drawing.points[1];
+        const rawWidth = Math.abs(end.x - start.x);
+        const rawHeight = Math.abs(end.y - start.y);
+        const size = Math.max(rawWidth, rawHeight);
+        const drawWidth = drawing.shape === 'rectangle' ? rawWidth : size;
+        const drawHeight = drawing.shape === 'rectangle' ? rawHeight : size;
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const chordLength = Math.hypot(dx, dy);
+        const minX =
+          drawing.shape === 'arc'
+            ? (start.x + end.x) / 2 - chordLength / Math.SQRT2 - clickRadius
+            : Math.min(start.x, end.x) - clickRadius;
+        const minY =
+          drawing.shape === 'arc'
+            ? (start.y + end.y) / 2 - chordLength / Math.SQRT2 - clickRadius
+            : Math.min(start.y, end.y) - clickRadius;
+        if (
+          point.x >= minX &&
+          point.x <= minX + drawWidth + clickRadius * 2 &&
+          point.y >= minY &&
+          point.y <= minY + drawHeight + clickRadius * 2
+        ) {
+          onRemoveDrawing(drawing.id);
+          break;
+        }
+      } else {
+        for (const pathPoint of drawing.points) {
+          const dx = pathPoint.x - point.x;
+          const dy = pathPoint.y - point.y;
+          if (Math.sqrt(dx * dx + dy * dy) < clickRadius) {
             onRemoveDrawing(drawing.id);
             break;
-          }
-        } else {
-          for (const pathPoint of drawing.points) {
-            const dx = pathPoint.x - point.x;
-            const dy = pathPoint.y - point.y;
-            if (Math.sqrt(dx * dx + dy * dy) < clickRadius) {
-              onRemoveDrawing(drawing.id);
-              break;
-            }
           }
         }
       }
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isLocked) return;
-    if (!isDrawing || !isDrawTool) return;
-
-    const point = getCanvasPointFromClient(e.clientX, e.clientY);
-    setCurrentPath((prev) => {
-      if (isShapeTool) {
-        return [prev[0], point];
-      }
-      return [...prev, point];
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (isLocked) return;
-    if (!isDrawing || !isDrawTool) return;
-
-    if (currentPath.length > 1) {
-      const newPath: DrawingPath = {
-        id: `path-${++pathIdCounter}-${Date.now()}`,
-        points: currentPath,
-        color: penColor,
-        width: penWidth,
-        style: isShapeTool ? 'solid' : getDrawingStyle(activeTool),
-        shape: isShapeTool ? (activeTool as DrawingShape) : 'path',
-      };
-      onAddDrawing(newPath);
-    }
-
-    setIsDrawing(false);
-    setCurrentPath([]);
-  };
-
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType === 'mouse') return;
     if (isLocked) return;
-    if (!isDrawTool) return;
+    if (!isDrawTool && activeTool !== 'eraser') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     e.preventDefault();
-    (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
+    e.stopPropagation();
     const point = getCanvasPointFromClient(e.clientX, e.clientY);
+    if (activeTool === 'eraser') {
+      eraseAtPoint(point);
+      return;
+    }
+    if (!isDrawTool) return;
+    (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
     setIsDrawing(true);
     setCurrentPath(isShapeTool ? [point, point] : [point]);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType === 'mouse') return;
     if (isLocked) return;
     if (!isDrawing || !isDrawTool) return;
 
     e.preventDefault();
+    e.stopPropagation();
     const point = getCanvasPointFromClient(e.clientX, e.clientY);
     setCurrentPath((prev) => {
       if (isShapeTool) {
@@ -318,11 +280,15 @@ export const DrawingCanvas = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType === 'mouse') return;
+    const canvas = e.currentTarget;
+    if (canvas.hasPointerCapture(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
     if (isLocked) return;
     if (!isDrawing || !isDrawTool) return;
 
     e.preventDefault();
+    e.stopPropagation();
     if (currentPath.length > 1) {
       const newPath: DrawingPath = {
         id: `path-${++pathIdCounter}-${Date.now()}`,
@@ -351,10 +317,6 @@ export const DrawingCanvas = ({
         touchAction: isDrawTool ? 'none' : 'auto',
         cursor: isDrawTool ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
