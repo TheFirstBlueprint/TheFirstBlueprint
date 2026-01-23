@@ -12,7 +12,6 @@ interface FrcRobotElementProps {
   onRotate: (delta: number) => void;
   onEdit: () => void;
   onRemove: () => void;
-  fieldBounds: { width: number; height: number };
   isLocked: boolean;
   scale: number;
 }
@@ -27,7 +26,6 @@ export const FrcRobotElement = ({
   onRotate,
   onEdit,
   onRemove,
-  fieldBounds,
   isLocked,
   scale,
 }: FrcRobotElementProps) => {
@@ -56,10 +54,8 @@ export const FrcRobotElement = ({
       const dx = (moveEvent.clientX - lastMouseRef.current.x) / normalizedScale;
       const dy = (moveEvent.clientY - lastMouseRef.current.y) / normalizedScale;
       const basePosition = positionRef.current;
-      const halfWidth = dimensions.width / 2;
-      const halfHeight = dimensions.height / 2;
-      const newX = Math.max(halfWidth, Math.min(fieldBounds.width - halfWidth, basePosition.x + dx));
-      const newY = Math.max(halfHeight, Math.min(fieldBounds.height - halfHeight, basePosition.y + dy));
+      const newX = basePosition.x + dx;
+      const newY = basePosition.y + dy;
       onPositionChange(newX, newY);
       lastMouseRef.current = { x: moveEvent.clientX, y: moveEvent.clientY };
     };
