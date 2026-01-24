@@ -24,6 +24,7 @@ const MAGNET_RADIUS = 6;
 const CLASSIFIED_POINTS = 3;
 const OVERFLOW_POINTS = 1;
 const MOTIF_POINTS = 2;
+const TRAIL_POINT_MIN_DISTANCE = 2;
 const PARK_ZONE_SIZE_IN = 24;
 const PARK_FULL_ENTER_RATIO = 0.98;
 const PARK_FULL_EXIT_RATIO = 0.93;
@@ -98,6 +99,12 @@ type SequenceStep = {
     overflowCounts: { red: number; blue: number };
   };
   rawScores: { red: number; blue: number };
+};
+type TrailPoint = { x: number; y: number };
+type TrailSegment = {
+  id: string;
+  alliance: 'red' | 'blue';
+  points: TrailPoint[];
 };
 type ParkState = 'not' | 'semi' | 'full';
 
@@ -252,6 +259,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<Robot[]>([]);
   const isApplyingSequenceRef = useRef(false);
+  const trailsByBotRef = useRef<Record<string, TrailSegment[]>>({});
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
@@ -382,6 +390,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     if (themeMode === 'sharkans') return fieldImageBasic;
     return fieldImageBasic;
   }, [themeMode]);
+  const [, setTrailVersion] = useState(0);
+  const clearTrails = useCallback(() => {
+    trailsByBotRef.current = {};
+    setTrailVersion((prev) => prev + 1);
+  }, []);
   const isFieldUninitialized = useMemo(() => {
     return (
       state.robots.length === 0 &&
@@ -427,6 +440,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       window.removeEventListener('orientationchange', updateViewport);
     };
   }, []);
+
+  useEffect(() => {
+    if (!sequencePlaying) {
+      clearTrails();
+    }
+  }, [clearTrails, sequencePlaying]);
 
   useEffect(() => {
     if (!isMobile || !shouldShowSetupCoachmark) {
@@ -1192,12 +1211,48 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
 
+  const startMovementTrails = useCallback((robots: Robot[]) => {
+    const next: Record<string, TrailSegment[]> = { ...trailsByBotRef.current };
+    const stamp = Date.now();
+    robots.forEach((robot, index) => {
+      const existing = next[robot.id] ? [...next[robot.id]] : [];
+      const fresh: TrailSegment = {
+        id: `${stamp}-${robot.id}-${index}`,
+        alliance: robot.alliance,
+        points: [{ x: robot.position.x, y: robot.position.y }],
+      };
+      existing.push(fresh);
+      if (existing.length > 2) {
+        existing.splice(0, existing.length - 2);
+      }
+      next[robot.id] = existing;
+    });
+    trailsByBotRef.current = next;
+    setTrailVersion((prev) => prev + 1);
+  }, []);
+
+  const appendTrailPoint = useCallback((robotId: string, point: TrailPoint) => {
+    const trails = trailsByBotRef.current[robotId];
+    if (!trails || trails.length === 0) return;
+    const active = trails[trails.length - 1];
+    const last = active.points[active.points.length - 1];
+    if (last) {
+      const dx = point.x - last.x;
+      const dy = point.y - last.y;
+      if (dx * dx + dy * dy < TRAIL_POINT_MIN_DISTANCE * TRAIL_POINT_MIN_DISTANCE) {
+        return;
+      }
+    }
+    active.points.push(point);
+  }, []);
+
   const playSequence = useCallback(async () => {
     if (sequencePlaying) return;
     if (Object.keys(sequenceSteps).length === 0) {
       toast.error('Save at least one step to play the sequence.');
       return;
     }
+    clearTrails();
     setSequencePlaying(true);
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
@@ -1207,6 +1262,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         position: { ...robot.position },
         rotation: robot.rotation,
       }));
+      startMovementTrails(robotsRef.current);
       isApplyingSequenceRef.current = true;
       await new Promise<void>((resolve) => {
         const startTime = window.performance.now();
@@ -1217,10 +1273,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             const target = step.positions[robot.id] ?? robot.position;
             const startRot = robot.rotation;
             const targetRot = step.rotations[robot.id] ?? startRot;
-            updateRobotPosition(robot.id, {
+            const nextPosition = {
               x: robot.position.x + (target.x - robot.position.x) * t,
               y: robot.position.y + (target.y - robot.position.y) * t,
-            });
+            };
+            updateRobotPosition(robot.id, nextPosition);
+            appendTrailPoint(robot.id, nextPosition);
             updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
           });
           if (t < 1) {
@@ -1241,7 +1299,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
     setSequencePlaying(false);
-  }, [maxSequence, restoreBallState, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [
+    appendTrailPoint,
+    clearTrails,
+    maxSequence,
+    restoreBallState,
+    sequencePlaying,
+    sequenceSteps,
+    startMovementTrails,
+    updateRobotPosition,
+    updateRobotRotation,
+  ]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1614,6 +1682,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+  const handleResetField = useCallback(() => {
+    resetField();
+    clearTrails();
+  }, [clearTrails, resetField]);
 
   const handleAddHumanPlayerBall = (alliance: 'red' | 'blue', color: 'green' | 'purple') => {
     const placed = addHumanPlayerBall(alliance, color);
@@ -2063,7 +2135,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onClearDrawings={clearDrawings}
             onClearBalls={clearBalls}
             onClearRobots={clearRobots}
-            onResetField={resetField}
+            onResetField={handleResetField}
             onSetupField={handleSetupField}
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
@@ -2229,6 +2301,37 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             isLocked={isInputLocked}
             scale={fieldScale}
           />
+
+          {sequencePlaying && (
+            <svg
+              className="absolute inset-0 z-[5] pointer-events-none"
+              width={FIELD_SIZE}
+              height={FIELD_SIZE}
+              viewBox={`0 0 ${FIELD_SIZE} ${FIELD_SIZE}`}
+            >
+              {Object.entries(trailsByBotRef.current).flatMap(([robotId, trails]) =>
+                trails.map((trail) => {
+                  if (trail.points.length < 2) return null;
+                  const path = trail.points
+                    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+                    .join(' ');
+                  return (
+                    <path
+                      key={`${robotId}-${trail.id}`}
+                      d={path}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeOpacity={0.45}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={trail.alliance === 'red' ? 'text-alliance-red' : 'text-alliance-blue'}
+                    />
+                  );
+                })
+              )}
+            </svg>
+          )}
 
           {/* Balls */}
           {state.balls.map((ball) => (
