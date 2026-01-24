@@ -20,10 +20,17 @@ const GOAL_HEIGHT = 156;
 const AUTON_SECONDS = 30;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 120;
-const MAGNET_RADIUS = 10;
+const MAGNET_RADIUS = 6;
 const CLASSIFIED_POINTS = 3;
 const OVERFLOW_POINTS = 1;
 const MOTIF_POINTS = 2;
+const TRAIL_POINT_MIN_DISTANCE = 2;
+const PARK_ZONE_SIZE_IN = 24;
+const PARK_FULL_ENTER_RATIO = 0.98;
+const PARK_FULL_EXIT_RATIO = 0.93;
+const PARK_SEMI_ENTER_RATIO = 0.3;
+const PARK_SEMI_EXIT_RATIO = 0.2;
+const PARK_FULL_TOLERANCE_PX = 2;
 const MAGNET_TARGETS = {
   blue: [{ x: 0.7275, y: 0.761 }],
   red: [{ x: 0.27, y: 0.761 }],
@@ -93,6 +100,13 @@ type SequenceStep = {
   };
   rawScores: { red: number; blue: number };
 };
+type TrailPoint = { x: number; y: number };
+type TrailSegment = {
+  id: string;
+  alliance: 'red' | 'blue';
+  points: TrailPoint[];
+};
+type ParkState = 'not' | 'semi' | 'full';
 
 type PersistedFieldPlannerState = {
   version: 1;
@@ -245,12 +259,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<Robot[]>([]);
   const isApplyingSequenceRef = useRef(false);
+  const trailsByBotRef = useRef<Record<string, TrailSegment[]>>({});
   const redClassifierRef = useRef<HTMLDivElement>(null);
   const blueClassifierRef = useRef<HTMLDivElement>(null);
   const redClassifierFieldRef = useRef<HTMLDivElement>(null);
   const blueClassifierFieldRef = useRef<HTMLDivElement>(null);
   const redClassifierExtensionRef = useRef<HTMLDivElement>(null);
   const blueClassifierExtensionRef = useRef<HTMLDivElement>(null);
+  const parkStateRef = useRef<Record<string, ParkState>>({});
   const isInputLocked = timerRunning && timerPhase === 'transition';
   const isDrawTool =
     activeTool === 'pen' ||
@@ -289,6 +305,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     }),
     []
   );
+  const parkZoneSize = PARK_ZONE_SIZE_IN * pixelsPerInch;
+  const parkZones = useMemo(() => {
+    const buildZone = (target: { x: number; y: number } | null) => {
+      if (!target) return null;
+      const half = parkZoneSize / 2;
+      return {
+        left: target.x - half,
+        right: target.x + half,
+        top: target.y - half,
+        bottom: target.y + half,
+      };
+    };
+    return {
+      red: buildZone(magnetTargetsPx.red),
+      blue: buildZone(magnetTargetsPx.blue),
+    };
+  }, [magnetTargetsPx.blue, magnetTargetsPx.red, parkZoneSize]);
   const classifierBallIds = useMemo(() => {
     const ids = new Set<string>();
     state.classifiers.blue.balls.forEach((ball) => ids.add(ball.id));
@@ -357,6 +390,11 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     if (themeMode === 'sharkans') return fieldImageBasic;
     return fieldImageBasic;
   }, [themeMode]);
+  const [, setTrailVersion] = useState(0);
+  const clearTrails = useCallback(() => {
+    trailsByBotRef.current = {};
+    setTrailVersion((prev) => prev + 1);
+  }, []);
   const isFieldUninitialized = useMemo(() => {
     return (
       state.robots.length === 0 &&
@@ -402,6 +440,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       window.removeEventListener('orientationchange', updateViewport);
     };
   }, []);
+
+  useEffect(() => {
+    if (!sequencePlaying) {
+      clearTrails();
+    }
+  }, [clearTrails, sequencePlaying]);
 
   useEffect(() => {
     if (!isMobile || !shouldShowSetupCoachmark) {
@@ -891,43 +935,99 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
-  const isDoubleParked = useCallback(
-    (alliance: 'red' | 'blue') => {
-      const target = magnetTargetsPx[alliance];
-      if (!target) return false;
-      const robots = state.robots.filter((robot) => robot.alliance === alliance);
-      if (robots.length < 2) return false;
-      for (let i = 0; i < robots.length - 1; i++) {
-        const a = robots[i];
-        const aDx = a.position.x - target.x;
-        const aDy = a.position.y - target.y;
-        const aMagnetized = Math.sqrt(aDx * aDx + aDy * aDy) <= MAGNET_RADIUS;
-        if (!aMagnetized) continue;
-        const aDim = getRobotDimensions(a);
-        const aRect = getRobotRect(a.position.x, a.position.y, aDim.width, aDim.height);
-        for (let j = i + 1; j < robots.length; j++) {
-          const b = robots[j];
-          const bDx = b.position.x - target.x;
-          const bDy = b.position.y - target.y;
-          const bMagnetized = Math.sqrt(bDx * bDx + bDy * bDy) <= MAGNET_RADIUS;
-          if (!bMagnetized) continue;
-          const bDim = getRobotDimensions(b);
-          const bRect = getRobotRect(b.position.x, b.position.y, bDim.width, bDim.height);
-          const overlaps =
-            aRect.left < bRect.right &&
-            aRect.right > bRect.left &&
-            aRect.top < bRect.bottom &&
-            aRect.bottom > bRect.top;
-          if (overlaps) return true;
-        }
-      }
-      return false;
+  const getRectOverlapArea = useCallback(
+    (
+      a: { left: number; right: number; top: number; bottom: number },
+      b: { left: number; right: number; top: number; bottom: number }
+    ) => {
+      const overlapWidth = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const overlapHeight = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      return overlapWidth * overlapHeight;
     },
-    [getRobotDimensions, getRobotRect, magnetTargetsPx, state.robots]
+    []
   );
 
-  const isRedDoubleParked = isDoubleParked('red');
-  const isBlueDoubleParked = isDoubleParked('blue');
+  const parkStates = useMemo(() => {
+    const nextStates: Record<string, ParkState> = {};
+    state.robots.forEach((robot) => {
+      const zone = parkZones[robot.alliance];
+      if (!zone) {
+        nextStates[robot.id] = 'not';
+        return;
+      }
+      const dimensions = getRobotDimensions(robot);
+      const rect = getRobotRect(robot.position.x, robot.position.y, dimensions.width, dimensions.height);
+      const robotArea = dimensions.width * dimensions.height;
+      const overlapArea = getRectOverlapArea(rect, zone);
+      const overlapRatio = robotArea > 0 ? overlapArea / robotArea : 0;
+      const centerInZone =
+        robot.position.x >= zone.left &&
+        robot.position.x <= zone.right &&
+        robot.position.y >= zone.top &&
+        robot.position.y <= zone.bottom;
+      const insideZone =
+        rect.left >= zone.left + PARK_FULL_TOLERANCE_PX &&
+        rect.right <= zone.right - PARK_FULL_TOLERANCE_PX &&
+        rect.top >= zone.top + PARK_FULL_TOLERANCE_PX &&
+        rect.bottom <= zone.bottom - PARK_FULL_TOLERANCE_PX;
+      const fullEnter = insideZone && overlapRatio >= PARK_FULL_ENTER_RATIO;
+      const fullExit = insideZone && overlapRatio >= PARK_FULL_EXIT_RATIO;
+      const semiEnter = overlapRatio >= PARK_SEMI_ENTER_RATIO || centerInZone;
+      const semiExit = overlapRatio >= PARK_SEMI_EXIT_RATIO || centerInZone;
+      const previous = parkStateRef.current[robot.id] ?? 'not';
+      let next: ParkState = 'not';
+
+      if (previous === 'full') {
+        if (fullExit) {
+          next = 'full';
+        } else if (semiExit) {
+          next = 'semi';
+        }
+      } else if (previous === 'semi') {
+        if (fullEnter) {
+          next = 'full';
+        } else if (semiExit) {
+          next = 'semi';
+        }
+      } else if (fullEnter) {
+        next = 'full';
+      } else if (semiEnter) {
+        next = 'semi';
+      }
+
+      nextStates[robot.id] = next;
+    });
+    return nextStates;
+  }, [getRectOverlapArea, getRobotDimensions, getRobotRect, parkZones, state.robots]);
+
+  useEffect(() => {
+    parkStateRef.current = parkStates;
+  }, [parkStates]);
+
+  const parkCounts = useMemo(() => {
+    const counts = { red: { full: 0, semi: 0 }, blue: { full: 0, semi: 0 } };
+    state.robots.forEach((robot) => {
+      const stateValue = parkStates[robot.id];
+      if (stateValue === 'full') {
+        counts[robot.alliance].full += 1;
+      } else if (stateValue === 'semi') {
+        counts[robot.alliance].semi += 1;
+      }
+    });
+    return counts;
+  }, [parkStates, state.robots]);
+
+  const parkScores = useMemo(() => {
+    const toScore = (count: { full: number; semi: number }) =>
+      count.full >= 2 ? 30 : count.full * 10 + count.semi * 5;
+    return {
+      red: toScore(parkCounts.red),
+      blue: toScore(parkCounts.blue),
+    };
+  }, [parkCounts]);
+
+  const isRedDoubleParked = parkCounts.red.full >= 2;
+  const isBlueDoubleParked = parkCounts.blue.full >= 2;
 
   const isRobotTouchingLever = useCallback(
     (robot: typeof state.robots[number], lever: { x: number; y: number }) => {
@@ -1029,9 +1129,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   }), [motifCounts]);
 
   const overallScores = useMemo(() => ({
-    red: rawScores.red + motifScores.red,
-    blue: rawScores.blue + motifScores.blue,
-  }), [motifScores, rawScores]);
+    red: rawScores.red + motifScores.red + parkScores.red,
+    blue: rawScores.blue + motifScores.blue + parkScores.blue,
+  }), [motifScores, parkScores, rawScores]);
 
   const handleScoreReset = useCallback(() => {
     setRawScores({ red: 0, blue: 0 });
@@ -1111,12 +1211,48 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
 
+  const startMovementTrails = useCallback((robots: Robot[]) => {
+    const next: Record<string, TrailSegment[]> = { ...trailsByBotRef.current };
+    const stamp = Date.now();
+    robots.forEach((robot, index) => {
+      const existing = next[robot.id] ? [...next[robot.id]] : [];
+      const fresh: TrailSegment = {
+        id: `${stamp}-${robot.id}-${index}`,
+        alliance: robot.alliance,
+        points: [{ x: robot.position.x, y: robot.position.y }],
+      };
+      existing.push(fresh);
+      if (existing.length > 2) {
+        existing.splice(0, existing.length - 2);
+      }
+      next[robot.id] = existing;
+    });
+    trailsByBotRef.current = next;
+    setTrailVersion((prev) => prev + 1);
+  }, []);
+
+  const appendTrailPoint = useCallback((robotId: string, point: TrailPoint) => {
+    const trails = trailsByBotRef.current[robotId];
+    if (!trails || trails.length === 0) return;
+    const active = trails[trails.length - 1];
+    const last = active.points[active.points.length - 1];
+    if (last) {
+      const dx = point.x - last.x;
+      const dy = point.y - last.y;
+      if (dx * dx + dy * dy < TRAIL_POINT_MIN_DISTANCE * TRAIL_POINT_MIN_DISTANCE) {
+        return;
+      }
+    }
+    active.points.push(point);
+  }, []);
+
   const playSequence = useCallback(async () => {
     if (sequencePlaying) return;
     if (Object.keys(sequenceSteps).length === 0) {
       toast.error('Save at least one step to play the sequence.');
       return;
     }
+    clearTrails();
     setSequencePlaying(true);
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
@@ -1126,6 +1262,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         position: { ...robot.position },
         rotation: robot.rotation,
       }));
+      startMovementTrails(robotsRef.current);
       isApplyingSequenceRef.current = true;
       await new Promise<void>((resolve) => {
         const startTime = window.performance.now();
@@ -1136,10 +1273,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             const target = step.positions[robot.id] ?? robot.position;
             const startRot = robot.rotation;
             const targetRot = step.rotations[robot.id] ?? startRot;
-            updateRobotPosition(robot.id, {
+            const nextPosition = {
               x: robot.position.x + (target.x - robot.position.x) * t,
               y: robot.position.y + (target.y - robot.position.y) * t,
-            });
+            };
+            updateRobotPosition(robot.id, nextPosition);
+            appendTrailPoint(robot.id, nextPosition);
             updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
           });
           if (t < 1) {
@@ -1160,7 +1299,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise((resolve) => setTimeout(resolve, 650));
     }
     setSequencePlaying(false);
-  }, [maxSequence, restoreBallState, sequencePlaying, sequenceSteps, updateRobotPosition, updateRobotRotation]);
+  }, [
+    appendTrailPoint,
+    clearTrails,
+    maxSequence,
+    restoreBallState,
+    sequencePlaying,
+    sequenceSteps,
+    startMovementTrails,
+    updateRobotPosition,
+    updateRobotRotation,
+  ]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1533,6 +1682,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+  const handleResetField = useCallback(() => {
+    resetField();
+    clearTrails();
+  }, [clearTrails, resetField]);
 
   const handleAddHumanPlayerBall = (alliance: 'red' | 'blue', color: 'green' | 'purple') => {
     const placed = addHumanPlayerBall(alliance, color);
@@ -1982,7 +2135,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onClearDrawings={clearDrawings}
             onClearBalls={clearBalls}
             onClearRobots={clearRobots}
-            onResetField={resetField}
+            onResetField={handleResetField}
             onSetupField={handleSetupField}
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
@@ -2148,6 +2301,37 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             isLocked={isInputLocked}
             scale={fieldScale}
           />
+
+          {sequencePlaying && (
+            <svg
+              className="absolute inset-0 z-[5] pointer-events-none"
+              width={FIELD_SIZE}
+              height={FIELD_SIZE}
+              viewBox={`0 0 ${FIELD_SIZE} ${FIELD_SIZE}`}
+            >
+              {Object.entries(trailsByBotRef.current).flatMap(([robotId, trails]) =>
+                trails.map((trail) => {
+                  if (trail.points.length < 2) return null;
+                  const path = trail.points
+                    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+                    .join(' ');
+                  return (
+                    <path
+                      key={`${robotId}-${trail.id}`}
+                      d={path}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeOpacity={0.45}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={trail.alliance === 'red' ? 'text-alliance-red' : 'text-alliance-blue'}
+                    />
+                  );
+                })
+              )}
+            </svg>
+          )}
 
           {/* Balls */}
           {state.balls.map((ball) => (
@@ -2706,6 +2890,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                         <div className="flex items-center justify-between">
                           <span>Motif Score</span>
                           <span className="font-mono text-foreground">{motifScores[alliance]}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Park</span>
+                          <span className="font-mono text-foreground">{parkScores[alliance]}</span>
                         </div>
                       </div>
                     </div>
