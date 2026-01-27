@@ -1,25 +1,27 @@
 {
-  "robots": [],
-  "balls": [],
-  "classifiers": {
-    "red": {
-      "alliance": "red",
-      "balls": [],
-      "maxCapacity": 9,
-      "extensionBalls": [],
-      "extensionCapacity": 6
+  "fieldState": {
+    "robots": [],
+    "balls": [],
+    "classifiers": {
+      "red": {
+        "alliance": "red",
+        "balls": [],
+        "maxCapacity": 9,
+        "extensionBalls": [],
+        "extensionCapacity": 6
+      },
+      "blue": {
+        "alliance": "blue",
+        "balls": [],
+        "maxCapacity": 9,
+        "extensionBalls": [],
+        "extensionCapacity": 6
+      }
     },
-    "blue": {
-      "alliance": "blue",
-      "balls": [],
-      "maxCapacity": 9,
-      "extensionBalls": [],
-      "extensionCapacity": 6
-    }
-  },
-  "overflowCounts": {
-    "red": 0,
-    "blue": 0
-  },
-  "drawings": []
+    "overflowCounts": {
+      "red": 0,
+      "blue": 0
+    },
+    "drawings": []
+  }
 }

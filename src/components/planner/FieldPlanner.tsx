@@ -1188,12 +1188,6 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [applySequenceStep, saveSequenceStep, sequencePlaying, sequenceSteps]
   );
 
-  const handleSequenceDeleteAll = useCallback(() => {
-    setSequenceSteps({});
-    setSelectedSequenceStep(null);
-    toast.success('Sequence cleared.');
-  }, []);
-
   const handleSequenceDeleteSelected = useCallback(() => {
     if (!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]) return;
     setSequenceSteps((prev) => {
@@ -1694,10 +1688,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+  const clearSequenceState = useCallback(() => {
+    setSequenceSteps({});
+    setSelectedSequenceStep(null);
+    setActiveSequenceStep(null);
+    setSequencePlaying(false);
+  }, []);
+
+  const handleSequenceDeleteAll = useCallback(() => {
+    clearSequenceState();
+    toast.success('Sequence cleared.');
+  }, [clearSequenceState]);
+
   const handleResetField = useCallback(() => {
     resetField();
     clearTrails();
-  }, [clearTrails, resetField]);
+    clearSequenceState();
+  }, [clearSequenceState, clearTrails, resetField]);
 
   const handleAddHumanPlayerBall = (alliance: 'red' | 'blue', color: 'green' | 'purple') => {
     const placed = addHumanPlayerBall(alliance, color);
@@ -1945,7 +1952,15 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   );
 
   const handleExport = () => {
-    const data = exportState();
+    const data = JSON.stringify(
+      {
+        fieldState: state,
+        sequenceSteps,
+        maxSequence,
+      },
+      null,
+      2
+    );
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1969,6 +1984,49 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [importState]
   );
 
+  const isFieldStatePayload = useCallback((value: unknown): value is FieldState => {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as FieldState;
+    return (
+      Array.isArray(candidate.robots) &&
+      Array.isArray(candidate.balls) &&
+      typeof candidate.classifiers === 'object' &&
+      Array.isArray(candidate.drawings)
+    );
+  }, []);
+
+  const applyPresetPayload = useCallback(
+    (payload: unknown, successMessage: string, errorMessage: string) => {
+      const preset = payload as {
+        fieldState?: FieldState;
+        sequenceSteps?: Record<number, SequenceStep>;
+        maxSequence?: number;
+      };
+      const fieldState = isFieldStatePayload(payload) ? payload : preset?.fieldState;
+      if (!fieldState || !isFieldStatePayload(fieldState)) {
+        toast.error(errorMessage);
+        return false;
+      }
+
+      clearSequenceState();
+      const success = applyImportedState(JSON.stringify(fieldState), successMessage, errorMessage);
+      if (!success) {
+        return false;
+      }
+
+      if (preset?.sequenceSteps && Object.keys(preset.sequenceSteps).length > 0) {
+        setSequenceSteps(preset.sequenceSteps);
+        const keys = Object.keys(preset.sequenceSteps)
+          .map((key) => Number(key))
+          .filter((value) => Number.isFinite(value));
+        const maxKey = keys.length ? Math.max(...keys) : MIN_SEQUENCE;
+        setMaxSequence((prev) => Math.max(prev, preset.maxSequence ?? maxKey, MIN_SEQUENCE));
+      }
+      return true;
+    },
+    [applyImportedState, clearSequenceState, isFieldStatePayload]
+  );
+
   const handleImport = () => {
     fileInputRef.current?.click();
   };
@@ -1979,8 +2037,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const content = event.target?.result as string;
-      applyImportedState(content, 'Strategy loaded!', 'Failed to load strategy file');
+      try {
+        const content = event.target?.result as string;
+        const payload = JSON.parse(content);
+        applyPresetPayload(payload, 'Strategy loaded!', 'Failed to load strategy file');
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load strategy file');
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -1994,16 +2058,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           throw new Error(`Failed to load preset: ${response.status}`);
         }
         const content = await response.text();
-        const success = applyImportedState(content, `Preset loaded: ${preset.label}`, 'Failed to load preset');
-        if (!success) {
-          return;
-        }
+        const payload = JSON.parse(content);
+        applyPresetPayload(payload, `Preset loaded: ${preset.label}`, 'Failed to load preset');
       } catch (error) {
         console.error(error);
         toast.error('Failed to load preset');
       }
     },
-    [applyImportedState]
+    [applyPresetPayload]
   );
 
   const handleRobotImageSelect = () => {
