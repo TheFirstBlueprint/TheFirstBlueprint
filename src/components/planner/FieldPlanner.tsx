@@ -211,6 +211,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     persistedState?.sequenceSteps ?? {}
   );
   const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [activeSequenceStep, setActiveSequenceStep] = useState<number | null>(null);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
     persistedState?.selectedSequenceStep ?? null
   );
@@ -446,6 +447,12 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       clearTrails();
     }
   }, [clearTrails, sequencePlaying]);
+
+  useEffect(() => {
+    if (!sequencePlaying) {
+      setActiveSequenceStep(null);
+    }
+  }, [sequencePlaying]);
 
   useEffect(() => {
     if (!isMobile || !shouldShowSetupCoachmark) {
@@ -1168,13 +1175,16 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const handleSelectSequenceStep = useCallback(
     (index: number) => {
       setSelectedSequenceStep(index);
+      if (sequencePlaying) {
+        setActiveSequenceStep(index);
+      }
       if (sequenceSteps[index]) {
         applySequenceStep(index);
         return;
       }
       saveSequenceStep(index, robotsRef.current, true);
     },
-    [applySequenceStep, saveSequenceStep, sequenceSteps]
+    [applySequenceStep, saveSequenceStep, sequencePlaying, sequenceSteps]
   );
 
   const handleSequenceDeleteAll = useCallback(() => {
@@ -1257,6 +1267,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      setActiveSequenceStep(i);
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -2982,11 +2993,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     const step = index + 1;
                     const isSaved = Boolean(sequenceSteps[step]);
                     const isSelected = selectedSequenceStep === step;
+                    const isActive = sequencePlaying && activeSequenceStep === step;
                     return (
                       <button
                         key={step}
                         onClick={() => handleSelectSequenceStep(step)}
-                        className={`tool-button text-xs font-mono ${isSelected ? 'active' : ''} ${isSaved && !isSelected ? 'bg-muted/40' : ''}`}
+                        className={cn(
+                          'tool-button text-xs font-mono sequence-step',
+                          isSelected && 'active',
+                          isSaved && !isSelected && 'bg-muted/40',
+                          isActive && 'sequence-step-active'
+                        )}
                         title={isSaved ? `Step ${step}` : `Create step ${step}`}
                       >
                         {step}

@@ -11,6 +11,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { FrcToolPanel } from './FrcToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const FIELD_FEET_WIDTH = 54;
 const FIELD_FEET_HEIGHT = 27;
@@ -374,6 +375,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     persistedState?.sequenceSteps ?? {}
   );
   const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [activeSequenceStep, setActiveSequenceStep] = useState<number | null>(null);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
     persistedState?.selectedSequenceStep ?? null
   );
@@ -1251,6 +1253,12 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     }
   }, [maxSequence, selectedSequenceStep]);
 
+  useEffect(() => {
+    if (!sequencePlaying) {
+      setActiveSequenceStep(null);
+    }
+  }, [sequencePlaying]);
+
   const applySequenceStep = useCallback(
     (index: number) => {
       const step = sequenceSteps[index];
@@ -1279,13 +1287,16 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const handleSelectSequenceStep = useCallback(
     (index: number) => {
       setSelectedSequenceStep(index);
+      if (sequencePlaying) {
+        setActiveSequenceStep(index);
+      }
       if (sequenceSteps[index]) {
         applySequenceStep(index);
         return;
       }
       saveSequenceStep(index, robotsRef.current, true);
     },
-    [applySequenceStep, saveSequenceStep, sequenceSteps]
+    [applySequenceStep, saveSequenceStep, sequencePlaying, sequenceSteps]
   );
 
   const handleSequenceDeleteAll = useCallback(() => {
@@ -1333,6 +1344,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     for (let i = 1; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      setActiveSequenceStep(i);
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -2056,11 +2068,17 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       const step = index + 1;
                       const isSaved = Boolean(sequenceSteps[step]);
                       const isSelected = selectedSequenceStep === step;
+                      const isActive = sequencePlaying && activeSequenceStep === step;
                       return (
                         <button
                           key={step}
                           onClick={() => handleSelectSequenceStep(step)}
-                          className={`tool-button text-xs font-mono ${isSelected ? 'active' : ''} ${isSaved && !isSelected ? 'bg-muted/40' : ''}`}
+                          className={cn(
+                            'tool-button text-xs font-mono sequence-step',
+                            isSelected && 'active',
+                            isSaved && !isSelected && 'bg-muted/40',
+                            isActive && 'sequence-step-active'
+                          )}
                           title={isSaved ? `Step ${step}` : `Create step ${step}`}
                         >
                           {step}
