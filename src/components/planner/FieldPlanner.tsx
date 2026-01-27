@@ -12,6 +12,7 @@ import { ToolPanel } from './ToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { PRESETS } from '@/presets/presets';
 
 const FIELD_SIZE = 600; 
 const FIELD_INCHES = 144;
@@ -1955,6 +1956,19 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     toast.success('Strategy exported!');
   };
 
+  const applyImportedState = useCallback(
+    (content: string, successMessage: string, errorMessage: string) => {
+      const success = importState(content);
+      if (success) {
+        toast.success(successMessage);
+      } else {
+        toast.error(errorMessage);
+      }
+      return success;
+    },
+    [importState]
+  );
+
   const handleImport = () => {
     fileInputRef.current?.click();
   };
@@ -1966,16 +1980,31 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      const success = importState(content);
-      if (success) {
-        toast.success('Strategy loaded!');
-      } else {
-        toast.error('Failed to load strategy file');
-      }
+      applyImportedState(content, 'Strategy loaded!', 'Failed to load strategy file');
     };
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  const handlePresetLoad = useCallback(
+    async (preset: { id: string; label: string; path: string }) => {
+      try {
+        const response = await fetch(preset.path);
+        if (!response.ok) {
+          throw new Error(`Failed to load preset: ${response.status}`);
+        }
+        const content = await response.text();
+        const success = applyImportedState(content, `Preset loaded: ${preset.label}`, 'Failed to load preset');
+        if (!success) {
+          return;
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load preset');
+      }
+    },
+    [applyImportedState]
+  );
 
   const handleRobotImageSelect = () => {
     robotImageInputRef.current?.click();
@@ -2151,6 +2180,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
+              presets={PRESETS}
+              onPresetLoad={handlePresetLoad}
               showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
               onDismissSetupCoachmark={dismissSetupCoachmark}
             />

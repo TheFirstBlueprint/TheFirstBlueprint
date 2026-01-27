@@ -28,6 +28,8 @@ interface ToolPanelProps {
   onSetupRobots: () => void;
   onExport: () => void;
   onImport: () => void;
+  presets: { id: string; label: string; path: string }[];
+  onPresetLoad: (preset: { id: string; label: string; path: string }) => void;
   showSetupCoachmark?: boolean;
   onDismissSetupCoachmark?: () => void;
 }
@@ -59,6 +61,8 @@ export const ToolPanel = ({
   onSetupRobots,
   onExport,
   onImport,
+  presets,
+  onPresetLoad,
   showSetupCoachmark = false,
   onDismissSetupCoachmark,
 }: ToolPanelProps) => {
@@ -201,6 +205,27 @@ export const ToolPanel = ({
               ))}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Presets */}
+      <div className="panel">
+        <div className="panel-header">Presets</div>
+        {presets.length ? (
+          <div className="grid gap-2">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => onPresetLoad(preset)}
+                className="tool-button w-full"
+                title={`Load ${preset.label}`}
+              >
+                <span className="text-xs">{preset.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">No presets configured.</div>
         )}
       </div>
 

@@ -1,0 +1,385 @@
+{
+  "robots": [
+    {
+      "id": "id-1-1769492278585",
+      "position": {
+        "x": 114.57090039147458,
+        "y": 232.00577752408878
+      },
+      "rotation": 0,
+      "widthIn": 18,
+      "heightIn": 18,
+      "alliance": "blue",
+      "heldBalls": [],
+      "name": "",
+      "imageDataUrl": null
+    },
+    {
+      "id": "id-2-1769492278585",
+      "position": {
+        "x": 479.99195302305344,
+        "y": 226.22299820028422
+      },
+      "rotation": 0,
+      "widthIn": 18,
+      "heightIn": 18,
+      "alliance": "red",
+      "heldBalls": [],
+      "name": "",
+      "imageDataUrl": null
+    },
+    {
+      "id": "id-3-1769492278585",
+      "position": {
+        "x": 257.7044367116141,
+        "y": 541.3005654632459
+      },
+      "rotation": -15,
+      "widthIn": 18,
+      "heightIn": 18,
+      "alliance": "blue",
+      "heldBalls": [],
+      "name": "",
+      "imageDataUrl": null
+    },
+    {
+      "id": "id-4-1769492278585",
+      "position": {
+        "x": 353.16985645932726,
+        "y": 547.8197042192261
+      },
+      "rotation": 15,
+      "widthIn": 18,
+      "heightIn": 18,
+      "alliance": "red",
+      "heldBalls": [],
+      "name": "",
+      "imageDataUrl": null
+    }
+  ],
+  "balls": [
+    {
+      "id": "id-8-1769492278585",
+      "color": "purple",
+      "position": {
+        "x": 73.25999999999999,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-9-1769492278585",
+      "color": "green",
+      "position": {
+        "x": 97.25999999999999,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-10-1769492278585",
+      "color": "purple",
+      "position": {
+        "x": 121.25999999999999,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-17-1769492278585",
+      "color": "purple",
+      "position": {
+        "x": 477.53999999999996,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-18-1769492278585",
+      "color": "green",
+      "position": {
+        "x": 501.53999999999996,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-19-1769492278585",
+      "color": "purple",
+      "position": {
+        "x": 525.54,
+        "y": 349.2
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-30-1769492358785",
+      "color": "purple",
+      "position": {
+        "x": 578,
+        "y": 578
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-29-1769492358508",
+      "color": "purple",
+      "position": {
+        "x": 578,
+        "y": 554
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-31-1769492359297",
+      "color": "green",
+      "position": {
+        "x": 578,
+        "y": 530
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-33-1769492359872",
+      "color": "purple",
+      "position": {
+        "x": 22,
+        "y": 578
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-32-1769492359739",
+      "color": "purple",
+      "position": {
+        "x": 22,
+        "y": 554
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    },
+    {
+      "id": "id-34-1769492361158",
+      "color": "green",
+      "position": {
+        "x": 22,
+        "y": 530
+      },
+      "isScored": false,
+      "heldByRobotId": null
+    }
+  ],
+  "classifiers": {
+    "red": {
+      "alliance": "red",
+      "balls": [
+        {
+          "id": "id-14-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 477.53999999999996,
+            "y": 253.2
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-15-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 501.53999999999996,
+            "y": 253.2
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-16-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 525.54,
+            "y": 253.2
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-21-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 530,
+            "y": 554
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-22-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 530,
+            "y": 530
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-20-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 530,
+            "y": 578
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-27-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 554,
+            "y": 554
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-28-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 554,
+            "y": 530
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-26-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 554,
+            "y": 578
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        }
+      ],
+      "maxCapacity": 9,
+      "extensionBalls": [],
+      "extensionCapacity": 6
+    },
+    "blue": {
+      "alliance": "blue",
+      "balls": [
+        {
+          "id": "id-7-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 121.25999999999999,
+            "y": 250.79999999999998
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-6-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 97.25999999999999,
+            "y": 250.79999999999998
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-5-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 73.25999999999999,
+            "y": 250.79999999999998
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-12-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 70,
+            "y": 554
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-11-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 70,
+            "y": 530
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-13-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 70,
+            "y": 578
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-24-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 46,
+            "y": 554
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-23-1769492278585",
+          "color": "purple",
+          "position": {
+            "x": 46,
+            "y": 578
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        },
+        {
+          "id": "id-25-1769492278585",
+          "color": "green",
+          "position": {
+            "x": 46,
+            "y": 530
+          },
+          "isScored": true,
+          "heldByRobotId": null
+        }
+      ],
+      "maxCapacity": 9,
+      "extensionBalls": [],
+      "extensionCapacity": 6
+    }
+  },
+  "overflowCounts": {
+    "red": 0,
+    "blue": 0
+  },
+  "drawings": []
+}
