@@ -21,7 +21,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
           {showBackButton && (
             <Link
               to={backTo}
-              className="tool-button h-10 w-10"
+              className="tool-button h-10 w-10 site-nav-button"
               title="Back to home"
               aria-label="Back to home"
             >
@@ -40,7 +40,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `tool-button text-xs font-mono ${
+                  `tool-button text-xs font-mono site-nav-link ${
                     item.to === '/ftc/patch-notes' ? 'mobile-hide' : ''
                   } ${isActive ? 'active' : ''}`
                 }
@@ -67,7 +67,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
           </nav>
           <Link
             to="/ftc/instructions"
-            className="tool-button text-xs font-mono ftc-instructions-link"
+            className="tool-button text-xs font-mono ftc-instructions-link site-nav-link"
             title="Instructions"
             aria-label="Open instructions"
           >
@@ -78,7 +78,7 @@ export const SiteHeader = ({ showBackButton = false, backTo = '/' }: SiteHeaderP
           </Link>
           <Link
             to="/ftc/settings"
-            className="tool-button w-10 h-10 mobile-hide"
+            className="tool-button w-10 h-10 mobile-hide site-nav-button"
             title="Settings"
             aria-label="Open settings"
           >

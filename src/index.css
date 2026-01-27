@@ -535,6 +535,14 @@
     box-shadow: none;
   }
 
+  html[data-sequence-playing="true"] .site-nav-link,
+  html[data-sequence-playing="true"] .site-nav-button {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+    filter: grayscale(0.2);
+  }
+
   .planner-coachmark {
     border-radius: var(--radius-md);
     background: linear-gradient(180deg, hsl(var(--card) / 0.9) 0%, hsl(var(--secondary) / 0.7) 100%);

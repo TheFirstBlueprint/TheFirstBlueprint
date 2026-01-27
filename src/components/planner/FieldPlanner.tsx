@@ -213,6 +213,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   );
   const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
   const [activeSequenceStep, setActiveSequenceStep] = useState<number | null>(null);
+  const [sequencePaused, setSequencePaused] = useState(false);
+  const [sequencePausedStep, setSequencePausedStep] = useState<number | null>(null);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
     persistedState?.selectedSequenceStep ?? null
   );
@@ -256,6 +258,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     red: null,
     blue: null,
   });
+  const sequenceRafRef = useRef<number | null>(null);
+  const sequenceDelayTimeoutRef = useRef<number | null>(null);
+  const sequenceAnimationResolveRef = useRef<(() => void) | null>(null);
+  const sequenceDelayResolveRef = useRef<(() => void) | null>(null);
+  const sequenceCancelRef = useRef(false);
+  const sequencePlayingRef = useRef(sequencePlaying);
+  const activeSequenceStepRef = useRef(activeSequenceStep);
   const fieldAreaRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const fieldFrameRef = useRef<HTMLDivElement>(null);
@@ -454,6 +463,19 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       setActiveSequenceStep(null);
     }
   }, [sequencePlaying]);
+
+  useEffect(() => {
+    sequencePlayingRef.current = sequencePlaying;
+    if (sequencePlaying) {
+      document.documentElement.setAttribute('data-sequence-playing', 'true');
+      return;
+    }
+    document.documentElement.removeAttribute('data-sequence-playing');
+  }, [sequencePlaying]);
+
+  useEffect(() => {
+    activeSequenceStepRef.current = activeSequenceStep;
+  }, [activeSequenceStep]);
 
   useEffect(() => {
     if (!isMobile || !shouldShowSetupCoachmark) {
@@ -1216,6 +1238,52 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
 
+  const clearSequencePause = useCallback(() => {
+    setSequencePaused(false);
+    setSequencePausedStep(null);
+  }, []);
+
+  const stopSequenceTimers = useCallback(() => {
+    if (sequenceRafRef.current !== null) {
+      window.cancelAnimationFrame(sequenceRafRef.current);
+      sequenceRafRef.current = null;
+    }
+    if (sequenceDelayTimeoutRef.current !== null) {
+      window.clearTimeout(sequenceDelayTimeoutRef.current);
+      sequenceDelayTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopSequencePlayback = useCallback(() => {
+    sequenceCancelRef.current = true;
+    stopSequenceTimers();
+    sequenceAnimationResolveRef.current?.();
+    sequenceDelayResolveRef.current?.();
+    isApplyingSequenceRef.current = false;
+    setSequencePlaying(false);
+  }, [stopSequenceTimers]);
+
+  const pauseSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    const pausedStep = activeSequenceStepRef.current ?? selectedSequenceStep ?? 1;
+    stopSequencePlayback();
+    setSequencePaused(true);
+    setSequencePausedStep(pausedStep);
+  }, [selectedSequenceStep, stopSequencePlayback]);
+
+  const endSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    stopSequencePlayback();
+    clearSequencePause();
+    const steps = Object.keys(sequenceSteps).map((step) => Number(step));
+    if (steps.length > 0) {
+      const lastStep = Math.max(...steps);
+      setSelectedSequenceStep(lastStep);
+      applySequenceStep(lastStep);
+    }
+    setActiveSequenceStep(null);
+  }, [applySequenceStep, clearSequencePause, sequenceSteps, stopSequencePlayback]);
+
   const startMovementTrails = useCallback((robots: Robot[]) => {
     const next: Record<string, TrailSegment[]> = { ...trailsByBotRef.current };
     const stamp = Date.now();
@@ -1251,15 +1319,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     active.points.push(point);
   }, []);
 
-  const playSequence = useCallback(async () => {
+  const playSequence = useCallback(async (startStep = 1) => {
     if (sequencePlaying) return;
     if (Object.keys(sequenceSteps).length === 0) {
       toast.error('Save at least one step to play the sequence.');
       return;
     }
+    sequenceCancelRef.current = false;
+    clearSequencePause();
     clearTrails();
     setSequencePlaying(true);
-    for (let i = 1; i <= maxSequence; i++) {
+    for (let i = startStep; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
       setActiveSequenceStep(i);
@@ -1273,7 +1343,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise<void>((resolve) => {
         const startTime = window.performance.now();
         const duration = 650;
+        const finish = () => {
+          if (!sequenceAnimationResolveRef.current) return;
+          sequenceAnimationResolveRef.current = null;
+          resolve();
+        };
+        sequenceAnimationResolveRef.current = finish;
         const tick = (now: number) => {
+          if (sequenceCancelRef.current) {
+            finish();
+            return;
+          }
           const t = Math.min(1, (now - startTime) / duration);
           startRobots.forEach((robot) => {
             const target = step.positions[robot.id] ?? robot.position;
@@ -1288,13 +1368,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
           });
           if (t < 1) {
-            window.requestAnimationFrame(tick);
+            sequenceRafRef.current = window.requestAnimationFrame(tick);
           } else {
-            resolve();
+            finish();
           }
         };
-        window.requestAnimationFrame(tick);
+        sequenceRafRef.current = window.requestAnimationFrame(tick);
       });
+      if (sequenceCancelRef.current) break;
       if (step.ballState) {
         restoreBallState(step.ballState);
       }
@@ -1302,12 +1383,22 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         setRawScores(step.rawScores);
       }
       isApplyingSequenceRef.current = false;
-      await new Promise((resolve) => setTimeout(resolve, 650));
+      await new Promise((resolve) => {
+        const finish = () => {
+          if (!sequenceDelayResolveRef.current) return;
+          sequenceDelayResolveRef.current = null;
+          resolve();
+        };
+        sequenceDelayResolveRef.current = finish;
+        sequenceDelayTimeoutRef.current = window.setTimeout(finish, 650);
+      });
+      if (sequenceCancelRef.current) break;
     }
     setSequencePlaying(false);
   }, [
     appendTrailPoint,
     clearTrails,
+    clearSequencePause,
     maxSequence,
     restoreBallState,
     sequencePlaying,
@@ -3104,17 +3195,43 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     );
                   })}
                 </div>
-                <button
-                  onClick={playSequence}
-                  className="tool-button mt-2 w-full"
-                  title="Play sequence"
-                  disabled={sequencePlaying}
-                >
-                  <span className="mobile-hide">{sequencePlaying ? 'Playing...' : 'Play Sequence'}</span>
-                  <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
-                    play_arrow
-                  </span>
-                </button>
+                {sequencePlaying ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="tool-button w-full"
+                      onClick={pauseSequence}
+                      title="Pause sequence"
+                    >
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        pause
+                      </span>
+                      <span className="mobile-hide">Pause</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="tool-button w-full"
+                      onClick={endSequence}
+                      title="End sequence"
+                    >
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        skip_next
+                      </span>
+                      <span className="mobile-hide">End</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => playSequence(sequencePausedStep ?? 1)}
+                    className="tool-button mt-2 w-full"
+                    title={sequencePaused ? 'Resume sequence' : 'Play sequence'}
+                  >
+                    <span className="mobile-hide">{sequencePaused ? 'Resume' : 'Play Sequence'}</span>
+                    <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+                      play_arrow
+                    </span>
+                  </button>
+                )}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"
