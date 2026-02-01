@@ -1393,6 +1393,14 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     setSelectedRobotId(null);
   };
 
+  const handleFieldPointerDownCapture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    window.getSelection?.()?.removeAllRanges();
+  }, []);
+
   const saveSequenceStep = useCallback(
     (index: number, robots: FrcRobot[], silent = false) => {
       if (robots.length === 0) {
@@ -2019,7 +2027,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_WIDTH * fieldScale, height: FIELD_HEIGHT * fieldScale }}
         >
           <div
-            className="relative field-surface"
+            className="relative field-surface planner-field-no-select"
             style={{
               width: FIELD_WIDTH,
               height: FIELD_HEIGHT,
@@ -2032,6 +2040,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
               backgroundSize: 'cover',
             }}
             onClick={handleFieldClick}
+            onPointerDownCapture={handleFieldPointerDownCapture}
             ref={fieldRef}
           >
             <DrawingCanvas

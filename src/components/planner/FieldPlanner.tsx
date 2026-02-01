@@ -1246,6 +1246,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setSelectedRobotId(null);
   };
 
+  const handleFieldPointerDownCapture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    window.getSelection?.()?.removeAllRanges();
+  }, []);
+
   const motifs = ['GPP', 'PGP', 'PPG'];
 
   const getMotifValidatedCount = useCallback((classifier: Classifier, motifValue: string) => {
@@ -2610,7 +2618,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}
         >
           <div
-            className="relative field-surface"
+            className="relative field-surface planner-field-no-select"
             style={{
               width: FIELD_SIZE,
               height: FIELD_SIZE,
@@ -2618,6 +2626,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               transformOrigin: 'top left',
             }}
             onClick={handleFieldClick}
+            onPointerDownCapture={handleFieldPointerDownCapture}
             ref={fieldRef}
           >
           {/* Field Background */}

@@ -756,6 +756,13 @@
     box-shadow: var(--shadow-field);
   }
 
+  .planner-field-no-select,
+  .planner-field-no-select * {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+  }
+
   .command-card {
     position: relative;
     overflow: hidden;
