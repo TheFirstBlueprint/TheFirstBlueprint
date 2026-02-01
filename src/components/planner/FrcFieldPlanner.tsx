@@ -1,4 +1,12 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
 import { Tool, Alliance, Position } from '@/types/planner';
 import { FrcFieldState, FrcFuel, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
@@ -22,6 +30,10 @@ const FIELD_WIDTH = FIELD_WIDTH_IN;
 const FIELD_HEIGHT = FIELD_HEIGHT_IN;
 const FIELD_SCREEN_RATIO = 0.9;
 const FIELD_SCALE_MULTIPLIER = 1.1;
+const DEFAULT_SIDEBAR_WIDTH = 256;
+const MIN_SIDEBAR_WIDTH = 220;
+const MIN_FIELD_WIDTH = 320;
+const SIDEBAR_WIDTH_STORAGE_KEY = 'planner-sidebar-widths';
 const AUTON_SECONDS = 20;
 const TRANSITION_SECONDS = 7;
 const TELEOP_SECONDS = 140;
@@ -137,6 +149,25 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'darkTactical') return 'dark';
   if (value === 'basic') return 'base';
   return 'dark';
+};
+
+const readSidebarWidths = () => {
+  if (typeof window === 'undefined') {
+    return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+  }
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+    if (!stored) {
+      return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+    }
+    const parsed = JSON.parse(stored) as { left?: number; right?: number };
+    return {
+      left: typeof parsed.left === 'number' ? parsed.left : DEFAULT_SIDEBAR_WIDTH,
+      right: typeof parsed.right === 'number' ? parsed.right : DEFAULT_SIDEBAR_WIDTH,
+    };
+  } catch {
+    return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+  }
 };
 
 const simplifyPolyline = (points: Point[], epsilon: number): Point[] => {
@@ -393,6 +424,21 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const [draftRobotId, setDraftRobotId] = useState<string | null>(persistedState?.draftRobotId ?? null);
   const [hasFuelSetup, setHasFuelSetup] = useState(persistedState?.hasFuelSetup ?? false);
   const [shotFuel, setShotFuel] = useState<ShotFuel[]>([]);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches ?? false
+  );
+  const [viewport, setViewport] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+  const initialSidebarWidths = useMemo(() => readSidebarWidths(), []);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(initialSidebarWidths.left);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(initialSidebarWidths.right);
+  const resizeStateRef = useRef<{
+    side: 'left' | 'right';
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const fieldAreaRef = useRef<HTMLDivElement>(null);
@@ -577,6 +623,126 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       setHasFuelSetup(true);
     }
   }, [hasFuelSetup, state.fuel.length]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(event.matches);
+    };
+    handleChange(media);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+    };
+  }, []);
+
+  const clampSidebarWidth = useCallback(
+    (nextWidth: number, side: 'left' | 'right') => {
+      const totalWidth = viewport.width || window.innerWidth;
+      const otherWidth = side === 'left' ? rightSidebarWidth : leftSidebarWidth;
+      const maxWidth = Math.max(0, totalWidth - otherWidth - MIN_FIELD_WIDTH);
+      const safeMin = Math.min(MIN_SIDEBAR_WIDTH, maxWidth);
+      return Math.max(safeMin, Math.min(nextWidth, maxWidth));
+    },
+    [leftSidebarWidth, rightSidebarWidth, viewport.width]
+  );
+
+  const handleResizeStart = useCallback(
+    (side: 'left' | 'right', event: ReactPointerEvent<HTMLDivElement>) => {
+      if (isMobile) return;
+      event.preventDefault();
+      event.stopPropagation();
+      resizeStateRef.current = {
+        side,
+        startX: event.clientX,
+        startWidth: side === 'left' ? leftSidebarWidth : rightSidebarWidth,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [isMobile, leftSidebarWidth, rightSidebarWidth]
+  );
+
+  const handleResizeReset = useCallback(
+    (side: 'left' | 'right') => {
+      const nextWidth = clampSidebarWidth(DEFAULT_SIDEBAR_WIDTH, side);
+      if (side === 'left') {
+        setLeftSidebarWidth(nextWidth);
+        return;
+      }
+      setRightSidebarWidth(nextWidth);
+    },
+    [clampSidebarWidth]
+  );
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const resizeState = resizeStateRef.current;
+      if (!resizeState) return;
+      const delta = event.clientX - resizeState.startX;
+      const nextWidth =
+        resizeState.side === 'left' ? resizeState.startWidth + delta : resizeState.startWidth - delta;
+      const clamped = clampSidebarWidth(nextWidth, resizeState.side);
+      if (resizeState.side === 'left') {
+        setLeftSidebarWidth(clamped);
+      } else {
+        setRightSidebarWidth(clamped);
+      }
+    };
+    const stopResize = () => {
+      if (!resizeStateRef.current) return;
+      resizeStateRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResize);
+    window.addEventListener('pointercancel', stopResize);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResize);
+      window.removeEventListener('pointercancel', stopResize);
+    };
+  }, [clampSidebarWidth]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    window.localStorage.setItem(
+      SIDEBAR_WIDTH_STORAGE_KEY,
+      JSON.stringify({ left: leftSidebarWidth, right: rightSidebarWidth })
+    );
+  }, [isMobile, leftSidebarWidth, rightSidebarWidth]);
+
+  useEffect(() => {
+    if (isMobile) {
+      const targetSize = Math.min(viewport.width, viewport.height);
+      const remainingWidth = Math.max(0, viewport.width - targetSize);
+      const panelWidth = remainingWidth / 2;
+      document.documentElement.style.setProperty('--planner-mobile-panel-width', `${panelWidth}px`);
+      setLeftSidebarWidth(panelWidth);
+      setRightSidebarWidth(panelWidth);
+      return;
+    }
+    document.documentElement.style.removeProperty('--planner-mobile-panel-width');
+  }, [isMobile, viewport.height, viewport.width]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    setLeftSidebarWidth((prev) => clampSidebarWidth(prev, 'left'));
+    setRightSidebarWidth((prev) => clampSidebarWidth(prev, 'right'));
+  }, [clampSidebarWidth, isMobile, viewport.width]);
 
   const updateFieldScale = useCallback(() => {
     const area = fieldAreaRef.current;
@@ -1772,10 +1938,28 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         .includes(proposedName)
     : true;
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
+  const plannerGridStyle = {
+    '--planner-left-width': `${leftSidebarWidth}px`,
+    '--planner-right-width': `${rightSidebarWidth}px`,
+    '--planner-field-min-width': `${MIN_FIELD_WIDTH}px`,
+  } as CSSProperties;
 
   return (
-    <div className={`h-[100dvh] bg-background flex planner-shell ${className ?? ''}`}>
-      <div className="panel-left w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+    <div
+      className={`h-[100dvh] bg-background planner-shell planner-shell-grid ${className ?? ''}`}
+      style={plannerGridStyle}
+    >
+      <div className="panel-left relative h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div
+          className="sidebar-resizer sidebar-resizer--left"
+          onPointerDown={(event) => handleResizeStart('left', event)}
+          onDoubleClick={() => handleResizeReset('left')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize left sidebar"
+        >
+          <span className="sidebar-resizer-grip" aria-hidden="true" />
+        </div>
         <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
           <FrcToolPanel
             activeTool={activeTool}
@@ -1815,7 +1999,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
       <div
         ref={fieldAreaRef}
-        className="flex-1 flex items-start justify-center p-8 pt-6 field-container"
+        className="min-w-0 flex items-start justify-center p-8 pt-6 field-container"
       >
         <div
           ref={fieldFrameRef}
@@ -1926,7 +2110,17 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         </div>
       </div>
 
-      <div className="panel-right w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+      <div className="panel-right relative h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div
+          className="sidebar-resizer sidebar-resizer--right"
+          onPointerDown={(event) => handleResizeStart('right', event)}
+          onDoubleClick={() => handleResizeReset('right')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize right sidebar"
+        >
+          <span className="sidebar-resizer-grip" aria-hidden="true" />
+        </div>
         <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
           <div className="mb-6">
             <h1 className="font-title text-xl uppercase tracking-[0.2em] text-primary mb-1">
@@ -2045,7 +2239,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
               <div className="flex flex-col gap-4">
                 <div className="panel">
                   <div className="panel-header">Goal Activation</div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sidebar-grid">
                     <button
                       onClick={() => handleGoalModeChange('both')}
                       className={`tool-button text-xs ${state.goalMode === 'both' ? 'active' : ''}`}
@@ -2097,7 +2291,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                           : `Phase: ${timerPhase}`
                       : timerMode.toUpperCase()}
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mt-3">
+                  <div className="grid grid-cols-3 gap-2 mt-3 sidebar-grid sidebar-grid--compact">
                     <button
                       onClick={() => handleTimerModeChange('full')}
                       className={`tool-button ${timerMode === 'full' ? 'active' : ''}`}
@@ -2153,7 +2347,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       </Tooltip>
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 gap-2 sidebar-grid sidebar-grid--tight">
                     {Array.from({ length: maxSequence }, (_, index) => {
                       const step = index + 1;
                       const isSaved = Boolean(sequenceSteps[step]);
@@ -2177,7 +2371,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     })}
                   </div>
                     {sequencePlaying ? (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="mt-2 grid grid-cols-2 gap-2 sidebar-grid">
                         <button
                           type="button"
                           className="tool-button w-full"
@@ -2210,7 +2404,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                         {sequencePaused ? 'Resume' : 'Play Sequence'}
                       </button>
                     )}
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2 sidebar-grid">
                     <button
                       type="button"
                       className="tool-button w-full"

@@ -298,6 +298,14 @@
     overflow: hidden;
   }
 
+  .planner-shell-grid {
+    display: grid;
+    grid-template-columns:
+      var(--planner-left-width, 16rem)
+      minmax(var(--planner-field-min-width, 320px), 1fr)
+      var(--planner-right-width, 16rem);
+  }
+
   .planner-page-mobile {
     min-height: 100vh;
     height: 100dvh;
@@ -680,6 +688,7 @@
   .panel-left,
   .panel-right {
     background: linear-gradient(180deg, hsl(var(--sidebar-background) / 0.95) 0%, hsl(var(--background) / 0.98) 100%);
+    --sidebar-grid-min: 120px;
   }
 
   .panel-left {
@@ -688,6 +697,43 @@
 
   .panel-right {
     box-shadow: inset 1px 0 0 hsl(var(--border) / 0.5), -10px 0 30px hsl(var(--background) / 0.35);
+  }
+
+  .sidebar-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ew-resize;
+    touch-action: none;
+    z-index: 30;
+    background: linear-gradient(90deg, transparent, hsl(var(--border) / 0.2), transparent);
+  }
+
+  .sidebar-resizer--left {
+    right: 0;
+  }
+
+  .sidebar-resizer--right {
+    left: 0;
+  }
+
+  .sidebar-resizer-grip {
+    width: 4px;
+    height: 28px;
+    background:
+      radial-gradient(circle, hsl(var(--border) / 0.8) 0 2px, transparent 3px)
+      center/4px 6px repeat-y;
+    opacity: 0.9;
+  }
+
+  .sidebar-resizer:hover .sidebar-resizer-grip {
+    background:
+      radial-gradient(circle, hsl(var(--foreground) / 0.8) 0 2px, transparent 3px)
+      center/4px 6px repeat-y;
   }
 
   .field-surface {
@@ -772,6 +818,10 @@
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .sidebar-resizer {
+    display: none;
+  }
+
   .panel-left,
   .panel-right {
     width: var(--planner-mobile-panel-width, 9rem);
@@ -960,6 +1010,20 @@
 
 .planner-viewport-rotated .planner-shell .field-container {
   padding: 0;
+}
+
+@layer utilities {
+  .sidebar-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--sidebar-grid-min, 120px), 100%), 1fr)) !important;
+  }
+
+  .sidebar-grid--compact {
+    --sidebar-grid-min: 88px;
+  }
+
+  .sidebar-grid--tight {
+    --sidebar-grid-min: 56px;
+  }
 }
 
 

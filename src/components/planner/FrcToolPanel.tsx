@@ -228,7 +228,7 @@ export const FrcToolPanel = ({
 
       <div className="panel">
         <div className="panel-header">Clear</div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sidebar-grid">
           <button onClick={onClearDrawings} className="tool-button gap-1">
             <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
               edit
