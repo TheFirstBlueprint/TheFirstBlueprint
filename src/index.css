@@ -688,7 +688,6 @@
   .panel-left,
   .panel-right {
     background: linear-gradient(180deg, hsl(var(--sidebar-background) / 0.95) 0%, hsl(var(--background) / 0.98) 100%);
-    --sidebar-grid-min: 120px;
   }
 
   .panel-left {
@@ -697,6 +696,20 @@
 
   .panel-right {
     box-shadow: inset 1px 0 0 hsl(var(--border) / 0.5), -10px 0 30px hsl(var(--background) / 0.35);
+  }
+
+  .sidebar-panel-array {
+    --sidebar-panel-columns: 1;
+    display: grid;
+    grid-template-columns: repeat(var(--sidebar-panel-columns), minmax(0, 1fr));
+    gap: 1rem;
+    width: 100%;
+    align-content: start;
+  }
+
+  .sidebar-panel-array > .panel {
+    width: 100%;
+    min-width: 0;
   }
 
   .sidebar-resizer {
@@ -818,6 +831,15 @@
 }
 
 @media (hover: none) and (pointer: coarse) {
+  .sidebar-panel-array {
+    --sidebar-panel-columns: 1 !important;
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-panel-array > .panel {
+    width: 100%;
+  }
+
   .sidebar-resizer {
     display: none;
   }
@@ -834,7 +856,9 @@
   }
 
   .panel-left .flex.flex-col.gap-4,
-  .panel-right .flex.flex-col.gap-4 {
+  .panel-right .flex.flex-col.gap-4,
+  .panel-left .sidebar-panel-array,
+  .panel-right .sidebar-panel-array {
     gap: 0.5rem;
   }
 
@@ -898,7 +922,8 @@
     gap: 0.25rem;
   }
 
-  .panel-left .flex.flex-col.gap-4 {
+  .panel-left .flex.flex-col.gap-4,
+  .panel-left .sidebar-panel-array {
     gap: 0.45rem;
   }
 
@@ -994,7 +1019,8 @@
   gap: 0.25rem;
 }
 
-.planner-viewport-rotated .panel-left .flex.flex-col.gap-4 {
+.planner-viewport-rotated .panel-left .flex.flex-col.gap-4,
+.planner-viewport-rotated .panel-left .sidebar-panel-array {
   gap: 0.45rem;
 }
 
@@ -1010,20 +1036,6 @@
 
 .planner-viewport-rotated .planner-shell .field-container {
   padding: 0;
-}
-
-@layer utilities {
-  .sidebar-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(var(--sidebar-grid-min, 120px), 100%), 1fr)) !important;
-  }
-
-  .sidebar-grid--compact {
-    --sidebar-grid-min: 88px;
-  }
-
-  .sidebar-grid--tight {
-    --sidebar-grid-min: 56px;
-  }
 }
 
 

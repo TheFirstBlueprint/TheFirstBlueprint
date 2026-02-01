@@ -31,8 +31,14 @@ const FIELD_HEIGHT = FIELD_HEIGHT_IN;
 const FIELD_SCREEN_RATIO = 0.9;
 const FIELD_SCALE_MULTIPLIER = 1.1;
 const DEFAULT_SIDEBAR_WIDTH = 256;
-const MIN_SIDEBAR_WIDTH = 220;
+const MIN_SIDEBAR_WIDTH = 256;
 const MIN_FIELD_WIDTH = 320;
+const MAX_SIDEBAR_WIDTH_RATIO = 0.4;
+const SIDEBAR_GRID_MIN_ITEM_WIDTH = 180;
+const SIDEBAR_GRID_GAP = 16;
+const SIDEBAR_HORIZONTAL_PADDING = 40;
+const SIDEBAR_REFLOW_THRESHOLD =
+  SIDEBAR_GRID_MIN_ITEM_WIDTH * 2 + SIDEBAR_GRID_GAP + SIDEBAR_HORIZONTAL_PADDING;
 const SIDEBAR_WIDTH_STORAGE_KEY = 'planner-sidebar-widths';
 const AUTON_SECONDS = 20;
 const TRANSITION_SECONDS = 7;
@@ -651,7 +657,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     (nextWidth: number, side: 'left' | 'right') => {
       const totalWidth = viewport.width || window.innerWidth;
       const otherWidth = side === 'left' ? rightSidebarWidth : leftSidebarWidth;
-      const maxWidth = Math.max(0, totalWidth - otherWidth - MIN_FIELD_WIDTH);
+      const maxWidthByViewport = Math.floor(totalWidth * MAX_SIDEBAR_WIDTH_RATIO);
+      const maxWidthByField = Math.max(0, totalWidth - otherWidth - MIN_FIELD_WIDTH);
+      const maxWidth = Math.min(maxWidthByViewport, maxWidthByField);
       const safeMin = Math.min(MIN_SIDEBAR_WIDTH, maxWidth);
       return Math.max(safeMin, Math.min(nextWidth, maxWidth));
     },
@@ -1938,6 +1946,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         .includes(proposedName)
     : true;
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
+  const leftSidebarPanelColumns: 1 | 2 = !isMobile && leftSidebarWidth >= SIDEBAR_REFLOW_THRESHOLD ? 2 : 1;
+  const rightSidebarPanelColumns: 1 | 2 =
+    !isMobile && rightSidebarWidth >= SIDEBAR_REFLOW_THRESHOLD ? 2 : 1;
   const plannerGridStyle = {
     '--planner-left-width': `${leftSidebarWidth}px`,
     '--planner-right-width': `${rightSidebarWidth}px`,
@@ -1986,6 +1997,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             onSetupField={handleSetupField}
             onExport={handleExport}
             onImport={handleImport}
+            panelColumns={leftSidebarPanelColumns}
           />
           <input
             ref={fileInputRef}
@@ -2236,10 +2248,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-4">
+              <div
+                className="sidebar-panel-array"
+                style={{ '--sidebar-panel-columns': rightSidebarPanelColumns } as CSSProperties}
+              >
                 <div className="panel">
                   <div className="panel-header">Goal Activation</div>
-                  <div className="grid grid-cols-2 gap-2 sidebar-grid">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => handleGoalModeChange('both')}
                       className={`tool-button text-xs ${state.goalMode === 'both' ? 'active' : ''}`}
@@ -2291,7 +2306,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                           : `Phase: ${timerPhase}`
                       : timerMode.toUpperCase()}
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mt-3 sidebar-grid sidebar-grid--compact">
+                  <div className="grid grid-cols-3 gap-2 mt-3">
                     <button
                       onClick={() => handleTimerModeChange('full')}
                       className={`tool-button ${timerMode === 'full' ? 'active' : ''}`}
@@ -2347,7 +2362,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       </Tooltip>
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-2 sidebar-grid sidebar-grid--tight">
+                  <div className="grid grid-cols-5 gap-2">
                     {Array.from({ length: maxSequence }, (_, index) => {
                       const step = index + 1;
                       const isSaved = Boolean(sequenceSteps[step]);
@@ -2371,7 +2386,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                     })}
                   </div>
                     {sequencePlaying ? (
-                      <div className="mt-2 grid grid-cols-2 gap-2 sidebar-grid">
+                      <div className="mt-2 grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           className="tool-button w-full"
@@ -2404,7 +2419,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                         {sequencePaused ? 'Resume' : 'Play Sequence'}
                       </button>
                     )}
-                  <div className="mt-2 grid grid-cols-2 gap-2 sidebar-grid">
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       className="tool-button w-full"
