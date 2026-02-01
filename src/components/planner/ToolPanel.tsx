@@ -28,6 +28,8 @@ interface ToolPanelProps {
   onSetupRobots: () => void;
   onExport: () => void;
   onImport: () => void;
+  presets: { id: string; label: string; path: string }[];
+  onPresetLoad: (preset: { id: string; label: string; path: string }) => void;
   showSetupCoachmark?: boolean;
   onDismissSetupCoachmark?: () => void;
 }
@@ -59,7 +61,8 @@ export const ToolPanel = ({
   onSetupRobots,
   onExport,
   onImport,
-  showSetupCoachmark = false,
+  presets,
+  onPresetLoad,
   onDismissSetupCoachmark,
 }: ToolPanelProps) => {
   const handleSetupFieldClick = () => {
@@ -172,16 +175,6 @@ export const ToolPanel = ({
               ink_eraser
             </span>
           </button>
-          <button
-            onClick={handleSetupFieldClick}
-            className="tool-button mobile-only-flex"
-            title="Setup field"
-            data-planner-setup="true"
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              auto_fix_high
-            </span>
-          </button>
         </div>
 
         {isDrawTool && (
@@ -201,6 +194,34 @@ export const ToolPanel = ({
               ))}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Presets */}
+      <div className="panel">
+        <div className="panel-header">Presets</div>
+        {presets.length ? (
+          <div className="grid gap-2">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => {
+                  if (preset.id === 'empty-field') {
+                    handleSetupFieldClick();
+                    return;
+                  }
+                  onPresetLoad(preset);
+                }}
+                className="tool-button w-full"
+                title={preset.id === 'empty-field' ? 'Setup Field' : `Load ${preset.label}`}
+                data-planner-setup={preset.id === 'empty-field' ? 'true' : undefined}
+              >
+                <span className="text-xs">{preset.id === 'empty-field' ? 'Setup Field' : preset.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">No presets configured.</div>
         )}
       </div>
 
@@ -236,42 +257,6 @@ export const ToolPanel = ({
         >
           Randomize
         </button>
-      </div>
-
-      {/* Field Setup */}
-      <div className="panel mobile-hide">
-        <div className="panel-header">Field Setup</div>
-        <div className="relative inline-flex">
-          {showSetupCoachmark && (
-            <div className="planner-coachmark absolute bottom-full left-0 mb-3 z-20 w-48">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-[11px] text-foreground">Click here to set up the field.</p>
-                <button
-                  type="button"
-                  onClick={onDismissSetupCoachmark}
-                  className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                  aria-label="Dismiss setup tip"
-                >
-                  X
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={onDismissSetupCoachmark}
-                className="mt-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              >
-                Got it
-              </button>
-              <span className="planner-coachmark-arrow absolute -bottom-2 left-6" aria-hidden="true" />
-            </div>
-          )}
-          <button onClick={handleSetupFieldClick} className="tool-button gap-1" data-planner-setup="true">
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              auto_fix_high
-            </span>
-            <span className="text-xs">Setup Field</span>
-          </button>
-        </div>
       </div>
 
       {/* Add Elements */}

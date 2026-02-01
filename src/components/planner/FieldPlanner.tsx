@@ -12,6 +12,7 @@ import { ToolPanel } from './ToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { PRESETS } from '@/presets/presets';
 
 const FIELD_SIZE = 600; 
 const FIELD_INCHES = 144;
@@ -211,6 +212,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     persistedState?.sequenceSteps ?? {}
   );
   const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [activeSequenceStep, setActiveSequenceStep] = useState<number | null>(null);
+  const [sequencePaused, setSequencePaused] = useState(false);
+  const [sequencePausedStep, setSequencePausedStep] = useState<number | null>(null);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
     persistedState?.selectedSequenceStep ?? null
   );
@@ -254,6 +258,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     red: null,
     blue: null,
   });
+  const sequenceRafRef = useRef<number | null>(null);
+  const sequenceDelayTimeoutRef = useRef<number | null>(null);
+  const sequenceAnimationResolveRef = useRef<(() => void) | null>(null);
+  const sequenceDelayResolveRef = useRef<(() => void) | null>(null);
+  const sequenceCancelRef = useRef(false);
+  const sequencePlayingRef = useRef(sequencePlaying);
+  const activeSequenceStepRef = useRef(activeSequenceStep);
   const fieldAreaRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const fieldFrameRef = useRef<HTMLDivElement>(null);
@@ -446,6 +457,25 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       clearTrails();
     }
   }, [clearTrails, sequencePlaying]);
+
+  useEffect(() => {
+    if (!sequencePlaying) {
+      setActiveSequenceStep(null);
+    }
+  }, [sequencePlaying]);
+
+  useEffect(() => {
+    sequencePlayingRef.current = sequencePlaying;
+    if (sequencePlaying) {
+      document.documentElement.setAttribute('data-sequence-playing', 'true');
+      return;
+    }
+    document.documentElement.removeAttribute('data-sequence-playing');
+  }, [sequencePlaying]);
+
+  useEffect(() => {
+    activeSequenceStepRef.current = activeSequenceStep;
+  }, [activeSequenceStep]);
 
   useEffect(() => {
     if (!isMobile || !shouldShowSetupCoachmark) {
@@ -1168,20 +1198,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const handleSelectSequenceStep = useCallback(
     (index: number) => {
       setSelectedSequenceStep(index);
+      if (sequencePlaying) {
+        setActiveSequenceStep(index);
+      }
       if (sequenceSteps[index]) {
         applySequenceStep(index);
         return;
       }
       saveSequenceStep(index, robotsRef.current, true);
     },
-    [applySequenceStep, saveSequenceStep, sequenceSteps]
+    [applySequenceStep, saveSequenceStep, sequencePlaying, sequenceSteps]
   );
-
-  const handleSequenceDeleteAll = useCallback(() => {
-    setSequenceSteps({});
-    setSelectedSequenceStep(null);
-    toast.success('Sequence cleared.');
-  }, []);
 
   const handleSequenceDeleteSelected = useCallback(() => {
     if (!selectedSequenceStep || !sequenceSteps[selectedSequenceStep]) return;
@@ -1210,6 +1237,52 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     },
     [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
+
+  const clearSequencePause = useCallback(() => {
+    setSequencePaused(false);
+    setSequencePausedStep(null);
+  }, []);
+
+  const stopSequenceTimers = useCallback(() => {
+    if (sequenceRafRef.current !== null) {
+      window.cancelAnimationFrame(sequenceRafRef.current);
+      sequenceRafRef.current = null;
+    }
+    if (sequenceDelayTimeoutRef.current !== null) {
+      window.clearTimeout(sequenceDelayTimeoutRef.current);
+      sequenceDelayTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopSequencePlayback = useCallback(() => {
+    sequenceCancelRef.current = true;
+    stopSequenceTimers();
+    sequenceAnimationResolveRef.current?.();
+    sequenceDelayResolveRef.current?.();
+    isApplyingSequenceRef.current = false;
+    setSequencePlaying(false);
+  }, [stopSequenceTimers]);
+
+  const pauseSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    const pausedStep = activeSequenceStepRef.current ?? selectedSequenceStep ?? 1;
+    stopSequencePlayback();
+    setSequencePaused(true);
+    setSequencePausedStep(pausedStep);
+  }, [selectedSequenceStep, stopSequencePlayback]);
+
+  const endSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    stopSequencePlayback();
+    clearSequencePause();
+    const steps = Object.keys(sequenceSteps).map((step) => Number(step));
+    if (steps.length > 0) {
+      const lastStep = Math.max(...steps);
+      setSelectedSequenceStep(lastStep);
+      applySequenceStep(lastStep);
+    }
+    setActiveSequenceStep(null);
+  }, [applySequenceStep, clearSequencePause, sequenceSteps, stopSequencePlayback]);
 
   const startMovementTrails = useCallback((robots: Robot[]) => {
     const next: Record<string, TrailSegment[]> = { ...trailsByBotRef.current };
@@ -1246,17 +1319,20 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     active.points.push(point);
   }, []);
 
-  const playSequence = useCallback(async () => {
+  const playSequence = useCallback(async (startStep = 1) => {
     if (sequencePlaying) return;
     if (Object.keys(sequenceSteps).length === 0) {
       toast.error('Save at least one step to play the sequence.');
       return;
     }
+    sequenceCancelRef.current = false;
+    clearSequencePause();
     clearTrails();
     setSequencePlaying(true);
-    for (let i = 1; i <= maxSequence; i++) {
+    for (let i = startStep; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      setActiveSequenceStep(i);
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -1267,7 +1343,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       await new Promise<void>((resolve) => {
         const startTime = window.performance.now();
         const duration = 650;
+        const finish = () => {
+          if (!sequenceAnimationResolveRef.current) return;
+          sequenceAnimationResolveRef.current = null;
+          resolve();
+        };
+        sequenceAnimationResolveRef.current = finish;
         const tick = (now: number) => {
+          if (sequenceCancelRef.current) {
+            finish();
+            return;
+          }
           const t = Math.min(1, (now - startTime) / duration);
           startRobots.forEach((robot) => {
             const target = step.positions[robot.id] ?? robot.position;
@@ -1282,13 +1368,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
           });
           if (t < 1) {
-            window.requestAnimationFrame(tick);
+            sequenceRafRef.current = window.requestAnimationFrame(tick);
           } else {
-            resolve();
+            finish();
           }
         };
-        window.requestAnimationFrame(tick);
+        sequenceRafRef.current = window.requestAnimationFrame(tick);
       });
+      if (sequenceCancelRef.current) break;
       if (step.ballState) {
         restoreBallState(step.ballState);
       }
@@ -1296,12 +1383,22 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         setRawScores(step.rawScores);
       }
       isApplyingSequenceRef.current = false;
-      await new Promise((resolve) => setTimeout(resolve, 650));
+      await new Promise((resolve) => {
+        const finish = () => {
+          if (!sequenceDelayResolveRef.current) return;
+          sequenceDelayResolveRef.current = null;
+          resolve();
+        };
+        sequenceDelayResolveRef.current = finish;
+        sequenceDelayTimeoutRef.current = window.setTimeout(finish, 650);
+      });
+      if (sequenceCancelRef.current) break;
     }
     setSequencePlaying(false);
   }, [
     appendTrailPoint,
     clearTrails,
+    clearSequencePause,
     maxSequence,
     restoreBallState,
     sequencePlaying,
@@ -1682,10 +1779,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const blueRobotCount = state.robots.filter((robot) => robot.alliance === 'blue').length;
   const canAddRedRobot = redRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
   const canAddBlueRobot = blueRobotCount < DEFAULT_CONFIG.maxRobotsPerAlliance;
+  const clearSequenceState = useCallback(() => {
+    setSequenceSteps({});
+    setSelectedSequenceStep(null);
+    setActiveSequenceStep(null);
+    setSequencePlaying(false);
+  }, []);
+
+  const handleSequenceDeleteAll = useCallback(() => {
+    clearSequenceState();
+    toast.success('Sequence cleared.');
+  }, [clearSequenceState]);
+
   const handleResetField = useCallback(() => {
     resetField();
     clearTrails();
-  }, [clearTrails, resetField]);
+    clearSequenceState();
+  }, [clearSequenceState, clearTrails, resetField]);
 
   const handleAddHumanPlayerBall = (alliance: 'red' | 'blue', color: 'green' | 'purple') => {
     const placed = addHumanPlayerBall(alliance, color);
@@ -1933,7 +2043,15 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   );
 
   const handleExport = () => {
-    const data = exportState();
+    const data = JSON.stringify(
+      {
+        fieldState: state,
+        sequenceSteps,
+        maxSequence,
+      },
+      null,
+      2
+    );
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1943,6 +2061,62 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     URL.revokeObjectURL(url);
     toast.success('Strategy exported!');
   };
+
+  const applyImportedState = useCallback(
+    (content: string, successMessage: string, errorMessage: string) => {
+      const success = importState(content);
+      if (success) {
+        toast.success(successMessage);
+      } else {
+        toast.error(errorMessage);
+      }
+      return success;
+    },
+    [importState]
+  );
+
+  const isFieldStatePayload = useCallback((value: unknown): value is FieldState => {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as FieldState;
+    return (
+      Array.isArray(candidate.robots) &&
+      Array.isArray(candidate.balls) &&
+      typeof candidate.classifiers === 'object' &&
+      Array.isArray(candidate.drawings)
+    );
+  }, []);
+
+  const applyPresetPayload = useCallback(
+    (payload: unknown, successMessage: string, errorMessage: string) => {
+      const preset = payload as {
+        fieldState?: FieldState;
+        sequenceSteps?: Record<number, SequenceStep>;
+        maxSequence?: number;
+      };
+      const fieldState = isFieldStatePayload(payload) ? payload : preset?.fieldState;
+      if (!fieldState || !isFieldStatePayload(fieldState)) {
+        toast.error(errorMessage);
+        return false;
+      }
+
+      clearSequenceState();
+      const success = applyImportedState(JSON.stringify(fieldState), successMessage, errorMessage);
+      if (!success) {
+        return false;
+      }
+
+      if (preset?.sequenceSteps && Object.keys(preset.sequenceSteps).length > 0) {
+        setSequenceSteps(preset.sequenceSteps);
+        const keys = Object.keys(preset.sequenceSteps)
+          .map((key) => Number(key))
+          .filter((value) => Number.isFinite(value));
+        const maxKey = keys.length ? Math.max(...keys) : MIN_SEQUENCE;
+        setMaxSequence((prev) => Math.max(prev, preset.maxSequence ?? maxKey, MIN_SEQUENCE));
+      }
+      return true;
+    },
+    [applyImportedState, clearSequenceState, isFieldStatePayload]
+  );
 
   const handleImport = () => {
     fileInputRef.current?.click();
@@ -1954,17 +2128,36 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const success = importState(content);
-      if (success) {
-        toast.success('Strategy loaded!');
-      } else {
+      try {
+        const content = event.target?.result as string;
+        const payload = JSON.parse(content);
+        applyPresetPayload(payload, 'Strategy loaded!', 'Failed to load strategy file');
+      } catch (error) {
+        console.error(error);
         toast.error('Failed to load strategy file');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
   };
+
+  const handlePresetLoad = useCallback(
+    async (preset: { id: string; label: string; path: string }) => {
+      try {
+        const response = await fetch(preset.path);
+        if (!response.ok) {
+          throw new Error(`Failed to load preset: ${response.status}`);
+        }
+        const content = await response.text();
+        const payload = JSON.parse(content);
+        applyPresetPayload(payload, `Preset loaded: ${preset.label}`, 'Failed to load preset');
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load preset');
+      }
+    },
+    [applyPresetPayload]
+  );
 
   const handleRobotImageSelect = () => {
     robotImageInputRef.current?.click();
@@ -2140,6 +2333,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
+              presets={PRESETS}
+              onPresetLoad={handlePresetLoad}
               showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
               onDismissSetupCoachmark={dismissSetupCoachmark}
             />
@@ -2982,11 +3177,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     const step = index + 1;
                     const isSaved = Boolean(sequenceSteps[step]);
                     const isSelected = selectedSequenceStep === step;
+                    const isActive = sequencePlaying && activeSequenceStep === step;
                     return (
                       <button
                         key={step}
                         onClick={() => handleSelectSequenceStep(step)}
-                        className={`tool-button text-xs font-mono ${isSelected ? 'active' : ''} ${isSaved && !isSelected ? 'bg-muted/40' : ''}`}
+                        className={cn(
+                          'tool-button text-xs font-mono sequence-step',
+                          isSelected && 'active',
+                          isSaved && !isSelected && 'bg-muted/40',
+                          isActive && 'sequence-step-active'
+                        )}
                         title={isSaved ? `Step ${step}` : `Create step ${step}`}
                       >
                         {step}
@@ -2994,17 +3195,43 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                     );
                   })}
                 </div>
-                <button
-                  onClick={playSequence}
-                  className="tool-button mt-2 w-full"
-                  title="Play sequence"
-                  disabled={sequencePlaying}
-                >
-                  <span className="mobile-hide">{sequencePlaying ? 'Playing...' : 'Play Sequence'}</span>
-                  <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
-                    play_arrow
-                  </span>
-                </button>
+                {sequencePlaying ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="tool-button w-full"
+                      onClick={pauseSequence}
+                      title="Pause sequence"
+                    >
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        pause
+                      </span>
+                      <span className="mobile-hide">Pause</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="tool-button w-full"
+                      onClick={endSequence}
+                      title="End sequence"
+                    >
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                        skip_next
+                      </span>
+                      <span className="mobile-hide">End</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => playSequence(sequencePausedStep ?? 1)}
+                    className="tool-button mt-2 w-full"
+                    title={sequencePaused ? 'Resume sequence' : 'Play sequence'}
+                  >
+                    <span className="mobile-hide">{sequencePaused ? 'Resume' : 'Play Sequence'}</span>
+                    <span className="material-symbols-outlined text-[18px] mobile-only-flex" aria-hidden="true">
+                      play_arrow
+                    </span>
+                  </button>
+                )}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"

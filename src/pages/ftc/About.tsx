@@ -3,8 +3,8 @@ import { SiteHeader } from '@/components/site/SiteHeader';
 import SiteFooter from '@/components/site/SiteFooter';
 
 const CONTRIBUTORS = [
-  { name: 'Prabhnoor S', role: 'Build Lead' },
-  { name: 'Jacob J', role: 'Code Lead' },
+  { name: 'Prabhnoor S', role: '27272 Build Lead' },
+  { name: 'Jacob J', role: '27272 Programmer' },
 ];
 
 const FtcAbout = () => {

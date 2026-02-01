@@ -11,6 +11,7 @@ import { DrawingCanvas } from './DrawingCanvas';
 import { FrcToolPanel } from './FrcToolPanel';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const FIELD_FEET_WIDTH = 54;
 const FIELD_FEET_HEIGHT = 27;
@@ -374,6 +375,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     persistedState?.sequenceSteps ?? {}
   );
   const [sequencePlaying, setSequencePlaying] = useState(persistedState?.sequencePlaying ?? false);
+  const [activeSequenceStep, setActiveSequenceStep] = useState<number | null>(null);
+  const [sequencePaused, setSequencePaused] = useState(false);
+  const [sequencePausedStep, setSequencePausedStep] = useState<number | null>(null);
   const [selectedSequenceStep, setSelectedSequenceStep] = useState<number | null>(
     persistedState?.selectedSequenceStep ?? null
   );
@@ -396,6 +400,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<FrcRobot[]>([]);
   const isApplyingSequenceRef = useRef(false);
+  const sequenceRafRef = useRef<number | null>(null);
+  const sequenceDelayTimeoutRef = useRef<number | null>(null);
+  const sequenceAnimationResolveRef = useRef<(() => void) | null>(null);
+  const sequenceDelayResolveRef = useRef<(() => void) | null>(null);
+  const sequenceCancelRef = useRef(false);
+  const sequencePlayingRef = useRef(sequencePlaying);
+  const activeSequenceStepRef = useRef(activeSequenceStep);
   const fieldPerimeterRef = useRef<Point[] | null>(null);
   const lastBoundaryWarningRef = useRef(0);
   const isInputLocked = timerRunning && timerPhase === 'transition';
@@ -1251,6 +1262,25 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     }
   }, [maxSequence, selectedSequenceStep]);
 
+  useEffect(() => {
+    if (!sequencePlaying) {
+      setActiveSequenceStep(null);
+    }
+  }, [sequencePlaying]);
+
+  useEffect(() => {
+    sequencePlayingRef.current = sequencePlaying;
+    if (sequencePlaying) {
+      document.documentElement.setAttribute('data-sequence-playing', 'true');
+      return;
+    }
+    document.documentElement.removeAttribute('data-sequence-playing');
+  }, [sequencePlaying]);
+
+  useEffect(() => {
+    activeSequenceStepRef.current = activeSequenceStep;
+  }, [activeSequenceStep]);
+
   const applySequenceStep = useCallback(
     (index: number) => {
       const step = sequenceSteps[index];
@@ -1279,13 +1309,16 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const handleSelectSequenceStep = useCallback(
     (index: number) => {
       setSelectedSequenceStep(index);
+      if (sequencePlaying) {
+        setActiveSequenceStep(index);
+      }
       if (sequenceSteps[index]) {
         applySequenceStep(index);
         return;
       }
       saveSequenceStep(index, robotsRef.current, true);
     },
-    [applySequenceStep, saveSequenceStep, sequenceSteps]
+    [applySequenceStep, saveSequenceStep, sequencePlaying, sequenceSteps]
   );
 
   const handleSequenceDeleteAll = useCallback(() => {
@@ -1323,16 +1356,65 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     [handleSelectSequenceStep, maxSequence, selectedSequenceStep, sequencePlaying]
   );
 
-  const playSequence = useCallback(async () => {
+  const clearSequencePause = useCallback(() => {
+    setSequencePaused(false);
+    setSequencePausedStep(null);
+  }, []);
+
+  const stopSequenceTimers = useCallback(() => {
+    if (sequenceRafRef.current !== null) {
+      window.cancelAnimationFrame(sequenceRafRef.current);
+      sequenceRafRef.current = null;
+    }
+    if (sequenceDelayTimeoutRef.current !== null) {
+      window.clearTimeout(sequenceDelayTimeoutRef.current);
+      sequenceDelayTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopSequencePlayback = useCallback(() => {
+    sequenceCancelRef.current = true;
+    stopSequenceTimers();
+    sequenceAnimationResolveRef.current?.();
+    sequenceDelayResolveRef.current?.();
+    isApplyingSequenceRef.current = false;
+    setSequencePlaying(false);
+  }, [stopSequenceTimers]);
+
+  const pauseSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    const pausedStep = activeSequenceStepRef.current ?? selectedSequenceStep ?? 1;
+    stopSequencePlayback();
+    setSequencePaused(true);
+    setSequencePausedStep(pausedStep);
+  }, [selectedSequenceStep, stopSequencePlayback]);
+
+  const endSequence = useCallback(() => {
+    if (!sequencePlayingRef.current) return;
+    stopSequencePlayback();
+    clearSequencePause();
+    const steps = Object.keys(sequenceSteps).map((step) => Number(step));
+    if (steps.length > 0) {
+      const lastStep = Math.max(...steps);
+      setSelectedSequenceStep(lastStep);
+      applySequenceStep(lastStep);
+    }
+    setActiveSequenceStep(null);
+  }, [applySequenceStep, clearSequencePause, sequenceSteps, stopSequencePlayback]);
+
+  const playSequence = useCallback(async (startStep = 1) => {
     if (sequencePlaying) return;
     if (Object.keys(sequenceSteps).length === 0) {
       toast.error('Save at least one step to play the sequence.');
       return;
     }
+    sequenceCancelRef.current = false;
+    clearSequencePause();
     setSequencePlaying(true);
-    for (let i = 1; i <= maxSequence; i++) {
+    for (let i = startStep; i <= maxSequence; i++) {
       const step = sequenceSteps[i];
       if (!step) continue;
+      setActiveSequenceStep(i);
       const startRobots = robotsRef.current.map((robot) => ({
         id: robot.id,
         position: { ...robot.position },
@@ -1342,7 +1424,17 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       await new Promise<void>((resolve) => {
         const startTime = window.performance.now();
         const duration = 650;
+        const finish = () => {
+          if (!sequenceAnimationResolveRef.current) return;
+          sequenceAnimationResolveRef.current = null;
+          resolve();
+        };
+        sequenceAnimationResolveRef.current = finish;
         const tick = (now: number) => {
+          if (sequenceCancelRef.current) {
+            finish();
+            return;
+          }
           const t = Math.min(1, (now - startTime) / duration);
           startRobots.forEach((robot) => {
             const target = step.positions[robot.id] ?? robot.position;
@@ -1357,20 +1449,30 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
             updateRobotRotation(robot.id, nextRotation);
           });
           if (t < 1) {
-            window.requestAnimationFrame(tick);
+            sequenceRafRef.current = window.requestAnimationFrame(tick);
           } else {
-            resolve();
+            finish();
           }
         };
-        window.requestAnimationFrame(tick);
+        sequenceRafRef.current = window.requestAnimationFrame(tick);
       });
+      if (sequenceCancelRef.current) break;
       if (step.fuelState) {
         restoreFuelState(step.fuelState);
       }
       isApplyingSequenceRef.current = false;
+      if (sequenceCancelRef.current) break;
     }
     setSequencePlaying(false);
-  }, [applyConstrainedRobotPosition, maxSequence, restoreFuelState, sequencePlaying, sequenceSteps, updateRobotRotation]);
+  }, [
+    applyConstrainedRobotPosition,
+    clearSequencePause,
+    maxSequence,
+    restoreFuelState,
+    sequencePlaying,
+    sequenceSteps,
+    updateRobotRotation,
+  ]);
 
   useEffect(() => {
     if (sequenceSteps[selectedSequenceStep ?? -1]) {
@@ -2056,11 +2158,17 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       const step = index + 1;
                       const isSaved = Boolean(sequenceSteps[step]);
                       const isSelected = selectedSequenceStep === step;
+                      const isActive = sequencePlaying && activeSequenceStep === step;
                       return (
                         <button
                           key={step}
                           onClick={() => handleSelectSequenceStep(step)}
-                          className={`tool-button text-xs font-mono ${isSelected ? 'active' : ''} ${isSaved && !isSelected ? 'bg-muted/40' : ''}`}
+                          className={cn(
+                            'tool-button text-xs font-mono sequence-step',
+                            isSelected && 'active',
+                            isSaved && !isSelected && 'bg-muted/40',
+                            isActive && 'sequence-step-active'
+                          )}
                           title={isSaved ? `Step ${step}` : `Create step ${step}`}
                         >
                           {step}
@@ -2068,14 +2176,40 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                       );
                     })}
                   </div>
-                  <button
-                    onClick={playSequence}
-                    className="tool-button mt-2 w-full"
-                    title="Play sequence"
-                    disabled={sequencePlaying}
-                  >
-                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
-                  </button>
+                    {sequencePlaying ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className="tool-button w-full"
+                          onClick={pauseSequence}
+                          title="Pause sequence"
+                        >
+                          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                            pause
+                          </span>
+                          <span className="mobile-hide">Pause</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="tool-button w-full"
+                          onClick={endSequence}
+                          title="End sequence"
+                        >
+                          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                            skip_next
+                          </span>
+                          <span className="mobile-hide">End</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => playSequence(sequencePausedStep ?? 1)}
+                        className="tool-button mt-2 w-full"
+                        title={sequencePaused ? 'Resume sequence' : 'Play sequence'}
+                      >
+                        {sequencePaused ? 'Resume' : 'Play Sequence'}
+                      </button>
+                    )}
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
                       type="button"

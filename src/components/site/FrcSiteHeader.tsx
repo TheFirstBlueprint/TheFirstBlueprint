@@ -21,7 +21,7 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
           {showBackButton && (
             <Link
               to={backTo}
-              className="tool-button h-10 w-10"
+              className="tool-button h-10 w-10 site-nav-button"
               title="Back to home"
               aria-label="Back to home"
             >
@@ -40,7 +40,7 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `tool-button text-xs font-mono ${
+                  `tool-button text-xs font-mono site-nav-link ${
                     item.to === '/frc/patch-notes' ? 'mobile-hide' : ''
                   } ${isActive ? 'active' : ''}`
                 }
@@ -67,7 +67,7 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
           </nav>
           <Link
             to="/frc/instructions"
-            className="tool-button text-xs font-mono"
+            className="tool-button text-xs font-mono site-nav-link"
             title="Instructions"
             aria-label="Open instructions"
           >
@@ -78,7 +78,7 @@ export const FrcSiteHeader = ({ showBackButton = false, backTo = '/' }: FrcSiteH
           </Link>
           <Link
             to="/frc/settings"
-            className="tool-button w-10 h-10 mobile-hide"
+            className="tool-button w-10 h-10 mobile-hide site-nav-button"
             title="Settings"
             aria-label="Open settings"
           >
