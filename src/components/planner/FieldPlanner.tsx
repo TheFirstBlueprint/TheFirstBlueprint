@@ -1,4 +1,12 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
 import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState, Ball } from '@/types/planner';
@@ -72,6 +80,16 @@ const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const FIELD_SCREEN_RATIO = 0.8;
 const FIELD_SCALE_MULTIPLIER = 1.1;
+const DEFAULT_SIDEBAR_WIDTH = 256;
+const MIN_SIDEBAR_WIDTH = 256;
+const MIN_FIELD_WIDTH = 320;
+const MAX_SIDEBAR_WIDTH_RATIO = 0.4;
+const SIDEBAR_GRID_MIN_ITEM_WIDTH = 180;
+const SIDEBAR_GRID_GAP = 16;
+const SIDEBAR_HORIZONTAL_PADDING = 40;
+const SIDEBAR_REFLOW_THRESHOLD =
+  SIDEBAR_GRID_MIN_ITEM_WIDTH * 2 + SIDEBAR_GRID_GAP + SIDEBAR_HORIZONTAL_PADDING;
+const SIDEBAR_WIDTH_STORAGE_KEY = 'planner-sidebar-widths';
 const DEFAULT_KEYBINDS = {
   select: 's',
   pen: 'p',
@@ -150,6 +168,25 @@ const normalizeThemeMode = (value: string | null): ThemeMode => {
   if (value === 'base' || value === 'dark' || value === 'light' || value === 'sharkans') return value;
   if (value === 'basic') return 'base';
   return 'dark';
+};
+
+const readSidebarWidths = () => {
+  if (typeof window === 'undefined') {
+    return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+  }
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+    if (!stored) {
+      return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+    }
+    const parsed = JSON.parse(stored) as { left?: number; right?: number };
+    return {
+      left: typeof parsed.left === 'number' ? parsed.left : DEFAULT_SIDEBAR_WIDTH,
+      right: typeof parsed.right === 'number' ? parsed.right : DEFAULT_SIDEBAR_WIDTH,
+    };
+  } catch {
+    return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
+  }
 };
 
 export const FieldPlanner = ({ className }: { className?: string }) => {
@@ -247,6 +284,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+  const initialSidebarWidths = useMemo(() => readSidebarWidths(), []);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(initialSidebarWidths.left);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(initialSidebarWidths.right);
+  const resizeStateRef = useRef<{
+    side: 'left' | 'right';
+    startX: number;
+    startWidth: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
@@ -451,6 +496,92 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       window.removeEventListener('orientationchange', updateViewport);
     };
   }, []);
+
+  const clampSidebarWidth = useCallback(
+    (nextWidth: number, side: 'left' | 'right') => {
+      const totalWidth = viewport.width || window.innerWidth;
+      const otherWidth = side === 'left' ? rightSidebarWidth : leftSidebarWidth;
+      const maxWidthByViewport = Math.floor(totalWidth * MAX_SIDEBAR_WIDTH_RATIO);
+      const maxWidthByField = Math.max(0, totalWidth - otherWidth - MIN_FIELD_WIDTH);
+      const maxWidth = Math.min(maxWidthByViewport, maxWidthByField);
+      const safeMin = Math.min(MIN_SIDEBAR_WIDTH, maxWidth);
+      return Math.max(safeMin, Math.min(nextWidth, maxWidth));
+    },
+    [leftSidebarWidth, rightSidebarWidth, viewport.width]
+  );
+
+  const handleResizeStart = useCallback(
+    (side: 'left' | 'right', event: ReactPointerEvent<HTMLDivElement>) => {
+      if (isMobile) return;
+      event.preventDefault();
+      event.stopPropagation();
+      resizeStateRef.current = {
+        side,
+        startX: event.clientX,
+        startWidth: side === 'left' ? leftSidebarWidth : rightSidebarWidth,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [isMobile, leftSidebarWidth, rightSidebarWidth]
+  );
+
+  const handleResizeReset = useCallback(
+    (side: 'left' | 'right') => {
+      const nextWidth = clampSidebarWidth(DEFAULT_SIDEBAR_WIDTH, side);
+      if (side === 'left') {
+        setLeftSidebarWidth(nextWidth);
+        return;
+      }
+      setRightSidebarWidth(nextWidth);
+    },
+    [clampSidebarWidth]
+  );
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const resizeState = resizeStateRef.current;
+      if (!resizeState) return;
+      const delta = event.clientX - resizeState.startX;
+      const nextWidth =
+        resizeState.side === 'left' ? resizeState.startWidth + delta : resizeState.startWidth - delta;
+      const clamped = clampSidebarWidth(nextWidth, resizeState.side);
+      if (resizeState.side === 'left') {
+        setLeftSidebarWidth(clamped);
+      } else {
+        setRightSidebarWidth(clamped);
+      }
+    };
+    const stopResize = () => {
+      if (!resizeStateRef.current) return;
+      resizeStateRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopResize);
+    window.addEventListener('pointercancel', stopResize);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopResize);
+      window.removeEventListener('pointercancel', stopResize);
+    };
+  }, [clampSidebarWidth]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    window.localStorage.setItem(
+      SIDEBAR_WIDTH_STORAGE_KEY,
+      JSON.stringify({ left: leftSidebarWidth, right: rightSidebarWidth })
+    );
+  }, [isMobile, leftSidebarWidth, rightSidebarWidth]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    setLeftSidebarWidth((prev) => clampSidebarWidth(prev, 'left'));
+    setRightSidebarWidth((prev) => clampSidebarWidth(prev, 'right'));
+  }, [clampSidebarWidth, isMobile, viewport.width]);
 
   useEffect(() => {
     if (!sequencePlaying) {
@@ -673,6 +804,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     const remainingWidth = Math.max(0, viewport.width - targetSize);
     const panelWidth = remainingWidth / 2;
     document.documentElement.style.setProperty('--planner-mobile-panel-width', `${panelWidth}px`);
+    setLeftSidebarWidth(panelWidth);
+    setRightSidebarWidth(panelWidth);
   }, [isMobile, viewport.height, viewport.width]);
 
   const updatePlannerMetrics = useCallback(() => {
@@ -1112,6 +1245,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     setActiveClassifierMenu(null);
     setSelectedRobotId(null);
   };
+
+  const handleFieldPointerDownCapture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
+    event.preventDefault();
+    window.getSelection?.()?.removeAllRanges();
+  }, []);
 
   const motifs = ['GPP', 'PGP', 'PPG'];
 
@@ -2302,11 +2443,32 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         .includes(proposedName)
     : true;
   const canSaveRobot = Boolean(robotDraft && nameIsValid && nameIsUnique);
+  const leftSidebarPanelColumns: 1 | 2 = !isMobile && leftSidebarWidth >= SIDEBAR_REFLOW_THRESHOLD ? 2 : 1;
+  const rightSidebarPanelColumns: 1 | 2 =
+    !isMobile && rightSidebarWidth >= SIDEBAR_REFLOW_THRESHOLD ? 2 : 1;
+  const plannerGridStyle = {
+    '--planner-left-width': `${leftSidebarWidth}px`,
+    '--planner-right-width': `${rightSidebarWidth}px`,
+    '--planner-field-min-width': `${MIN_FIELD_WIDTH}px`,
+  } as CSSProperties;
 
   return (
-    <div className={`h-full bg-background flex planner-shell ${className ?? ''}`}>
+    <div
+      className={`h-full bg-background planner-shell planner-shell-grid ${className ?? ''}`}
+      style={plannerGridStyle}
+    >
       {/* Left Panel */}
-      <div className="panel-left w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+      <div className="panel-left relative h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div
+          className="sidebar-resizer sidebar-resizer--left"
+          onPointerDown={(event) => handleResizeStart('left', event)}
+          onDoubleClick={() => handleResizeReset('left')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize left sidebar"
+        >
+          <span className="sidebar-resizer-grip" aria-hidden="true" />
+        </div>
           <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
             <ToolPanel
               activeTool={activeTool}
@@ -2337,6 +2499,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               onPresetLoad={handlePresetLoad}
               showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
               onDismissSetupCoachmark={dismissSetupCoachmark}
+              panelColumns={leftSidebarPanelColumns}
             />
             {isMobile && selectedRobot && (
               <div className="panel mobile-only-block">
@@ -2447,7 +2610,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       {/* Field Area */}
       <div
         ref={fieldAreaRef}
-        className={`flex-1 flex items-start justify-center field-container ${isMobile ? 'p-0' : 'p-8 pt-6'}`}
+        className={`min-w-0 flex items-start justify-center field-container ${isMobile ? 'p-0' : 'p-8 pt-6'}`}
       >
         <div
           ref={fieldFrameRef}
@@ -2455,7 +2618,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}
         >
           <div
-            className="relative field-surface"
+            className="relative field-surface planner-field-no-select"
             style={{
               width: FIELD_SIZE,
               height: FIELD_SIZE,
@@ -2463,6 +2626,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               transformOrigin: 'top left',
             }}
             onClick={handleFieldClick}
+            onPointerDownCapture={handleFieldPointerDownCapture}
             ref={fieldRef}
           >
           {/* Field Background */}
@@ -2887,7 +3051,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       </div>
 
       {/* Right Panel */}
-      <div className="panel-right w-64 flex-shrink-0 h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+      <div className="panel-right relative h-full min-h-0 flex flex-col overflow-y-auto overscroll-contain">
+        <div
+          className="sidebar-resizer sidebar-resizer--right"
+          onPointerDown={(event) => handleResizeStart('right', event)}
+          onDoubleClick={() => handleResizeReset('right')}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize right sidebar"
+        >
+          <span className="sidebar-resizer-grip" aria-hidden="true" />
+        </div>
         <div className="h-full overflow-y-auto overscroll-contain p-5 pb-24">
           <div className="mb-6 mobile-hide">
             <h1 className="font-title text-xl uppercase tracking-[0.2em] text-primary mb-1">
@@ -3057,7 +3231,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-4">
+            <div
+              className="sidebar-panel-array"
+              style={{ '--sidebar-panel-columns': rightSidebarPanelColumns } as CSSProperties}
+            >
               <div className="panel">
                 <div className="panel-header">Points</div>
                 <div className="space-y-3 text-xs text-muted-foreground">

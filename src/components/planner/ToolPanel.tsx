@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Tool, BallColor, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,7 @@ interface ToolPanelProps {
   onPresetLoad: (preset: { id: string; label: string; path: string }) => void;
   showSetupCoachmark?: boolean;
   onDismissSetupCoachmark?: () => void;
+  panelColumns?: 1 | 2;
 }
 
 const PEN_COLORS = ['#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
@@ -64,6 +66,7 @@ export const ToolPanel = ({
   presets,
   onPresetLoad,
   onDismissSetupCoachmark,
+  panelColumns = 1,
 }: ToolPanelProps) => {
   const handleSetupFieldClick = () => {
     onSetupField();
@@ -80,7 +83,10 @@ export const ToolPanel = ({
     activeTool === 'arc';
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className="sidebar-panel-array"
+      style={{ '--sidebar-panel-columns': panelColumns } as CSSProperties}
+    >
       {/* Drawing Tools */}
       <div className="panel">
         <div className="panel-header">Tools</div>

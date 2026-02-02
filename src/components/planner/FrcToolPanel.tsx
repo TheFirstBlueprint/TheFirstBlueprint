@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Tool, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,7 @@ interface FrcToolPanelProps {
   onSetupField: () => void;
   onExport: () => void;
   onImport: () => void;
+  panelColumns?: 1 | 2;
 }
 
 const PEN_COLORS = ['#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
@@ -41,6 +43,7 @@ export const FrcToolPanel = ({
   onSetupField,
   onExport,
   onImport,
+  panelColumns = 1,
 }: FrcToolPanelProps) => {
   const isDrawTool =
     activeTool === 'pen' ||
@@ -52,7 +55,10 @@ export const FrcToolPanel = ({
     activeTool === 'arc';
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className="sidebar-panel-array"
+      style={{ '--sidebar-panel-columns': panelColumns } as CSSProperties}
+    >
       <div className="panel">
         <div className="panel-header">Tools</div>
         <div className="grid grid-cols-3 gap-2">
