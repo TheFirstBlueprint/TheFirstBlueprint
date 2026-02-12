@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
-import { Alliance, DrawingPath, Position } from '@/types/planner';
+import { Alliance, DrawingPath, Position, TextBox } from '@/types/planner';
 import { FrcFieldState, FrcFuel, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
 
 let idCounter = 0;
 const generateId = () => `frc-${++idCounter}-${Date.now()}`;
 const INCHES_PER_FOOT = 12;
+const FIELD_WIDTH_IN = 54 * INCHES_PER_FOOT;
+const FIELD_HEIGHT_IN = 27 * INCHES_PER_FOOT;
 const FUEL_RADIUS_IN = 2.955;
 const MAX_FUEL_CAPACITY = 100;
 const STARTING_FUEL = 8;
@@ -15,6 +17,7 @@ const createInitialState = (): FrcFieldState => ({
   fuel: [],
   goalMode: 'both',
   randomizedGoal: null,
+  textBoxes: [],
 });
 
 const normalizeFrcFieldState = (parsed: FrcFieldState): FrcFieldState => ({
@@ -32,6 +35,17 @@ const normalizeFrcFieldState = (parsed: FrcFieldState): FrcFieldState => ({
   fuel: parsed.fuel ?? [],
   goalMode: parsed.goalMode ?? 'both',
   randomizedGoal: parsed.randomizedGoal ?? null,
+  textBoxes: (parsed.textBoxes ?? []).map((box) => ({
+    id: box.id,
+    x: typeof box.x === 'number' ? box.x : FIELD_WIDTH_IN / 2,
+    y: typeof box.y === 'number' ? box.y : FIELD_HEIGHT_IN / 2,
+    rotation: typeof box.rotation === 'number' ? box.rotation : 0,
+    text: typeof box.text === 'string' ? box.text : 'Text',
+    fontSize: typeof box.fontSize === 'number' ? box.fontSize : 16,
+    color: typeof box.color === 'string' ? box.color : '#ffffff',
+    width: box.width,
+    height: box.height,
+  })),
 });
 
 export const useFrcFieldState = (initialState?: FrcFieldState) => {
@@ -228,6 +242,33 @@ export const useFrcFieldState = (initialState?: FrcFieldState) => {
     }));
   }, []);
 
+  const addTextBox = useCallback((textBox: TextBox) => {
+    setState((prev) => ({ ...prev, textBoxes: [...prev.textBoxes, textBox] }));
+    return textBox.id;
+  }, []);
+
+  const updateTextBox = useCallback((id: string, updates: Partial<TextBox>) => {
+    setState((prev) => ({
+      ...prev,
+      textBoxes: prev.textBoxes.map((box) =>
+        box.id === id
+          ? {
+              ...box,
+              ...updates,
+              rotation: updates.rotation === undefined ? box.rotation : updates.rotation % 360,
+            }
+          : box
+      ),
+    }));
+  }, []);
+
+  const removeTextBox = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      textBoxes: prev.textBoxes.filter((box) => box.id !== id),
+    }));
+  }, []);
+
   const clearDrawings = useCallback(() => {
     setState((prev) => ({ ...prev, drawings: [] }));
   }, []);
@@ -290,6 +331,9 @@ export const useFrcFieldState = (initialState?: FrcFieldState) => {
     addDrawing,
     removeDrawing,
     clearDrawings,
+    addTextBox,
+    updateTextBox,
+    removeTextBox,
     clearFuel,
     clearRobots,
     setGoalMode,
