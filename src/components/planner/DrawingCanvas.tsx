@@ -313,7 +313,7 @@ export const DrawingCanvas = ({
       className="absolute inset-0"
       style={{
         zIndex: 5,
-        pointerEvents: activeTool === 'select' || isLocked ? 'none' : 'auto',
+        pointerEvents: activeTool === 'select' || activeTool === 'text' || isLocked ? 'none' : 'auto',
         touchAction: isDrawTool ? 'none' : 'auto',
         cursor: isDrawTool ? 'crosshair' : activeTool === 'eraser' ? 'pointer' : 'default',
       }}
