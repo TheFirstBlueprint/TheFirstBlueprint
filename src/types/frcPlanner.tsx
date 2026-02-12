@@ -1,4 +1,4 @@
-import { Alliance, DrawingPath, Position } from '@/types/planner';
+import { Alliance, DrawingPath, Position, TextBox } from '@/types/planner';
 
 export type GoalActivationMode = 'both' | 'blue' | 'red' | 'randomized';
 
@@ -25,4 +25,5 @@ export interface FrcFieldState {
   fuel: FrcFuel[];
   goalMode: GoalActivationMode;
   randomizedGoal: Alliance | null;
+  textBoxes: TextBox[];
 }

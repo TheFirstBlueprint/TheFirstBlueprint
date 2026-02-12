@@ -1,6 +1,6 @@
 export type BallColor = 'green' | 'purple';
 export type Alliance = 'red' | 'blue';
-export type Tool = 'select' | 'pen' | 'dotted' | 'arrow' | 'eraser' | 'box' | 'rectangle' | 'circle' | 'arc';
+export type Tool = 'select' | 'pen' | 'dotted' | 'arrow' | 'eraser' | 'box' | 'rectangle' | 'circle' | 'arc' | 'text';
 export type DrawingStyle = 'solid' | 'dotted' | 'arrow';
 export type DrawingShape = 'path' | 'box' | 'rectangle' | 'circle' | 'arc';
 
@@ -46,6 +46,18 @@ export interface DrawingPath {
   shape?: DrawingShape;
 }
 
+export interface TextBox {
+  id: string;
+  x: number;
+  y: number;
+  rotation: number;
+  text: string;
+  fontSize: number;
+  color: string;
+  width?: number;
+  height?: number;
+}
+
 export interface FieldState {
   robots: Robot[];
   balls: Ball[];
@@ -58,6 +70,7 @@ export interface FieldState {
     blue: number;
   };
   drawings: DrawingPath[];
+  textBoxes: TextBox[];
 }
 
 export interface PlannerConfig {
@@ -92,4 +105,5 @@ export const createInitialState = (): FieldState => ({
     blue: 0,
   },
   drawings: [],
+  textBoxes: [],
 });

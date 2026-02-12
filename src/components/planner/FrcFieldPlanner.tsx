@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFrcFieldState } from '@/hooks/useFrcFieldState';
-import { Tool, Alliance, Position } from '@/types/planner';
+import { Tool, Alliance, Position, TextBox } from '@/types/planner';
 import { FrcFieldState, FrcFuel, FrcRobot, GoalActivationMode } from '@/types/frcPlanner';
 import fieldImageBasic from '@/assets/basic_rebuilt_field.png';
 import fieldImageDark from '@/assets/black_rebuilt_field.png';
@@ -17,6 +17,7 @@ import { FrcRobotElement } from './FrcRobotElement';
 import { FrcFuelElement } from './FrcFuelElement';
 import { DrawingCanvas } from './DrawingCanvas';
 import { FrcToolPanel } from './FrcToolPanel';
+import { TextBoxElement } from './TextBoxElement';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -90,6 +91,7 @@ const MAX_SEQUENCE = 50;
 const MAX_BOUNDARY_STEP = 4;
 const PERIMETER_BG_THRESHOLD = 10;
 const PERIMETER_INSET = 10;
+const TEXT_COLORS = ['#ffffff', '#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899'];
 
 type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
 type Keybinds = typeof DEFAULT_KEYBINDS;
@@ -387,6 +389,9 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     addDrawing,
     removeDrawing,
     clearDrawings,
+    addTextBox,
+    updateTextBox,
+    removeTextBox,
     clearFuel,
     clearRobots,
     setGoalMode,
@@ -398,6 +403,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const [activeTool, setActiveTool] = useState<Tool>(persistedState?.activeTool ?? 'select');
   const [penColor, setPenColor] = useState(persistedState?.penColor ?? '#2b76d2');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(persistedState?.selectedRobotId ?? null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [textEditorOpen, setTextEditorOpen] = useState(false);
   const [timerMode, setTimerMode] = useState<'full' | 'teleop' | 'auton'>(
     persistedState?.timerMode ?? 'full'
   );
@@ -462,6 +469,37 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const fieldPerimeterRef = useRef<Point[] | null>(null);
   const lastBoundaryWarningRef = useRef(0);
   const isInputLocked = timerRunning && timerPhase === 'transition';
+  const selectedText = useMemo(
+    () => state.textBoxes.find((box) => box.id === selectedTextId) ?? null,
+    [selectedTextId, state.textBoxes]
+  );
+  const allowTextInteraction = activeTool === 'select' || activeTool === 'text';
+
+  const handleTextSelect = useCallback(
+    (id: string) => {
+      if (isInputLocked) return;
+      setSelectedTextId(id);
+      setSelectedRobotId(null);
+    },
+    [isInputLocked]
+  );
+
+  const handleTextEdit = useCallback(
+    (id: string) => {
+      handleTextSelect(id);
+      setTextEditorOpen(true);
+    },
+    [handleTextSelect]
+  );
+
+  const handleTextDelete = useCallback(
+    (id: string) => {
+      removeTextBox(id);
+      setSelectedTextId((prev) => (prev === id ? null : prev));
+      setTextEditorOpen(false);
+    },
+    [removeTextBox]
+  );
   const isDrawTool =
     activeTool === 'pen' ||
     activeTool === 'dotted' ||
@@ -1387,10 +1425,44 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     [selectedRobotId, state.robots, updateRobotRotation]
   );
 
-  const handleFieldClick = () => {
+  const getFieldPointFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = fieldRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      const scale = fieldScale || 1;
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      if (x < 0 || y < 0 || x > FIELD_WIDTH || y > FIELD_HEIGHT) return null;
+      return { x, y };
+    },
+    [fieldScale]
+  );
+
+  const handleFieldClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
+
+    if (activeTool === 'text') {
+      const point = getFieldPointFromClient(event.clientX, event.clientY);
+      if (point) {
+        const newBox: TextBox = {
+          id: `text-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+          x: point.x,
+          y: point.y,
+          rotation: 0,
+          text: 'Text',
+          fontSize: 16,
+          color: '#ffffff',
+        };
+        const newId = addTextBox(newBox);
+        setSelectedTextId(newId);
+      }
+      return;
+    }
+
     setSelectedRobotId(null);
+    setSelectedTextId(null);
+    setTextEditorOpen(false);
   };
 
   const handleFieldPointerDownCapture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -1760,6 +1832,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       const robot = state.robots.find((item) => item.id === robotId);
       if (!robot) return;
       setSelectedRobotId(robotId);
+      setSelectedTextId(null);
+      setTextEditorOpen(false);
       setRobotDraft({
         widthFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
         heightFt: robot.widthFt ?? DEFAULT_ROBOT_FT,
@@ -2027,7 +2101,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_WIDTH * fieldScale, height: FIELD_HEIGHT * fieldScale }}
         >
           <div
-            className="relative field-surface planner-field-no-select"
+            className={cn(
+              'relative field-surface planner-field-no-select',
+              activeTool === 'text' && 'cursor-text'
+            )}
             style={{
               width: FIELD_WIDTH,
               height: FIELD_HEIGHT,
@@ -2055,6 +2132,23 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
               isLocked={isInputLocked}
               scale={fieldScale}
             />
+
+            {state.textBoxes.map((box) => (
+              <TextBoxElement
+                key={box.id}
+                textBox={box}
+                isSelected={selectedTextId === box.id}
+                onSelect={() => handleTextSelect(box.id)}
+                onPositionChange={(x, y) => updateTextBox(box.id, { x, y })}
+                onRotate={(delta) => updateTextBox(box.id, { rotation: box.rotation + delta })}
+                onEdit={() => handleTextEdit(box.id)}
+                onRemove={() => handleTextDelete(box.id)}
+                fieldBounds={{ width: FIELD_WIDTH, height: FIELD_HEIGHT }}
+                isLocked={isInputLocked}
+                scale={fieldScale}
+                allowInteraction={allowTextInteraction && !isDrawTool}
+              />
+            ))}
 
             <div
               className={`absolute frc-goal-zone ${activeGoals.blue ? 'frc-goal-zone-active' : ''} frc-goal-zone-blue`}
@@ -2112,13 +2206,19 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                   dimensions={dimensions}
                   displayName={displayName}
                   isSelected={selectedRobotId === robot.id}
-                  onSelect={() => setSelectedRobotId(robot.id)}
+                  onSelect={() => {
+                    setSelectedRobotId(robot.id);
+                    setSelectedTextId(null);
+                    setTextEditorOpen(false);
+                  }}
                   onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
                   onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
                   onEdit={() => handleRobotPanelOpen(robot.id)}
                   onRemove={() => {
                     removeRobot(robot.id);
                     setSelectedRobotId(null);
+                    setSelectedTextId(null);
+                    setTextEditorOpen(false);
                     handleRobotPanelClose();
                   }}
                   isLocked={isInputLocked}
@@ -2507,6 +2607,133 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
           )}
         </div>
       </div>
+
+      {textEditorOpen && selectedText && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overlay-scrim backdrop-blur-sm px-4 py-6"
+          onClick={() => setTextEditorOpen(false)}
+        >
+          <div
+            className="panel w-full max-w-md"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Edit Text
+              </h2>
+              <button
+                onClick={() => setTextEditorOpen(false)}
+                className="tool-button !p-1"
+                title="Close text editor"
+                aria-label="Close text editor"
+              >
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  close
+                </span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                Text
+                <textarea
+                  value={selectedText.text}
+                  onChange={(event) => updateTextBox(selectedText.id, { text: event.target.value })}
+                  className="min-h-[80px] rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm text-foreground shadow-inner shadow-black/20"
+                  placeholder="Type text..."
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                  Font Size
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={10}
+                      max={64}
+                      value={selectedText.fontSize}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { fontSize: Number(event.target.value) })
+                      }
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min={10}
+                      max={64}
+                      value={selectedText.fontSize}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { fontSize: Number(event.target.value) })
+                      }
+                      className="w-16 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-xs text-foreground shadow-inner shadow-black/20"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                  Rotation
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={Math.round(selectedText.rotation)}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { rotation: Number(event.target.value) })
+                      }
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={360}
+                      value={Math.round(selectedText.rotation)}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { rotation: Number(event.target.value) })
+                      }
+                      className="w-16 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-xs text-foreground shadow-inner shadow-black/20"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                Text Color
+                <div className="flex items-center gap-2">
+                  {TEXT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => updateTextBox(selectedText.id, { color })}
+                      className={cn(
+                        'w-6 h-6 rounded-full border-2 transition-all',
+                        selectedText.color === color ? 'border-foreground scale-110' : 'border-transparent'
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={selectedText.color}
+                    onChange={(event) => updateTextBox(selectedText.id, { color: event.target.value })}
+                    className="h-7 w-7 rounded-md border border-border/60 bg-background/70 p-0"
+                    title="Custom color"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setTextEditorOpen(false)}
+                className="tool-button active"
+                title="Done"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

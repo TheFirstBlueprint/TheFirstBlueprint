@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useFieldState } from '@/hooks/useFieldState';
-import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState, Ball } from '@/types/planner';
+import { Tool, DEFAULT_CONFIG, Robot, Alliance, Classifier, FieldState, Ball, TextBox } from '@/types/planner';
 import fieldImageBasic from '@/assets/decode_field_B.png';
 import fieldImageDark from '@/assets/decode_field_B.png';
 import fieldImageLight from '@/assets/decode_field_L.png';
@@ -17,6 +17,7 @@ import { RobotElement } from './RobotElement';
 import { BallElement } from './BallElement';
 import { DrawingCanvas } from './DrawingCanvas';
 import { ToolPanel } from './ToolPanel';
+import { TextBoxElement } from './TextBoxElement';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ const PARK_FULL_EXIT_RATIO = 0.93;
 const PARK_SEMI_ENTER_RATIO = 0.3;
 const PARK_SEMI_EXIT_RATIO = 0.2;
 const PARK_FULL_TOLERANCE_PX = 2;
+const TEXT_COLORS = ['#ffffff', '#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899'];
 const MAGNET_TARGETS = {
   blue: [{ x: 0.7275, y: 0.761 }],
   red: [{ x: 0.27, y: 0.761 }],
@@ -215,6 +217,9 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     addDrawing,
     removeDrawing,
     clearDrawings,
+    addTextBox,
+    updateTextBox,
+    removeTextBox,
     clearBalls,
     clearRobots,
     resetField,
@@ -228,6 +233,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
   const [activeTool, setActiveTool] = useState<Tool>(persistedState?.activeTool ?? 'select');
   const [penColor, setPenColor] = useState(persistedState?.penColor ?? '#2b76d2');
   const [selectedRobotId, setSelectedRobotId] = useState<string | null>(persistedState?.selectedRobotId ?? null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [textEditorOpen, setTextEditorOpen] = useState(false);
   const [motif, setMotif] = useState(persistedState?.motif ?? 'GPP');
   const [robotModes, setRobotModes] = useState<Record<string, { intake: boolean; outtake: boolean }>>(
     persistedState?.robotModes ?? {}
@@ -456,6 +463,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       state.robots.length === 0 &&
       state.balls.length === 0 &&
       state.drawings.length === 0 &&
+      state.textBoxes.length === 0 &&
       state.classifiers.red.balls.length === 0 &&
       state.classifiers.blue.balls.length === 0 &&
       state.classifiers.red.extensionBalls.length === 0 &&
@@ -465,6 +473,38 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     );
   }, [state]);
   const shouldShowSetupCoachmark = isFieldUninitialized && !setupCoachmarkDismissed;
+  const selectedText = useMemo(
+    () => state.textBoxes.find((box) => box.id === selectedTextId) ?? null,
+    [selectedTextId, state.textBoxes]
+  );
+  const allowTextInteraction = activeTool === 'select' || activeTool === 'text';
+
+  const handleTextSelect = useCallback(
+    (id: string) => {
+      if (isInputLocked) return;
+      setSelectedTextId(id);
+      setSelectedRobotId(null);
+      setActiveClassifierMenu(null);
+    },
+    [isInputLocked]
+  );
+
+  const handleTextEdit = useCallback(
+    (id: string) => {
+      handleTextSelect(id);
+      setTextEditorOpen(true);
+    },
+    [handleTextSelect]
+  );
+
+  const handleTextDelete = useCallback(
+    (id: string) => {
+      removeTextBox(id);
+      setSelectedTextId((prev) => (prev === id ? null : prev));
+      setTextEditorOpen(false);
+    },
+    [removeTextBox]
+  );
 
   const normalizeKey = useCallback((value: string) => value.trim().toLowerCase(), []);
 
@@ -1238,12 +1278,46 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     return () => window.clearInterval(interval);
   }, [emptyClassifier, isRobotTouchingLever, state.robots]);
 
-  const handleFieldClick = () => {
+  const getFieldPointFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = fieldRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      const scale = fieldScale || 1;
+      const x = (clientX - rect.left) / scale;
+      const y = (clientY - rect.top) / scale;
+      if (x < 0 || y < 0 || x > FIELD_SIZE || y > FIELD_SIZE) return null;
+      return { x, y };
+    },
+    [fieldScale]
+  );
+
+  const handleFieldClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isInputLocked) return;
     if (robotPanelOpen) return;
     if (settingsOpen || instructionsOpen) return;
+
+    if (activeTool === 'text') {
+      const point = getFieldPointFromClient(event.clientX, event.clientY);
+      if (point) {
+        const newBox: TextBox = {
+          id: `text-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+          x: point.x,
+          y: point.y,
+          rotation: 0,
+          text: 'Text',
+          fontSize: 16,
+          color: '#ffffff',
+        };
+        const newId = addTextBox(newBox);
+        setSelectedTextId(newId);
+      }
+      return;
+    }
+
     setActiveClassifierMenu(null);
     setSelectedRobotId(null);
+    setSelectedTextId(null);
+    setTextEditorOpen(false);
   };
 
   const handleFieldPointerDownCapture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
@@ -2322,6 +2396,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       const robot = state.robots.find((item) => item.id === robotId);
       if (!robot) return;
       setSelectedRobotId(robotId);
+      setSelectedTextId(null);
+      setTextEditorOpen(false);
       setRobotDraft({
         widthIn: robot.widthIn ?? 18,
         heightIn: robot.heightIn ?? 18,
@@ -2618,7 +2694,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           style={{ width: FIELD_SIZE * fieldScale, height: FIELD_SIZE * fieldScale }}
         >
           <div
-            className="relative field-surface planner-field-no-select"
+            className={cn(
+              'relative field-surface planner-field-no-select',
+              activeTool === 'text' && 'cursor-text'
+            )}
             style={{
               width: FIELD_SIZE,
               height: FIELD_SIZE,
@@ -2660,6 +2739,23 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             isLocked={isInputLocked}
             scale={fieldScale}
           />
+
+          {state.textBoxes.map((box) => (
+            <TextBoxElement
+              key={box.id}
+              textBox={box}
+              isSelected={selectedTextId === box.id}
+              onSelect={() => handleTextSelect(box.id)}
+              onPositionChange={(x, y) => updateTextBox(box.id, { x, y })}
+              onRotate={(delta) => updateTextBox(box.id, { rotation: box.rotation + delta })}
+              onEdit={() => handleTextEdit(box.id)}
+              onRemove={() => handleTextDelete(box.id)}
+              fieldBounds={{ width: FIELD_SIZE, height: FIELD_SIZE }}
+              isLocked={isInputLocked}
+              scale={fieldScale}
+              allowInteraction={allowTextInteraction && !isDrawTool}
+            />
+          ))}
 
           {sequencePlaying && (
             <svg
@@ -3016,6 +3112,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 isMobile={isMobile}
                 onSelect={() => {
                   setSelectedRobotId(robot.id);
+                  setSelectedTextId(null);
+                  setTextEditorOpen(false);
                 }}
                 onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
                 onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
@@ -3023,6 +3121,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
                 onRemove={() => {
                   removeRobot(robot.id);
                   setSelectedRobotId(null);
+                  setSelectedTextId(null);
+                  setTextEditorOpen(false);
                   handleRobotPanelClose();
                 }}
                 onEjectSingle={() => handleRobotShoot(robot.id, 'single')}
@@ -3489,6 +3589,132 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         )}
       </div>
 
+      {textEditorOpen && selectedText && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overlay-scrim backdrop-blur-sm px-4 py-6"
+          onClick={() => setTextEditorOpen(false)}
+        >
+          <div
+            className="panel w-full max-w-md"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Edit Text
+              </h2>
+              <button
+                onClick={() => setTextEditorOpen(false)}
+                className="tool-button !p-1"
+                title="Close text editor"
+                aria-label="Close text editor"
+              >
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  close
+                </span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                Text
+                <textarea
+                  value={selectedText.text}
+                  onChange={(event) => updateTextBox(selectedText.id, { text: event.target.value })}
+                  className="min-h-[80px] rounded-md border border-border/60 bg-background/70 px-3 py-2 text-sm text-foreground shadow-inner shadow-black/20"
+                  placeholder="Type text..."
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                  Font Size
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={10}
+                      max={64}
+                      value={selectedText.fontSize}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { fontSize: Number(event.target.value) })
+                      }
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min={10}
+                      max={64}
+                      value={selectedText.fontSize}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { fontSize: Number(event.target.value) })
+                      }
+                      className="w-16 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-xs text-foreground shadow-inner shadow-black/20"
+                    />
+                  </div>
+                </label>
+                <label className="flex flex-col gap-2 text-xs text-muted-foreground">
+                  Rotation
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={Math.round(selectedText.rotation)}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { rotation: Number(event.target.value) })
+                      }
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={360}
+                      value={Math.round(selectedText.rotation)}
+                      onChange={(event) =>
+                        updateTextBox(selectedText.id, { rotation: Number(event.target.value) })
+                      }
+                      className="w-16 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-xs text-foreground shadow-inner shadow-black/20"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                Text Color
+                <div className="flex items-center gap-2">
+                  {TEXT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => updateTextBox(selectedText.id, { color })}
+                      className={cn(
+                        'w-6 h-6 rounded-full border-2 transition-all',
+                        selectedText.color === color ? 'border-foreground scale-110' : 'border-transparent'
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={selectedText.color}
+                    onChange={(event) => updateTextBox(selectedText.id, { color: event.target.value })}
+                    className="h-7 w-7 rounded-md border border-border/60 bg-background/70 p-0"
+                    title="Custom color"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setTextEditorOpen(false)}
+                className="tool-button active"
+                title="Done"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {settingsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overlay-scrim backdrop-blur-sm px-4 py-6">
           <div className="panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">

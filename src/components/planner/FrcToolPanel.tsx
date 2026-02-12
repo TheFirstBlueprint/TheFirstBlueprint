@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Tool, Alliance } from '@/types/planner';
 import { cn } from '@/lib/utils';
+import { PenColorPicker } from './PenColorPicker';
 
 type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
 
@@ -23,8 +24,6 @@ interface FrcToolPanelProps {
   onImport: () => void;
   panelColumns?: 1 | 2;
 }
-
-const PEN_COLORS = ['#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899', '#ffffff'];
 
 export const FrcToolPanel = ({
   activeTool,
@@ -108,12 +107,12 @@ export const FrcToolPanel = ({
             </span>
           </button>
           <button
-            onClick={() => onToolChange('rectangle')}
-            className={cn('tool-button mobile-hide', activeTool === 'rectangle' && 'active')}
-            title="Rectangle"
+            onClick={() => onToolChange('text')}
+            className={cn('tool-button', activeTool === 'text' && 'active')}
+            title="Text"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              rectangle
+              text_fields
             </span>
           </button>
           <button
@@ -157,19 +156,7 @@ export const FrcToolPanel = ({
         {isDrawTool && (
           <div className="mt-3">
             <div className="text-xs text-muted-foreground mb-1">Pen Color</div>
-            <div className="flex gap-1">
-              {PEN_COLORS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => onPenColorChange(color)}
-                  className={cn(
-                    'w-6 h-6 rounded-full border-2 transition-all',
-                    penColor === color ? 'border-foreground scale-110' : 'border-transparent'
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
+            <PenColorPicker penColor={penColor} onPenColorChange={onPenColorChange} />
           </div>
         )}
       </div>

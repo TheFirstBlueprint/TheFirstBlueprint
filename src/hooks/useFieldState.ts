@@ -9,6 +9,7 @@ import {
   createInitialState,
   BallColor,
   DEFAULT_CONFIG,
+  TextBox,
 } from '@/types/planner';
 
 let idCounter = 0;
@@ -127,6 +128,17 @@ const getTotalBallCount = (state: FieldState) => {
 };
 
 const normalizeFieldState = (parsed: FieldState): FieldState => {
+  const normalizeTextBox = (box: TextBox): TextBox => ({
+    id: box.id,
+    x: typeof box.x === 'number' ? box.x : DEFAULT_CONFIG.fieldWidth / 2,
+    y: typeof box.y === 'number' ? box.y : DEFAULT_CONFIG.fieldHeight / 2,
+    rotation: typeof box.rotation === 'number' ? box.rotation : 0,
+    text: typeof box.text === 'string' ? box.text : 'Text',
+    fontSize: typeof box.fontSize === 'number' ? box.fontSize : 16,
+    color: typeof box.color === 'string' ? box.color : '#ffffff',
+    width: box.width,
+    height: box.height,
+  });
   const withClassifiers = {
     ...parsed,
     classifiers: {
@@ -146,6 +158,7 @@ const normalizeFieldState = (parsed: FieldState): FieldState => {
   return {
     ...withClassifiers,
     overflowCounts: parsed.overflowCounts ?? { red: 0, blue: 0 },
+    textBoxes: (parsed.textBoxes ?? []).map(normalizeTextBox),
   };
 };
 
@@ -696,6 +709,34 @@ export const useFieldState = (initialState?: FieldState) => {
     }));
   }, []);
 
+  // Text box operations
+  const addTextBox = useCallback((textBox: TextBox) => {
+    setState((prev) => ({ ...prev, textBoxes: [...prev.textBoxes, textBox] }));
+    return textBox.id;
+  }, []);
+
+  const updateTextBox = useCallback((id: string, updates: Partial<TextBox>) => {
+    setState((prev) => ({
+      ...prev,
+      textBoxes: prev.textBoxes.map((box) =>
+        box.id === id
+          ? {
+              ...box,
+              ...updates,
+              rotation: updates.rotation === undefined ? box.rotation : updates.rotation % 360,
+            }
+          : box
+      ),
+    }));
+  }, []);
+
+  const removeTextBox = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      textBoxes: prev.textBoxes.filter((box) => box.id !== id),
+    }));
+  }, []);
+
   // Clear operations
   const clearDrawings = useCallback(() => {
     setState((prev) => ({ ...prev, drawings: [] }));
@@ -791,10 +832,14 @@ export const useFieldState = (initialState?: FieldState) => {
     popClassifierBall,
     clearClassifierBalls,
     setupFieldArtifacts,
-    // Drawing
-    addDrawing,
-    removeDrawing,
-    clearDrawings,
+  // Drawing
+  addDrawing,
+  removeDrawing,
+  clearDrawings,
+  // Text
+  addTextBox,
+  updateTextBox,
+  removeTextBox,
     // Clear
     clearBalls,
     clearRobots,
