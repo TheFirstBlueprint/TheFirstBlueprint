@@ -641,6 +641,7 @@
 
   .frc-goal-zone {
     pointer-events: none;
+    box-sizing: border-box;
     border: 2px dashed hsl(var(--border) / 0.6);
     background-color: hsl(var(--background) / 0.08);
     box-shadow: inset 0 0 12px hsl(var(--background) / 0.4);

@@ -54,13 +54,11 @@ const FUEL_RADIUS_IN = 2.955;
 const FUEL_PER_DEPOT = 24;
 const FUEL_PER_OUTPOST = 24;
 const FUEL_PER_NEUTRAL_BOX = 180;
-const NEUTRAL_ZONE_WIDTH_IN = 206;
-const NEUTRAL_ZONE_HEIGHT_IN = 72;
-const NEUTRAL_ZONE_GAP_IN = 2;
-const DEPOT_ZONE_IN = { x: 28.2, y: 77.0, width: 36, height: 30 };
+const NEUTRAL_ZONE_IN = { x: 294, y: 84, width: 60, height: 140 };
+const DEPOT_ZONE_IN = { x: 28, y: 77, width: 36, height: 30 };
 const OUTPOST_ZONE_IN = {
-  x: 597.6,
-  y: 216.6,
+  x: 586,
+  y: 154,
   width: 36,
   height: 30,
 };
@@ -68,11 +66,7 @@ const GOAL_ZONE_BASE_IN = {
   blue: { x: 432.1, y: 143.1, width: 36.6, height: 35.0 },
   red: { x: 193.5, y: 143.1, width: 36.6, height: 35.4 },
 };
-const GOAL_ZONE_X_OFFSET_IN = FIELD_WIDTH_IN * 0.01;
-const GOAL_ZONES_IN = {
-  blue: { ...GOAL_ZONE_BASE_IN.blue, x: GOAL_ZONE_BASE_IN.blue.x + GOAL_ZONE_X_OFFSET_IN },
-  red: { ...GOAL_ZONE_BASE_IN.red, x: GOAL_ZONE_BASE_IN.red.x - GOAL_ZONE_X_OFFSET_IN },
-};
+const GOAL_ZONES_IN = GOAL_ZONE_BASE_IN;
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
@@ -89,8 +83,13 @@ const DEFAULT_KEYBINDS = {
 const MIN_SEQUENCE = 10;
 const MAX_SEQUENCE = 50;
 const MAX_BOUNDARY_STEP = 4;
-const PERIMETER_BG_THRESHOLD = 10;
-const PERIMETER_INSET = 10;
+const FUEL_BOUNDARY_SAMPLE_COUNT = 12;
+const PURPLE_PERIMETER_POLYGON: Point[] = [
+  { x: 52, y: 24 },
+  { x: FIELD_WIDTH - 52, y: 24 },
+  { x: FIELD_WIDTH - 52, y: FIELD_HEIGHT - 24 },
+  { x: 52, y: FIELD_HEIGHT - 24 },
+];
 const TEXT_COLORS = ['#ffffff', '#2b76d2', '#f97316', '#eab308', '#22c55e', '#ec4899'];
 
 type ThemeMode = 'base' | 'dark' | 'light' | 'sharkans';
@@ -176,162 +175,6 @@ const readSidebarWidths = () => {
   } catch {
     return { left: DEFAULT_SIDEBAR_WIDTH, right: DEFAULT_SIDEBAR_WIDTH };
   }
-};
-
-const simplifyPolyline = (points: Point[], epsilon: number): Point[] => {
-  if (points.length < 3) return points;
-  const distanceToSegment = (point: Point, a: Point, b: Point) => {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    if (dx === 0 && dy === 0) {
-      return Math.hypot(point.x - a.x, point.y - a.y);
-    }
-    const t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy);
-    const clamped = Math.max(0, Math.min(1, t));
-    const proj = { x: a.x + clamped * dx, y: a.y + clamped * dy };
-    return Math.hypot(point.x - proj.x, point.y - proj.y);
-  };
-
-  const simplifySegment = (pts: Point[], start: number, end: number, epsilonValue: number, keep: boolean[]) => {
-    let maxDistance = 0;
-    let index = -1;
-    const a = pts[start];
-    const b = pts[end];
-    for (let i = start + 1; i < end; i += 1) {
-      const dist = distanceToSegment(pts[i], a, b);
-      if (dist > maxDistance) {
-        maxDistance = dist;
-        index = i;
-      }
-    }
-    if (maxDistance > epsilonValue && index !== -1) {
-      keep[index] = true;
-      simplifySegment(pts, start, index, epsilonValue, keep);
-      simplifySegment(pts, index, end, epsilonValue, keep);
-    }
-  };
-
-  const keep = new Array(points.length).fill(false);
-  keep[0] = true;
-  keep[points.length - 1] = true;
-  simplifySegment(points, 0, points.length - 1, epsilon, keep);
-  return points.filter((_, idx) => keep[idx]);
-};
-
-const insetPolygon = (points: Point[], inset: number): Point[] => {
-  if (points.length === 0) return points;
-  const centroid = points.reduce(
-    (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
-    { x: 0, y: 0 }
-  );
-  centroid.x /= points.length;
-  centroid.y /= points.length;
-  return points.map((point) => {
-    const dx = centroid.x - point.x;
-    const dy = centroid.y - point.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist === 0) return point;
-    const scale = inset / dist;
-    return { x: point.x + dx * scale, y: point.y + dy * scale };
-  });
-};
-
-const buildPerimeterFromImage = (image: HTMLImageElement): Point[] => {
-  const canvas = document.createElement('canvas');
-  canvas.width = FIELD_WIDTH;
-  canvas.height = FIELD_HEIGHT;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return [];
-
-  const scale = Math.max(FIELD_WIDTH / image.width, FIELD_HEIGHT / image.height);
-  const drawWidth = image.width * scale;
-  const drawHeight = image.height * scale;
-  const dx = (FIELD_WIDTH - drawWidth) / 2;
-  const dy = (FIELD_HEIGHT - drawHeight) / 2;
-  ctx.clearRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
-  ctx.drawImage(image, dx, dy, drawWidth, drawHeight);
-
-  const { data } = ctx.getImageData(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
-  const bg = [data[0], data[1], data[2]];
-  const inside = new Array(FIELD_WIDTH * FIELD_HEIGHT).fill(false);
-  for (let y = 0; y < FIELD_HEIGHT; y += 1) {
-    for (let x = 0; x < FIELD_WIDTH; x += 1) {
-      const idx = (y * FIELD_WIDTH + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const isBackground =
-        Math.abs(r - bg[0]) <= PERIMETER_BG_THRESHOLD &&
-        Math.abs(g - bg[1]) <= PERIMETER_BG_THRESHOLD &&
-        Math.abs(b - bg[2]) <= PERIMETER_BG_THRESHOLD;
-      inside[y * FIELD_WIDTH + x] = !isBackground;
-    }
-  }
-
-  const isInside = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= FIELD_WIDTH || y >= FIELD_HEIGHT) return false;
-    return inside[y * FIELD_WIDTH + x];
-  };
-
-  let start: Point | null = null;
-  for (let y = 0; y < FIELD_HEIGHT && !start; y += 1) {
-    for (let x = 0; x < FIELD_WIDTH; x += 1) {
-      if (!isInside(x, y)) continue;
-      if (!isInside(x - 1, y) || !isInside(x + 1, y) || !isInside(x, y - 1) || !isInside(x, y + 1)) {
-        start = { x, y };
-        break;
-      }
-    }
-  }
-  if (!start) return [];
-
-  const neighbors = [
-    { x: 1, y: 0 },
-    { x: 1, y: 1 },
-    { x: 0, y: 1 },
-    { x: -1, y: 1 },
-    { x: -1, y: 0 },
-    { x: -1, y: -1 },
-    { x: 0, y: -1 },
-    { x: 1, y: -1 },
-  ];
-
-  const contour: Point[] = [];
-  let current = start;
-  let backtrack = { x: start.x - 1, y: start.y };
-  const startBacktrack = { ...backtrack };
-  const maxIterations = FIELD_WIDTH * FIELD_HEIGHT * 4;
-
-  for (let iter = 0; iter < maxIterations; iter += 1) {
-    contour.push({ ...current });
-    const dx = backtrack.x - current.x;
-    const dy = backtrack.y - current.y;
-    let startIndex = neighbors.findIndex((n) => n.x === dx && n.y === dy);
-    if (startIndex === -1) startIndex = 4;
-
-    let next: Point | null = null;
-    let nextBacktrack: Point | null = null;
-    for (let i = 0; i < 8; i += 1) {
-      const idx = (startIndex + 1 + i) % 8;
-      const candidate = { x: current.x + neighbors[idx].x, y: current.y + neighbors[idx].y };
-      if (isInside(candidate.x, candidate.y)) {
-        next = candidate;
-        const backIdx = (idx + 7) % 8;
-        nextBacktrack = { x: current.x + neighbors[backIdx].x, y: current.y + neighbors[backIdx].y };
-        break;
-      }
-    }
-    if (!next || !nextBacktrack) break;
-    current = next;
-    backtrack = nextBacktrack;
-    if (current.x === start.x && current.y === start.y && backtrack.x === startBacktrack.x && backtrack.y === startBacktrack.y) {
-      break;
-    }
-  }
-
-  if (contour.length < 3) return [];
-  const simplified = simplifyPolyline(contour, 1.25);
-  return insetPolygon(simplified, PERIMETER_INSET);
 };
 
 const ShotFuelElement = ({
@@ -458,6 +301,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   const fieldRef = useRef<HTMLDivElement>(null);
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const robotsRef = useRef<FrcRobot[]>([]);
+  const fuelRef = useRef<FrcFuel[]>([]);
   const isApplyingSequenceRef = useRef(false);
   const sequenceRafRef = useRef<number | null>(null);
   const sequenceDelayTimeoutRef = useRef<number | null>(null);
@@ -585,17 +429,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   }, []);
 
   useEffect(() => {
-    let canceled = false;
-    const image = new Image();
-    image.src = fieldImageBasic;
-    image.onload = () => {
-      if (canceled) return;
-      const perimeter = buildPerimeterFromImage(image);
-      fieldPerimeterRef.current = perimeter;
-    };
-    return () => {
-      canceled = true;
-    };
+    fieldPerimeterRef.current = PURPLE_PERIMETER_POLYGON;
   }, []);
 
   const handleThemeModeChange = useCallback((nextMode: ThemeMode) => {
@@ -621,25 +455,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   }, [fieldScale, pxPerIn]);
   const goalZonesIn = useMemo(() => GOAL_ZONES_IN, []);
   const fuelZonesIn = useMemo(() => {
-    const centerX = FIELD_WIDTH_IN / 2;
-    const centerY = FIELD_HEIGHT_IN / 2;
-    const upper = {
-      x: centerX - NEUTRAL_ZONE_WIDTH_IN / 2,
-      y: centerY - NEUTRAL_ZONE_GAP_IN / 2 - NEUTRAL_ZONE_HEIGHT_IN,
-      width: NEUTRAL_ZONE_WIDTH_IN,
-      height: NEUTRAL_ZONE_HEIGHT_IN,
-    };
-    const lower = {
-      x: centerX - NEUTRAL_ZONE_WIDTH_IN / 2,
-      y: centerY + NEUTRAL_ZONE_GAP_IN / 2,
-      width: NEUTRAL_ZONE_WIDTH_IN,
-      height: NEUTRAL_ZONE_HEIGHT_IN,
-    };
     return {
       depot: DEPOT_ZONE_IN,
       outpost: OUTPOST_ZONE_IN,
-      neutralUpper: upper,
-      neutralLower: lower,
+      neutral: NEUTRAL_ZONE_IN,
     };
   }, []);
 
@@ -661,6 +480,10 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   useEffect(() => {
     robotsRef.current = state.robots;
   }, [state.robots]);
+
+  useEffect(() => {
+    fuelRef.current = state.fuel;
+  }, [state.fuel]);
 
   useEffect(() => {
     if (!hasFuelSetup && state.fuel.length > 0) {
@@ -966,14 +789,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     };
   }, []);
 
-  const fallbackPerimeter = useMemo<Point[]>(() => (
-    insetPolygon([
-      { x: 0, y: 0 },
-      { x: FIELD_WIDTH, y: 0 },
-      { x: FIELD_WIDTH, y: FIELD_HEIGHT },
-      { x: 0, y: FIELD_HEIGHT },
-    ], PERIMETER_INSET)
-  ), []);
+  const fallbackPerimeter = useMemo<Point[]>(() => PURPLE_PERIMETER_POLYGON, []);
 
   const getPerimeter = useCallback(() => fieldPerimeterRef.current ?? fallbackPerimeter, [fallbackPerimeter]);
 
@@ -1155,7 +971,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
   const applyConstrainedRobotPosition = useCallback(
     (robotId: string, target: { x: number; y: number }, rotationOverride?: number) => {
-      const robot = state.robots.find((item) => item.id === robotId);
+      const robot = robotsRef.current.find((item) => item.id === robotId);
       if (!robot) return;
       const dimensions = getRobotDimensions(robot);
       const rotation = rotationOverride ?? robot.rotation;
@@ -1183,7 +999,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         }
       }
     },
-    [getRobotDimensions, isRobotFootprintInside, state.robots, updateRobotPosition]
+    [getRobotDimensions, isRobotFootprintInside, updateRobotPosition]
   );
 
   useEffect(() => {
@@ -1208,15 +1024,75 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     });
   }, [clampRobotPositionToBoundary, getRobotDimensions, isRobotFootprintInside, isDev, state.robots, updateRobotPosition]);
 
+  const isFuelCircleInsidePerimeter = useCallback(
+    (position: Position, radius: number) => {
+      const perimeter = getPerimeter();
+      if (!isPointInsidePolygon(position, perimeter)) return false;
+      for (let i = 0; i < FUEL_BOUNDARY_SAMPLE_COUNT; i += 1) {
+        const theta = (Math.PI * 2 * i) / FUEL_BOUNDARY_SAMPLE_COUNT;
+        const sample = {
+          x: position.x + Math.cos(theta) * radius,
+          y: position.y + Math.sin(theta) * radius,
+        };
+        if (!isPointInsidePolygon(sample, perimeter)) return false;
+      }
+      return true;
+    },
+    [getPerimeter, isPointInsidePolygon]
+  );
+
+  const nudgeFuelIntoPerimeter = useCallback(
+    (position: Position, radius: number) => {
+      if (isFuelCircleInsidePerimeter(position, radius)) return position;
+      const center = { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 };
+      const dx = center.x - position.x;
+      const dy = center.y - position.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance === 0) return position;
+      const steps = Math.max(1, Math.ceil(distance / MAX_BOUNDARY_STEP));
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        const candidate = { x: position.x + dx * t, y: position.y + dy * t };
+        if (isFuelCircleInsidePerimeter(candidate, radius)) return candidate;
+      }
+      return position;
+    },
+    [isFuelCircleInsidePerimeter]
+  );
+
   const clampFuelPosition = useCallback(
-    (x: number, y: number) => resolvePositionWithSolids({ x, y }, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, []),
-    [resolvePositionWithSolids]
+    (from: Position, to: Position) => {
+      const start = nudgeFuelIntoPerimeter(
+        resolvePositionWithSolids(from, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, []),
+        FUEL_RADIUS_IN
+      );
+      const target = resolvePositionWithSolids(to, FUEL_DIAMETER_IN, FUEL_DIAMETER_IN, []);
+      const dx = target.x - start.x;
+      const dy = target.y - start.y;
+      const distance = Math.hypot(dx, dy);
+      const steps = Math.max(1, Math.ceil(distance / MAX_BOUNDARY_STEP));
+      let last = start;
+      for (let i = 1; i <= steps; i += 1) {
+        const t = i / steps;
+        const candidate = {
+          x: start.x + dx * t,
+          y: start.y + dy * t,
+        };
+        if (isFuelCircleInsidePerimeter(candidate, FUEL_RADIUS_IN)) {
+          last = candidate;
+        } else {
+          break;
+        }
+      }
+      return last;
+    },
+    [isFuelCircleInsidePerimeter, nudgeFuelIntoPerimeter, resolvePositionWithSolids]
   );
 
   const handleRobotMove = useCallback(
     (robotId: string, x: number, y: number) => {
       if (isInputLocked) return;
-      const movingRobot = state.robots.find((item) => item.id === robotId);
+      const movingRobot = robotsRef.current.find((item) => item.id === robotId);
       if (!movingRobot) return;
       const dimensions = getRobotDimensions(movingRobot);
       const candidate = resolvePositionWithSolids(
@@ -1227,15 +1103,35 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       );
       applyConstrainedRobotPosition(robotId, candidate, movingRobot.rotation);
     },
-    [applyConstrainedRobotPosition, getRobotDimensions, goalSolidRects, isInputLocked, resolvePositionWithSolids, state.robots]
+    [applyConstrainedRobotPosition, getRobotDimensions, goalSolidRects, isInputLocked, resolvePositionWithSolids]
   );
 
   const handleFuelMove = useCallback(
     (fuelId: string, x: number, y: number) => {
       if (isInputLocked) return;
-      updateFuelPosition(fuelId, { x, y });
+      const current = fuelRef.current.find((item) => item.id === fuelId)?.position;
+      if (!current) return;
+      const constrained = clampFuelPosition(current, { x, y });
+      if (constrained.x === current.x && constrained.y === current.y) return;
+      updateFuelPosition(fuelId, constrained);
     },
-    [isInputLocked, updateFuelPosition]
+    [clampFuelPosition, isInputLocked, updateFuelPosition]
+  );
+
+  const handleRobotSelect = useCallback((robotId: string) => {
+    setSelectedRobotId(robotId);
+    setSelectedTextId(null);
+    setTextEditorOpen(false);
+  }, []);
+
+  const handleRobotRotateById = useCallback(
+    (robotId: string, delta: number) => {
+      if (isInputLocked) return;
+      const robot = robotsRef.current.find((item) => item.id === robotId);
+      if (!robot) return;
+      updateRobotRotation(robotId, robot.rotation + delta);
+    },
+    [isInputLocked, updateRobotRotation]
   );
 
   const randomizeGoal = useCallback((): Alliance => (Math.random() < 0.5 ? 'blue' : 'red'), []);
@@ -1332,24 +1228,31 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
     const nextFuelId = () => `frc-fuel-${stamp}-${++fuelIndex}`;
     const depotPositions = buildFuelGrid(fuelZonesIn.depot, FUEL_PER_DEPOT, { rotate: true });
     const outpostPositions = buildFuelGrid(fuelZonesIn.outpost, FUEL_PER_OUTPOST, { rotate: true });
-    const neutralUpperPositions = buildFuelGrid(fuelZonesIn.neutralUpper, FUEL_PER_NEUTRAL_BOX, {
+    const neutralPositions = buildFuelGrid(fuelZonesIn.neutral, FUEL_PER_NEUTRAL_BOX, {
       spacingMultiplier: 1.05,
-      minCols: 14,
-      maxCols: 22,
-    });
-    const neutralLowerPositions = buildFuelGrid(fuelZonesIn.neutralLower, FUEL_PER_NEUTRAL_BOX, {
-      spacingMultiplier: 1.05,
-      minCols: 14,
-      maxCols: 22,
+      minCols: 8,
+      maxCols: 12,
     });
 
-    return [...depotPositions, ...outpostPositions, ...neutralUpperPositions, ...neutralLowerPositions].map(
-      (position) => ({
+    return [...depotPositions, ...outpostPositions, ...neutralPositions].map((position) => {
+      const constrained = clampFuelPosition({ x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 }, position);
+      return {
       id: nextFuelId(),
-      position,
-    })
-    );
-  }, [buildFuelGrid, fuelZonesIn.depot, fuelZonesIn.neutralLower, fuelZonesIn.neutralUpper, fuelZonesIn.outpost]);
+        position: constrained,
+      };
+    });
+  }, [buildFuelGrid, clampFuelPosition, fuelZonesIn.depot, fuelZonesIn.neutral, fuelZonesIn.outpost]);
+
+  const constrainFuelSnapshot = useCallback(
+    (snapshot: { fuel: FrcFuel[]; robotFuelCounts: Record<string, number> }) => ({
+      ...snapshot,
+      fuel: snapshot.fuel.map((item) => ({
+        ...item,
+        position: clampFuelPosition({ x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2 }, item.position),
+      })),
+    }),
+    [clampFuelPosition]
+  );
 
   const goalCenters = useMemo(
     () => ({
@@ -1551,13 +1454,13 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
         }
       });
       if (step.fuelState) {
-        restoreFuelState(step.fuelState);
+        restoreFuelState(constrainFuelSnapshot(step.fuelState));
       }
       window.setTimeout(() => {
         isApplyingSequenceRef.current = false;
       }, 0);
     },
-    [applyConstrainedRobotPosition, restoreFuelState, sequenceSteps, updateRobotRotation]
+    [applyConstrainedRobotPosition, constrainFuelSnapshot, restoreFuelState, sequenceSteps, updateRobotRotation]
   );
 
   const handleSelectSequenceStep = useCallback(
@@ -1712,7 +1615,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       });
       if (sequenceCancelRef.current) break;
       if (step.fuelState) {
-        restoreFuelState(step.fuelState);
+        restoreFuelState(constrainFuelSnapshot(step.fuelState));
       }
       isApplyingSequenceRef.current = false;
       if (sequenceCancelRef.current) break;
@@ -1721,6 +1624,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
   }, [
     applyConstrainedRobotPosition,
     clearSequencePause,
+    constrainFuelSnapshot,
     maxSequence,
     restoreFuelState,
     sequencePlaying,
@@ -1829,7 +1733,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
   const handleRobotPanelOpen = useCallback(
     (robotId: string) => {
-      const robot = state.robots.find((item) => item.id === robotId);
+      const robot = robotsRef.current.find((item) => item.id === robotId);
       if (!robot) return;
       setSelectedRobotId(robotId);
       setSelectedTextId(null);
@@ -1843,14 +1747,34 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       setRobotPanelOpen(true);
       setDraftRobotId(robotId);
     },
-    [state.robots]
+    []
   );
 
-  const handleRobotPanelClose = () => {
+  const handleRobotPanelClose = useCallback(() => {
     setRobotPanelOpen(false);
     setRobotDraft(null);
     setDraftRobotId(null);
-  };
+  }, []);
+
+  const handleRobotEditById = useCallback(
+    (robotId: string) => {
+      if (isInputLocked) return;
+      handleRobotPanelOpen(robotId);
+    },
+    [handleRobotPanelOpen, isInputLocked]
+  );
+
+  const handleRobotRemoveById = useCallback(
+    (robotId: string) => {
+      if (isInputLocked) return;
+      removeRobot(robotId);
+      setSelectedRobotId((prev) => (prev === robotId ? null : prev));
+      setSelectedTextId(null);
+      setTextEditorOpen(false);
+      handleRobotPanelClose();
+    },
+    [handleRobotPanelClose, isInputLocked, removeRobot]
+  );
 
   const handleRobotSave = () => {
     if (!selectedRobotId || !robotDraft) return;
@@ -1916,7 +1840,7 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
 
   const checkRobotCollision = useCallback(
     (x: number, y: number) => {
-      for (const robot of state.robots) {
+      for (const robot of robotsRef.current) {
         const sizeFt = robot.widthFt ?? DEFAULT_ROBOT_FT;
         const sizeIn = sizeFt * FIELD_UNITS_PER_FOOT;
         const halfSize = sizeIn / 2;
@@ -1932,18 +1856,18 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
       }
       return null;
     },
-    [state.robots]
+    []
   );
 
   const collectFuelForRobot = useCallback(
     (robotId: string, fuelId: string) => {
-      const robot = state.robots.find((item) => item.id === robotId);
+      const robot = robotsRef.current.find((item) => item.id === robotId);
       if (!robot) return;
       if ((robot.fuelCount ?? 0) >= MAX_FUEL_CAPACITY) return;
       updateRobotDetails(robotId, { fuelCount: (robot.fuelCount ?? STARTING_FUEL) + 1 });
       removeFuel(fuelId);
     },
-    [removeFuel, state.robots, updateRobotDetails]
+    [removeFuel, updateRobotDetails]
   );
 
   const setupRobots = useCallback(() => {
@@ -2175,8 +2099,8 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                 id={fuel.id}
                 position={fuel.position}
                 radius={fuelRadius}
-                onPositionChange={(x, y) => handleFuelMove(fuel.id, x, y)}
-                onCollectByRobot={(robotId) => collectFuelForRobot(robotId, fuel.id)}
+                onPositionChange={handleFuelMove}
+                onCollectByRobot={collectFuelForRobot}
                 checkRobotCollision={checkRobotCollision}
                 clampPosition={clampFuelPosition}
                 isLocked={isInputLocked}
@@ -2206,21 +2130,11 @@ export const FrcFieldPlanner = ({ className }: { className?: string }) => {
                   dimensions={dimensions}
                   displayName={displayName}
                   isSelected={selectedRobotId === robot.id}
-                  onSelect={() => {
-                    setSelectedRobotId(robot.id);
-                    setSelectedTextId(null);
-                    setTextEditorOpen(false);
-                  }}
-                  onPositionChange={(x, y) => handleRobotMove(robot.id, x, y)}
-                  onRotate={(delta) => updateRobotRotation(robot.id, robot.rotation + delta)}
-                  onEdit={() => handleRobotPanelOpen(robot.id)}
-                  onRemove={() => {
-                    removeRobot(robot.id);
-                    setSelectedRobotId(null);
-                    setSelectedTextId(null);
-                    setTextEditorOpen(false);
-                    handleRobotPanelClose();
-                  }}
+                  onSelect={handleRobotSelect}
+                  onPositionChange={handleRobotMove}
+                  onRotate={handleRobotRotateById}
+                  onEdit={handleRobotEditById}
+                  onRemove={handleRobotRemoveById}
                   isLocked={isInputLocked}
                   scale={fieldScale}
                   disablePointerEvents={isDrawTool}
