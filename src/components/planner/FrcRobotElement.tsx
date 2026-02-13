@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { FrcRobot } from '@/types/frcPlanner';
 import { cn } from '@/lib/utils';
 
@@ -7,17 +7,17 @@ interface FrcRobotElementProps {
   dimensions: { width: number; height: number };
   displayName: string;
   isSelected: boolean;
-  onSelect: () => void;
-  onPositionChange: (x: number, y: number) => void;
-  onRotate: (delta: number) => void;
-  onEdit: () => void;
-  onRemove: () => void;
+  onSelect: (id: string) => void;
+  onPositionChange: (id: string, x: number, y: number) => void;
+  onRotate: (id: string, delta: number) => void;
+  onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
   isLocked: boolean;
   scale: number;
   disablePointerEvents?: boolean;
 }
 
-export const FrcRobotElement = ({
+const FrcRobotElementComponent = ({
   robot,
   dimensions,
   displayName,
@@ -33,6 +33,8 @@ export const FrcRobotElement = ({
 }: FrcRobotElementProps) => {
   const positionRef = useRef(robot.position);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
   const hasImage = Boolean(robot.imageDataUrl);
   const badgeScale = Math.min(1.4, Math.max(0.85, 1 / (scale || 1)));
 
@@ -40,42 +42,76 @@ export const FrcRobotElement = ({
     positionRef.current = robot.position;
   }, [robot.position.x, robot.position.y]);
 
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (e.target instanceof HTMLElement && e.target.closest('button')) return;
     e.stopPropagation();
     if (isLocked) return;
-    onSelect();
+    onSelect(robot.id);
 
     lastMouseRef.current = { x: e.clientX, y: e.clientY };
     const normalizedScale = scale || 1;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+
+    const flushPendingPosition = () => {
+      rafRef.current = null;
+      const pending = pendingPositionRef.current;
+      if (!pending) return;
+      pendingPositionRef.current = null;
+      onPositionChange(robot.id, pending.x, pending.y);
+    };
+
+    const scheduleFlush = () => {
+      if (rafRef.current !== null) return;
+      rafRef.current = window.requestAnimationFrame(flushPendingPosition);
+    };
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (!lastMouseRef.current) return;
       const dx = (moveEvent.clientX - lastMouseRef.current.x) / normalizedScale;
       const dy = (moveEvent.clientY - lastMouseRef.current.y) / normalizedScale;
       const basePosition = positionRef.current;
-      const newX = basePosition.x + dx;
-      const newY = basePosition.y + dy;
-      onPositionChange(newX, newY);
+      pendingPositionRef.current = {
+        x: basePosition.x + dx,
+        y: basePosition.y + dy,
+      };
+      scheduleFlush();
       lastMouseRef.current = { x: moveEvent.clientX, y: moveEvent.clientY };
     };
 
     const handlePointerUp = () => {
       document.removeEventListener('pointermove', handlePointerMove);
       document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      const pending = pendingPositionRef.current;
+      if (pending) {
+        pendingPositionRef.current = null;
+        onPositionChange(robot.id, pending.x, pending.y);
+      }
       lastMouseRef.current = null;
     };
 
     document.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
   };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isLocked) return;
-    onSelect();
+    onSelect(robot.id);
   };
 
   return (
@@ -149,7 +185,7 @@ export const FrcRobotElement = ({
           onPointerDown={(e) => e.stopPropagation()}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(-45); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(robot.id, -45); }}
             className="tool-button !p-1"
             title="Rotate left"
           >
@@ -158,7 +194,7 @@ export const FrcRobotElement = ({
             </span>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(45); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRotate(robot.id, 45); }}
             className="tool-button !p-1"
             title="Rotate right"
           >
@@ -167,7 +203,7 @@ export const FrcRobotElement = ({
             </span>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onEdit(robot.id); }}
             className="tool-button !p-1"
             title="Edit robot"
           >
@@ -176,7 +212,7 @@ export const FrcRobotElement = ({
             </span>
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked) onRemove(robot.id); }}
             className="tool-button !p-1 text-destructive"
             title="Remove robot"
           >
@@ -189,3 +225,16 @@ export const FrcRobotElement = ({
     </div>
   );
 };
+
+export const FrcRobotElement = memo(
+  FrcRobotElementComponent,
+  (prev, next) =>
+    prev.robot === next.robot &&
+    prev.dimensions.width === next.dimensions.width &&
+    prev.dimensions.height === next.dimensions.height &&
+    prev.displayName === next.displayName &&
+    prev.isSelected === next.isSelected &&
+    prev.isLocked === next.isLocked &&
+    prev.scale === next.scale &&
+    prev.disablePointerEvents === next.disablePointerEvents
+);
