@@ -30,6 +30,7 @@ interface ToolPanelProps {
   onSetupRobots: () => void;
   onExport: () => void;
   onImport: () => void;
+  onImportPedropathing: () => void;
   presets: { id: string; label: string; path: string }[];
   onPresetLoad: (preset: { id: string; label: string; path: string }) => void;
   showSetupCoachmark?: boolean;
@@ -62,6 +63,7 @@ export const ToolPanel = ({
   onSetupRobots,
   onExport,
   onImport,
+  onImportPedropathing,
   presets,
   onPresetLoad,
   onDismissSetupCoachmark,
@@ -417,6 +419,9 @@ export const ToolPanel = ({
             <span className="text-xs mobile-hide">Import</span>
           </button>
         </div>
+        <button onClick={onImportPedropathing} className="tool-button mt-2 w-full">
+          <span className="text-xs">Import Pedropathing File</span>
+        </button>
       </div>
     </div>
   );

@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { PRESETS } from '@/presets/presets';
+import { parsePedroPP, convertPedroPPToSequencer } from '@/pedropathing/ppImport';
 
 const FIELD_SIZE = 600; 
 const FIELD_INCHES = 144;
@@ -300,6 +301,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     startWidth: number;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ppFileInputRef = useRef<HTMLInputElement>(null);
   const robotImageInputRef = useRef<HTMLInputElement>(null);
   const leverContactRef = useRef<{ red: number | null; blue: number | null }>({
     red: null,
@@ -1574,13 +1576,14 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             const target = step.positions[robot.id] ?? robot.position;
             const startRot = robot.rotation;
             const targetRot = step.rotations[robot.id] ?? startRot;
+            const rotationDelta = ((targetRot - startRot + 540) % 360) - 180;
             const nextPosition = {
               x: robot.position.x + (target.x - robot.position.x) * t,
               y: robot.position.y + (target.y - robot.position.y) * t,
             };
             updateRobotPosition(robot.id, nextPosition);
             appendTrailPoint(robot.id, nextPosition);
-            updateRobotRotation(robot.id, startRot + (targetRot - startRot) * t);
+            updateRobotRotation(robot.id, startRot + rotationDelta * t);
           });
           if (t < 1) {
             sequenceRafRef.current = window.requestAnimationFrame(tick);
@@ -2337,6 +2340,10 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
     fileInputRef.current?.click();
   };
 
+  const handlePedroImport = () => {
+    ppFileInputRef.current?.click();
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2350,6 +2357,121 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
       } catch (error) {
         console.error(error);
         toast.error('Failed to load strategy file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handlePedroFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const pedro = parsePedroPP(content);
+        const converted = convertPedroPPToSequencer(pedro);
+        const totalPositions = converted.length;
+        if (totalPositions === 0) {
+          toast.error('Failed to load Pedropathing file');
+          return;
+        }
+
+        const targetRobot = selectedRobotId
+          ? state.robots.find((robot) => robot.id === selectedRobotId)
+          : state.robots[0];
+        if (!targetRobot) {
+          toast.error('Add a robot before importing a Pedropathing file');
+          return;
+        }
+
+        const ballStateSnapshot = {
+          balls: state.balls.map((ball) => ({ ...ball })),
+          robotsHeldBalls: state.robots.reduce<Record<string, Ball[]>>((acc, robot) => {
+            acc[robot.id] = robot.heldBalls.map((ball) => ({ ...ball }));
+            return acc;
+          }, {}),
+          classifiers: {
+            red: {
+              balls: state.classifiers.red.balls.map((ball) => ({ ...ball })),
+              extensionBalls: state.classifiers.red.extensionBalls.map((ball) => ({ ...ball })),
+            },
+            blue: {
+              balls: state.classifiers.blue.balls.map((ball) => ({ ...ball })),
+              extensionBalls: state.classifiers.blue.extensionBalls.map((ball) => ({ ...ball })),
+            },
+          },
+          overflowCounts: { ...state.overflowCounts },
+        };
+
+        const importedGroups = Math.ceil(totalPositions / 5);
+        const currentGroups = Math.ceil(maxSequence / 5);
+        const importStartStep = currentGroups * 5 + 1;
+        const requiredMaxSequence = importStartStep + importedGroups * 5 - 1;
+        if (requiredMaxSequence > MAX_SEQUENCE) {
+          toast.error('Pedropathing file is too large for available sequence slots');
+          return;
+        }
+
+        const importedSteps: Record<number, SequenceStep> = {};
+        for (let index = 0; index < totalPositions; index += 1) {
+          const pathStep = converted[index];
+          const positions: Record<string, { x: number; y: number }> = {};
+          const rotations: Record<string, number> = {};
+          state.robots.forEach((robot) => {
+            if (robot.id === targetRobot.id) {
+              positions[robot.id] = { x: pathStep.x, y: pathStep.y };
+              rotations[robot.id] = pathStep.heading;
+              return;
+            }
+            positions[robot.id] = { ...robot.position };
+            rotations[robot.id] = robot.rotation;
+          });
+          importedSteps[importStartStep + index] = {
+            positions,
+            rotations,
+            ballState: {
+              balls: ballStateSnapshot.balls.map((ball) => ({ ...ball })),
+              robotsHeldBalls: Object.fromEntries(
+                Object.entries(ballStateSnapshot.robotsHeldBalls).map(([robotId, balls]) => [
+                  robotId,
+                  balls.map((ball) => ({ ...ball })),
+                ])
+              ),
+              classifiers: {
+                red: {
+                  balls: ballStateSnapshot.classifiers.red.balls.map((ball) => ({ ...ball })),
+                  extensionBalls: ballStateSnapshot.classifiers.red.extensionBalls.map((ball) => ({ ...ball })),
+                },
+                blue: {
+                  balls: ballStateSnapshot.classifiers.blue.balls.map((ball) => ({ ...ball })),
+                  extensionBalls: ballStateSnapshot.classifiers.blue.extensionBalls.map((ball) => ({ ...ball })),
+                },
+              },
+              overflowCounts: { ...ballStateSnapshot.overflowCounts },
+            },
+            rawScores: { ...rawScores },
+          };
+        }
+
+        const finalImportedStep = importStartStep + totalPositions - 1;
+        // Prevent the selected-step autosave effect from immediately overwriting imported import slots.
+        isApplyingSequenceRef.current = true;
+        setSequenceSteps((prev) => ({
+          ...prev,
+          ...importedSteps,
+        }));
+        setSelectedSequenceStep(finalImportedStep);
+        window.setTimeout(() => {
+          isApplyingSequenceRef.current = false;
+        }, 0);
+        setMaxSequence((prev) => Math.max(prev, requiredMaxSequence, MIN_SEQUENCE));
+        toast.success('Pedropathing file imported!');
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load Pedropathing file');
       }
     };
     reader.readAsText(file);
@@ -2571,6 +2693,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             onSetupRobots={handleSetupRobots}
             onExport={handleExport}
             onImport={handleImport}
+            onImportPedropathing={handlePedroImport}
               presets={PRESETS}
               onPresetLoad={handlePresetLoad}
               showSetupCoachmark={!isMobile && shouldShowSetupCoachmark}
@@ -2678,6 +2801,13 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
               type="file"
               accept=".json"
             onChange={handleFileChange}
+            className="hidden"
+          />
+          <input
+            ref={ppFileInputRef}
+            type="file"
+            accept=".pp"
+            onChange={handlePedroFileChange}
             className="hidden"
           />
         </div>
