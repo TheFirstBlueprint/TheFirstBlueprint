@@ -2373,8 +2373,8 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
         const content = event.target?.result as string;
         const pedro = parsePedroPP(content);
         const converted = convertPedroPPToSequencer(pedro);
-        const maxImportedSteps = Math.min(converted.length, MAX_SEQUENCE);
-        if (maxImportedSteps === 0) {
+        const totalPositions = converted.length;
+        if (totalPositions === 0) {
           toast.error('Failed to load Pedropathing file');
           return;
         }
@@ -2406,8 +2406,17 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           overflowCounts: { ...state.overflowCounts },
         };
 
+        const importedGroups = Math.ceil(totalPositions / 5);
+        const currentGroups = Math.ceil(maxSequence / 5);
+        const importStartStep = currentGroups * 5 + 1;
+        const requiredMaxSequence = importStartStep + importedGroups * 5 - 1;
+        if (requiredMaxSequence > MAX_SEQUENCE) {
+          toast.error('Pedropathing file is too large for available sequence slots');
+          return;
+        }
+
         const importedSteps: Record<number, SequenceStep> = {};
-        for (let index = 0; index < maxImportedSteps; index += 1) {
+        for (let index = 0; index < totalPositions; index += 1) {
           const pathStep = converted[index];
           const positions: Record<string, { x: number; y: number }> = {};
           const rotations: Record<string, number> = {};
@@ -2420,7 +2429,7 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
             positions[robot.id] = { ...robot.position };
             rotations[robot.id] = robot.rotation;
           });
-          importedSteps[index + 1] = {
+          importedSteps[importStartStep + index] = {
             positions,
             rotations,
             ballState: {
@@ -2447,15 +2456,18 @@ export const FieldPlanner = ({ className }: { className?: string }) => {
           };
         }
 
-        clearSequenceState();
-        // Prevent the selected-step autosave effect from immediately overwriting imported step 1.
+        const finalImportedStep = importStartStep + totalPositions - 1;
+        // Prevent the selected-step autosave effect from immediately overwriting imported import slots.
         isApplyingSequenceRef.current = true;
-        setSequenceSteps(importedSteps);
-        setSelectedSequenceStep(1);
+        setSequenceSteps((prev) => ({
+          ...prev,
+          ...importedSteps,
+        }));
+        setSelectedSequenceStep(finalImportedStep);
         window.setTimeout(() => {
           isApplyingSequenceRef.current = false;
         }, 0);
-        setMaxSequence((prev) => Math.max(prev, maxImportedSteps, MIN_SEQUENCE));
+        setMaxSequence((prev) => Math.max(prev, requiredMaxSequence, MIN_SEQUENCE));
         toast.success('Pedropathing file imported!');
       } catch (error) {
         console.error(error);
