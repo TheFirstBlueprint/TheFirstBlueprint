@@ -66,7 +66,11 @@ const GOAL_ZONE_BASE_IN = {
   blue: { x: 432.1, y: 143.1, width: 36.6, height: 35.0 },
   red: { x: 193.5, y: 143.1, width: 36.6, height: 35.4 },
 };
-const GOAL_ZONES_IN = GOAL_ZONE_BASE_IN;
+const GOAL_ZONE_HORIZONTAL_OFFSET_IN = 12;
+const GOAL_ZONES_IN = {
+  blue: { ...GOAL_ZONE_BASE_IN.blue, x: GOAL_ZONE_BASE_IN.blue.x + GOAL_ZONE_HORIZONTAL_OFFSET_IN },
+  red: { ...GOAL_ZONE_BASE_IN.red, x: GOAL_ZONE_BASE_IN.red.x - GOAL_ZONE_HORIZONTAL_OFFSET_IN },
+};
 const THEME_STORAGE_KEY = 'planner-theme-mode';
 const KEYBINDS_STORAGE_KEY = 'planner-keybinds';
 const DEFAULT_KEYBINDS = {
