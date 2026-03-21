@@ -59,10 +59,10 @@ const CENTER_FUEL_PADDING_MULTIPLIER = 0.12;
 const SIDE_DEPOT_PADDING_MULTIPLIER = 0.08;
 const FUEL_CLUSTER_MIN_INSET_IN = 0.12;
 const NEUTRAL_ZONE_IN = { x: 294, y: 84, width: 60, height: 140 };
-const DEPOT_ZONE_IN = { x: 28, y: 77, width: 36, height: 30 };
+const DEPOT_ZONE_IN = { x: 20, y: 77, width: 36, height: 30 };
 const OUTPOST_ZONE_IN = {
-  x: 586,
-  y: 154,
+  x: 607,
+  y: 214,
   width: 36,
   height: 30,
 };
